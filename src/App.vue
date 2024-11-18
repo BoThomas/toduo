@@ -1,85 +1,68 @@
-<script setup>
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
+  <div class="app-container">
+    <header>
+      <h1>ToDuo</h1>
+      <div v-if="isLoading">Loading...</div>
+      <template v-else-if="isAuthenticated">
+        <div>Hello, {{ user }}</div>
+        <nav>
+          <router-link to="/">Dashboard</router-link> | <router-link to="/doings">The Doings</router-link> | <router-link to="/duo">The Duo</router-link> | <router-link to="/report">Reports</router-link> |
+          <a href="#" @click.prevent="logout">Logout</a>
+        </nav>
+      </template>
+    </header>
+    <main v-if="!isLoading">
+      <router-view v-if="isAuthenticated"></router-view>
+      <Login v-else />
+    </main>
+  </div>
 </template>
 
+<script setup>
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useAuth0 } from "@auth0/auth0-vue";
+import Login from "./components/Login.vue";
+
+const router = useRouter();
+const auth0 = useAuth0();
+
+const isLoading = computed(() => auth0.isLoading.value);
+const isAuthenticated = computed(() => auth0.isAuthenticated.value);
+const user = computed(() => auth0.user.value?.nickname);
+
+const logout = () => {
+  auth0.logout({
+    logoutParams: {
+      returnTo: window.location.origin,
+    },
+  });
+};
+</script>
+
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+.app-container {
+  font-family: Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+header {
+  margin-bottom: 20px;
 }
 
 nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
+  margin-top: 10px;
 }
 
 nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
+  margin-right: 10px;
+  text-decoration: none;
+  color: #333;
 }
 
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+nav a.router-link-active {
+  font-weight: bold;
 }
 </style>

@@ -1,0 +1,169 @@
+<template>
+  <div class="reports">
+    <h2>Reports</h2>
+
+    <div class="p-grid">
+      <div class="p-col-12 p-md-6">
+        <h3>Completed Todos per Person</h3>
+        <Chart type="line" :data="completedTodosData" :options="chartOptions" />
+      </div>
+      <div class="p-col-12 p-md-6">
+        <h3>Missed Todos per Person</h3>
+        <Chart type="line" :data="missedTodosData" :options="chartOptions" />
+      </div>
+    </div>
+
+    <div class="p-grid">
+      <div class="p-col-12 p-md-6">
+        <h3>Work Done (in hours)</h3>
+        <TabView>
+          <TabPanel header="This Week">
+            <h4>Total Hours: {{ workDone.week }}</h4>
+          </TabPanel>
+          <TabPanel header="This Month">
+            <h4>Total Hours: {{ workDone.month }}</h4>
+          </TabPanel>
+          <TabPanel header="This Year">
+            <h4>Total Hours: {{ workDone.year }}</h4>
+          </TabPanel>
+        </TabView>
+      </div>
+      <div class="p-col-12 p-md-6">
+        <h3>Upcoming Work (in hours)</h3>
+        <TabView>
+          <TabPanel header="This Week">
+            <h4>Total Hours: {{ upcomingWork.week }}</h4>
+          </TabPanel>
+          <TabPanel header="This Month">
+            <h4>Total Hours: {{ upcomingWork.month }}</h4>
+          </TabPanel>
+          <TabPanel header="This Year">
+            <h4>Total Hours: {{ upcomingWork.year }}</h4>
+          </TabPanel>
+        </TabView>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from "vue";
+import Chart from "primevue/chart";
+import TabView from "primevue/tabview";
+import TabPanel from "primevue/tabpanel";
+
+const completedTodosData = ref(null);
+const missedTodosData = ref(null);
+const workDone = ref({ week: 0, month: 0, year: 0 });
+const upcomingWork = ref({ week: 0, month: 0, year: 0 });
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    y: {
+      beginAtZero: true,
+    },
+  },
+};
+
+onMounted(async () => {
+  await fetchCompletedTodos();
+  await fetchMissedTodos();
+  await fetchWorkDone();
+  await fetchUpcomingWork();
+});
+
+const fetchCompletedTodos = async () => {
+  try {
+    const response = await fetch("/api/reports/completed-todos", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      },
+    });
+    const data = await response.json();
+    completedTodosData.value = {
+      labels: data.labels,
+      datasets: data.datasets,
+    };
+  } catch (error) {
+    console.error("Error fetching completed todos:", error);
+  }
+};
+
+const fetchMissedTodos = async () => {
+  try {
+    const response = await fetch("/api/reports/missed-todos", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      },
+    });
+    const data = await response.json();
+    missedTodosData.value = {
+      labels: data.labels,
+      datasets: data.datasets,
+    };
+  } catch (error) {
+    console.error("Error fetching missed todos:", error);
+  }
+};
+
+const fetchWorkDone = async () => {
+  try {
+    const response = await fetch("/api/reports/work-done", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      },
+    });
+    workDone.value = await response.json();
+  } catch (error) {
+    console.error("Error fetching work done:", error);
+  }
+};
+
+const fetchUpcomingWork = async () => {
+  try {
+    const response = await fetch("/api/reports/upcoming-work", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      },
+    });
+    upcomingWork.value = await response.json();
+  } catch (error) {
+    console.error("Error fetching upcoming work:", error);
+  }
+};
+</script>
+
+<style scoped>
+.reports {
+  padding: 20px;
+}
+
+.p-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -0.5rem;
+}
+
+.p-col-12 {
+  flex: 0 0 100%;
+  padding: 0.5rem;
+}
+
+@media screen and (min-width: 768px) {
+  .p-md-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+h2,
+h3 {
+  margin-bottom: 1rem;
+}
+
+.p-tabview {
+  margin-top: 1rem;
+}
+</style>
