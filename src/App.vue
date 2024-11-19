@@ -163,6 +163,10 @@ main {
 }
 
 @media (max-width: 600px) {
+  main {
+    padding: 0.5rem 1rem;
+  }
+
   .title {
     flex-direction: column;
     align-items: center;
