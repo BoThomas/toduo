@@ -24,6 +24,19 @@ app.use(router);
 
 // Define a custom preset
 const MyPreset = definePreset(Aura, {
+  components: {
+    menubar: {
+      // TODO: not working in prime vue, handled in js/css
+      // item: {
+      //   active: {
+      //     background: "red",
+      //   },
+      // },
+      border: {
+        color: "none",
+      },
+    },
+  },
   primitive: {
     borderRadius: {
       none: "0",
