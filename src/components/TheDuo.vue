@@ -35,6 +35,7 @@ import Column from "primevue/column";
 import Slider from "primevue/slider";
 import Dropdown from "primevue/dropdown";
 import Button from "primevue/button";
+import { mockApi } from "@/services/mockApi";
 
 const users = ref([]);
 const weeklyAssignments = ref([]);
@@ -47,12 +48,13 @@ onMounted(async () => {
 
 const fetchUsers = async () => {
   try {
-    const response = await fetch("/api/users", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    users.value = await response.json();
+    // const response = await fetch("/api/users", {
+    //   headers: {
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    // });
+    // users.value = await response.json();
+    users.value = await mockApi.fetchUsers();
   } catch (error) {
     console.error("Error fetching users:", error);
   }
@@ -60,12 +62,13 @@ const fetchUsers = async () => {
 
 const fetchWeeklyAssignments = async () => {
   try {
-    const response = await fetch("/api/assignments/weekly", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    weeklyAssignments.value = await response.json();
+    // const response = await fetch("/api/assignments/weekly", {
+    //   headers: {
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    // });
+    // weeklyAssignments.value = await response.json();
+    weeklyAssignments.value = await mockApi.fetchWeeklyAssignments();
   } catch (error) {
     console.error("Error fetching weekly assignments:", error);
   }
@@ -73,14 +76,15 @@ const fetchWeeklyAssignments = async () => {
 
 const updateParticipation = async () => {
   try {
-    await fetch("/api/users/participation", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-      body: JSON.stringify(users.value.map((user) => ({ id: user.id, participation: user.participation }))),
-    });
+    // await fetch("/api/users/participation", {
+    //   method: "PUT",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    //   body: JSON.stringify(users.value.map((user) => ({ id: user.id, participation: user.participation }))),
+    // });
+    await mockApi.updateUserParticipation(users.value);
   } catch (error) {
     console.error("Error updating user participation:", error);
   }
@@ -88,14 +92,15 @@ const updateParticipation = async () => {
 
 const updateAssignment = async (assignment) => {
   try {
-    await fetch(`/api/assignments/${assignment.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-      body: JSON.stringify({ assignedUser: assignment.assignedUser }),
-    });
+    // await fetch(`/api/assignments/${assignment.id}`, {
+    //   method: "PATCH",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    //   body: JSON.stringify({ assignedUser: assignment.assignedUser }),
+    // });
+    await mockApi.updateAssignment(assignment);
   } catch (error) {
     console.error("Error updating assignment:", error);
   }
@@ -103,14 +108,15 @@ const updateAssignment = async (assignment) => {
 
 const updateStatus = async (assignment) => {
   try {
-    await fetch(`/api/assignments/${assignment.id}/status`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-      body: JSON.stringify({ status: assignment.status }),
-    });
+    // await fetch(`/api/assignments/${assignment.id}/status`, {
+    //   method: "PATCH",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    //   body: JSON.stringify({ status: assignment.status }),
+    // });
+    await mockApi.updateAssignmentStatus(assignment);
   } catch (error) {
     console.error("Error updating assignment status:", error);
   }
@@ -118,13 +124,15 @@ const updateStatus = async (assignment) => {
 
 const triggerReassignment = async () => {
   try {
-    await fetch("/api/assignments/reassign", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    await fetchWeeklyAssignments();
+    // await fetch("/api/assignments/reassign", {
+    //   method: "POST",
+    //   headers: {
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    // });
+    // await fetchWeeklyAssignments();
+    await mockApi.triggerReassignment();
+    weeklyAssignments.value = await mockApi.fetchWeeklyAssignments();
   } catch (error) {
     console.error("Error triggering reassignment:", error);
   }

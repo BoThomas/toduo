@@ -1,7 +1,7 @@
 <template>
   <div class="the-doings">
     <h2>The Doings</h2>
-    <Dialog v-model:visible="dialogVisible" :style="{ width: '450px' }" header="Todo Details" :modal="true">
+    <Dialog v-model:visible="dialogVisible" header="Todo Details" :modal="true">
       <div class="p-fluid">
         <div class="p-field">
           <label for="name">Name</label>
@@ -77,6 +77,7 @@ import Textarea from "primevue/textarea";
 import Dropdown from "primevue/dropdown";
 import InputNumber from "primevue/inputnumber";
 import Checkbox from "primevue/checkbox";
+import { mockApi } from "@/services/mockApi";
 
 const todos = ref([]);
 const dialogVisible = ref(false);
@@ -95,12 +96,13 @@ onMounted(async () => {
 
 const fetchTodos = async () => {
   try {
-    const response = await fetch("/api/todos", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    todos.value = await response.json();
+    //   const response = await fetch("/api/todos", {
+    //     headers: {
+    //       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //     },
+    //   });
+    //   todos.value = await response.json();
+    todos.value = await mockApi.fetchTodos();
   } catch (error) {
     console.error("Error fetching todos:", error);
   }
@@ -130,20 +132,23 @@ const closeDialog = () => {
 
 const saveTodo = async () => {
   try {
-    const method = currentTodo.value.id ? "PUT" : "POST";
-    const url = currentTodo.value.id ? `/api/todos/${currentTodo.value.id}` : "/api/todos";
+    // const method = currentTodo.value.id ? "PUT" : "POST";
+    // const url = currentTodo.value.id ? `/api/todos/${currentTodo.value.id}` : "/api/todos";
 
-    await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-      body: JSON.stringify(currentTodo.value),
-    });
+    // await fetch(url, {
+    //   method,
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    //   body: JSON.stringify(currentTodo.value),
+    // });
 
-    await fetchTodos();
-    closeDialog();
+    // await fetchTodos();
+    // closeDialog();
+
+    await mockApi.updateTodo(currentTodo.value);
+    todos.value = await mockApi.fetchTodos();
   } catch (error) {
     console.error("Error saving todo:", error);
   }
@@ -152,13 +157,15 @@ const saveTodo = async () => {
 const deleteTodo = async (id) => {
   if (confirm("Are you sure you want to delete this todo?")) {
     try {
-      await fetch(`/api/todos/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-        },
-      });
-      await fetchTodos();
+      // await fetch(`/api/todos/${id}`, {
+      //   method: "DELETE",
+      //   headers: {
+      //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+      //   },
+      // });
+      // await fetchTodos();
+      await mockApi.deleteTodo(id);
+      todos.value = await mockApi.fetchTodos();
     } catch (error) {
       console.error("Error deleting todo:", error);
     }
@@ -167,14 +174,15 @@ const deleteTodo = async (id) => {
 
 const updateShittyPoints = async (todo) => {
   try {
-    await fetch(`/api/todos/${todo.id}/shitty-points`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-      body: JSON.stringify({ shittyPoints: todo.shittyPoints }),
-    });
+    // await fetch(`/api/todos/${todo.id}/shitty-points`, {
+    //   method: "PATCH",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    //   body: JSON.stringify({ shittyPoints: todo.shittyPoints }),
+    // });
+    await mockApi.updateTodo(todo);
   } catch (error) {
     console.error("Error updating shitty points:", error);
   }

@@ -20,6 +20,7 @@ import { ref, onMounted } from "vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Checkbox from "primevue/checkbox";
+import { mockApi } from "@/services/mockApi";
 
 const username = ref("");
 const weeklyTodos = ref([]);
@@ -31,12 +32,13 @@ onMounted(async () => {
 
 const fetchWeeklyTodos = async () => {
   try {
-    const response = await fetch("/api/todos/weekly", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    weeklyTodos.value = await response.json();
+    // const response = await fetch("/api/todos/weekly", {
+    //   headers: {
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    // });
+    // weeklyTodos.value = await response.json();
+    weeklyTodos.value = await mockApi.fetchTodos();
   } catch (error) {
     console.error("Error fetching weekly todos:", error);
   }
@@ -44,14 +46,15 @@ const fetchWeeklyTodos = async () => {
 
 const updateTodoStatus = async (todo) => {
   try {
-    await fetch(`/api/todos/${todo.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-      body: JSON.stringify({ completed: todo.completed }),
-    });
+    // await fetch(`/api/todos/${todo.id}`, {
+    //   method: "PATCH",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    //   body: JSON.stringify({ completed: todo.completed }),
+    // });
+    await mockApi.updateTodo(todo);
   } catch (error) {
     console.error("Error updating todo status:", error);
   }

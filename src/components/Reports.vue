@@ -51,6 +51,7 @@ import { ref, onMounted } from "vue";
 import Chart from "primevue/chart";
 import TabView from "primevue/tabview";
 import TabPanel from "primevue/tabpanel";
+import { mockApi } from "@/services/mockApi";
 
 const completedTodosData = ref(null);
 const missedTodosData = ref(null);
@@ -76,12 +77,13 @@ onMounted(async () => {
 
 const fetchCompletedTodos = async () => {
   try {
-    const response = await fetch("/api/reports/completed-todos", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    const data = await response.json();
+    // const response = await fetch("/api/reports/completed-todos", {
+    //   headers: {
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    // });
+    // const data = await response.json();
+    const data = await mockApi.fetchCompletedTodos();
     completedTodosData.value = {
       labels: data.labels,
       datasets: data.datasets,
@@ -93,12 +95,13 @@ const fetchCompletedTodos = async () => {
 
 const fetchMissedTodos = async () => {
   try {
-    const response = await fetch("/api/reports/missed-todos", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    const data = await response.json();
+    // const response = await fetch("/api/reports/missed-todos", {
+    //   headers: {
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    // });
+    // const data = await response.json();
+    const data = await mockApi.fetchMissedTodos();
     missedTodosData.value = {
       labels: data.labels,
       datasets: data.datasets,
@@ -110,12 +113,13 @@ const fetchMissedTodos = async () => {
 
 const fetchWorkDone = async () => {
   try {
-    const response = await fetch("/api/reports/work-done", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    workDone.value = await response.json();
+    // const response = await fetch("/api/reports/work-done", {
+    //   headers: {
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    // });
+    // workDone.value = await response.json();
+    workDone.value = await mockApi.fetchWorkDone();
   } catch (error) {
     console.error("Error fetching work done:", error);
   }
@@ -123,47 +127,15 @@ const fetchWorkDone = async () => {
 
 const fetchUpcomingWork = async () => {
   try {
-    const response = await fetch("/api/reports/upcoming-work", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      },
-    });
-    upcomingWork.value = await response.json();
+    // const response = await fetch("/api/reports/upcoming-work", {
+    //   headers: {
+    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+    //   },
+    // });
+    // upcomingWork.value = await response.json();
+    upcomingWork.value = await mockApi.fetchUpcomingWork();
   } catch (error) {
     console.error("Error fetching upcoming work:", error);
   }
 };
 </script>
-
-<style scoped>
-.reports {
-  padding: 20px;
-}
-
-.p-grid {
-  display: flex;
-  flex-wrap: wrap;
-  margin: -0.5rem;
-}
-
-.p-col-12 {
-  flex: 0 0 100%;
-  padding: 0.5rem;
-}
-
-@media screen and (min-width: 768px) {
-  .p-md-6 {
-    flex: 0 0 50%;
-    max-width: 50%;
-  }
-}
-
-h2,
-h3 {
-  margin-bottom: 1rem;
-}
-
-.p-tabview {
-  margin-top: 1rem;
-}
-</style>

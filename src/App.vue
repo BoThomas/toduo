@@ -39,30 +39,3 @@ const logout = () => {
   });
 };
 </script>
-
-<style scoped>
-.app-container {
-  font-family: Arial, sans-serif;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-header {
-  margin-bottom: 20px;
-}
-
-nav {
-  margin-top: 10px;
-}
-
-nav a {
-  margin-right: 10px;
-  text-decoration: none;
-  color: #333;
-}
-
-nav a.router-link-active {
-  font-weight: bold;
-}
-</style>
