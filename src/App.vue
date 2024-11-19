@@ -21,19 +21,17 @@
         <Menubar :model="items" breakpoint="0px" class="menubar" />
       </div>
     </header>
-    <main v-if="!isLoading">
-      <router-view v-if="isAuthenticated"></router-view>
-      <Login v-else />
+    <main v-if="!isLoading && isAuthenticated">
+      <router-view></router-view>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth0 } from "@auth0/auth0-vue";
 import Menubar from "primevue/menubar";
-import Login from "./components/Login.vue";
 
 const router = useRouter();
 const auth0 = useAuth0();
@@ -62,38 +60,62 @@ const items = ref([
     icon: "pi pi-home",
     command: () => {
       router.push("/");
-      setActiveItem("Dashboard");
+      setActiveItem("/");
     },
-    class: computed(() => (activeItem.value === "Dashboard" ? "active-menu-item" : "")),
+    class: computed(() => (activeItem.value === "/" ? "active-menu-item" : "")),
   },
   {
     label: "The Doings",
     icon: "pi pi-list",
     command: () => {
       router.push("/doings");
-      setActiveItem("The Doings");
+      setActiveItem("/doings");
     },
-    class: computed(() => (activeItem.value === "The Doings" ? "active-menu-item" : "")),
+    class: computed(() => (activeItem.value === "/doings" ? "active-menu-item" : "")),
   },
   {
     label: "The Duo",
     icon: "pi pi-users",
     command: () => {
       router.push("/duo");
-      setActiveItem("The Duo");
+      setActiveItem("/duo");
     },
-    class: computed(() => (activeItem.value === "The Duo" ? "active-menu-item" : "")),
+    class: computed(() => (activeItem.value === "/duo" ? "active-menu-item" : "")),
   },
   {
     label: "Reports",
     icon: "pi pi-chart-bar",
     command: () => {
       router.push("/report");
-      setActiveItem("Reports");
+      setActiveItem("/report");
     },
-    class: computed(() => (activeItem.value === "Reports" ? "active-menu-item" : "")),
+    class: computed(() => (activeItem.value === "/report" ? "active-menu-item" : "")),
   },
 ]);
+
+// auth
+watch(isLoading, (nowLoading) => {
+  if (!nowLoading) {
+    if (!isAuthenticated.value) {
+      // Try to login if not authenticated and not loading
+      const targetUrl = window.location.pathname;
+      //const appState = { target: targetUrl };
+      // TODO: auth0 appState is not working
+      // save the target url to local storage to redirect after login
+      localStorage.setItem("targetUrl", targetUrl);
+      auth0.loginWithRedirect(); //{ appState });
+    } else {
+      // redirect to the target url after login
+      const targetUrl = localStorage.getItem("targetUrl");
+      if (targetUrl) {
+        localStorage.removeItem("targetUrl");
+        console.log("redirecting to", targetUrl);
+        router.push(targetUrl);
+        setActiveItem(targetUrl);
+      }
+    }
+  }
+});
 </script>
 
 <style>
