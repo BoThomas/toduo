@@ -97,6 +97,10 @@ const items = ref([
 </script>
 
 <style>
+main {
+  padding: 0.5rem 3rem;
+}
+
 .left-section {
   display: flex;
   align-items: center;
@@ -118,6 +122,7 @@ const items = ref([
   justify-content: space-between;
   width: 100%;
   color: var(--p-primary-color);
+  flex-wrap: wrap;
 }
 
 .logo {
@@ -149,11 +154,56 @@ const items = ref([
   margin: 1rem 0;
 }
 
-main {
-  padding: 0.5rem 3rem;
-}
-
 .active-menu-item div {
   background-color: var(--p-primary-100) !important;
+}
+
+.menubar .p-menubar-root-list {
+  margin: auto;
+}
+
+@media (max-width: 600px) {
+  .title {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .center-section,
+  .right-section {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .center-section {
+    text-align: center;
+  }
+
+  .right-section {
+    margin-bottom: 1rem;
+  }
+
+  .navbar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .menubar {
+    width: 100%;
+  }
+
+  .menubar .p-menubar-root-list {
+    flex-direction: column;
+    margin: auto;
+  }
+
+  .menubar .p-menubar-root-list > li {
+    width: 100%;
+    text-align: center;
+  }
+
+  .menubar .p-menubar-root-list > li div {
+    padding: 0.2rem 1.5rem;
+  }
 }
 </style>
