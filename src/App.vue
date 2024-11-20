@@ -1,19 +1,26 @@
 <template>
   <div class="app-container">
     <header>
+      <div class="dark-mode-toggle">
+        <span class="icon" @click="toggleDarkMode">
+          <span v-if="isDarkMode" class="pi pi-sun"></span>
+          <span v-else class="pi pi-moon"></span>
+        </span>
+      </div>
       <div class="title">
-        <div class="left-section">
+        <div class="left-section"></div>
+        <div class="center-section">
           <img src="@/assets/logo.png" alt="ToDuo Logo" class="logo" />
           <h1>ToDuo</h1>
         </div>
-        <div v-if="isAuthenticated" class="center-section">
-          <span>welcome {{ user }}!</span>
-        </div>
-        <div v-if="isAuthenticated" class="right-section">
-          <a @click="logout" class="p-menuitem-link logout-link">
-            <span class="pi pi-sign-out"></span>
-            <span>logout</span>
-          </a>
+        <div class="right-section">
+          <div v-if="isAuthenticated" class="welcome-logout">
+            <span>welcome {{ user }}!</span>
+            <a @click="logout" class="p-menuitem-link logout-link">
+              <span class="pi pi-sign-out"></span>
+              <span>logout</span>
+            </a>
+          </div>
         </div>
       </div>
       <div v-if="isLoading">Loading...</div>
@@ -28,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth0 } from "@auth0/auth0-vue";
 import Menubar from "primevue/menubar";
@@ -46,6 +53,16 @@ const logout = () => {
       returnTo: window.location.origin,
     },
   });
+};
+
+const isDarkMode = ref(localStorage.getItem("darkMode") === "true");
+onMounted(() => {
+  document.documentElement.classList.toggle("dark-mode", isDarkMode.value);
+});
+const toggleDarkMode = () => {
+  isDarkMode.value = !isDarkMode.value;
+  document.documentElement.classList.toggle("dark-mode", isDarkMode.value);
+  localStorage.setItem("darkMode", isDarkMode.value);
 };
 
 const activeItem = ref("Dashboard");
@@ -124,18 +141,18 @@ main {
 }
 
 .left-section {
-  display: flex;
-  align-items: center;
+  flex: 1;
 }
 
 .center-section {
-  flex-grow: 1;
-  text-align: center;
+  display: flex;
+  align-items: center;
 }
 
 .right-section {
   display: flex;
-  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
 }
 
 .title {
@@ -150,12 +167,14 @@ main {
 .logo {
   height: 3.5rem;
   width: 3.5rem;
-  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.logout-container {
+.welcome-logout {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-right: 0.5rem;
 }
 
 .logout-link {
@@ -163,7 +182,6 @@ main {
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
-  padding: 0.5rem;
   color: var(--p-zinc-500);
   transition: color 0.3s;
 }
@@ -182,6 +200,18 @@ main {
 
 .menubar .p-menubar-root-list {
   margin: auto;
+}
+
+.dark-mode-toggle {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  cursor: pointer;
+}
+
+.dark-mode-toggle .icon {
+  font-size: 1.5rem;
+  color: var(--p-primary-color);
 }
 
 @media (max-width: 600px) {
@@ -206,6 +236,11 @@ main {
 
   .right-section {
     margin-bottom: 1rem;
+  }
+
+  .welcome-logout {
+    align-items: center;
+    margin-right: 0;
   }
 
   .navbar {
