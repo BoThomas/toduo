@@ -1,29 +1,29 @@
 <template>
   <div class="the-doings">
     <h2>The Doings</h2>
-    <Dialog v-model:visible="dialogVisible" header="Todo Details" :modal="true">
-      <div class="p-fluid">
-        <div class="p-field">
+    <Dialog v-model:visible="dialogVisible" header="Todo Details" :modal="true" :style="{ width: '50vw' }">
+      <div class="formgrid grid">
+        <div class="field col-12">
           <label for="name">Name</label>
-          <InputText id="name" v-model="currentTodo.name" required />
+          <InputText id="name" v-model="currentTodo.name" required class="w-full" />
         </div>
-        <div class="p-field">
+        <div class="field col-12">
           <label for="description">Description</label>
-          <Textarea id="description" v-model="currentTodo.description" required rows="3" />
+          <Textarea id="description" v-model="currentTodo.description" required rows="3" class="w-full" />
         </div>
-        <div class="p-field">
+        <div class="field field col-12">
           <label for="repetition">Repetition</label>
-          <Dropdown id="repetition" v-model="currentTodo.repetition" :options="repetitionOptions" optionLabel="label" optionValue="value" placeholder="Select repetition" />
+          <Dropdown id="repetition" v-model="currentTodo.repetition" :options="repetitionOptions" optionLabel="label" optionValue="value" placeholder="Select repetition" class="w-full" />
         </div>
-        <div class="p-field">
+        <div class="field field col-12 lg:col-6">
           <label for="effort">Effort (minutes)</label>
-          <InputNumber id="effort" v-model="currentTodo.effort" required />
+          <InputNumber id="effort" v-model="currentTodo.effort" required class="w-full" />
         </div>
-        <div class="p-field">
+        <div class="field col-12 lg:col-6">
           <label for="notice">Notice (optional)</label>
-          <InputText id="notice" v-model="currentTodo.notice" />
+          <InputText id="notice" v-model="currentTodo.notice" class="w-full" />
         </div>
-        <div class="p-field-checkbox">
+        <div class="field-checkbox col-12 mt-2">
           <Checkbox id="active" v-model="currentTodo.active" :binary="true" />
           <label for="active">Active</label>
         </div>
@@ -46,8 +46,8 @@
       </Column>
       <Column header="Actions">
         <template #body="slotProps">
-          <Button icon="pi pi-pencil" @click="editTodo(slotProps.data)" class="p-button-rounded p-button-success mr-2" />
-          <Button icon="pi pi-trash" @click="deleteTodo(slotProps.data.id)" class="p-button-rounded p-button-danger" />
+          <Button icon="pi pi-pencil" @click="editTodo(slotProps.data)" class="p-button-rounded p-button-success m-1" />
+          <Button icon="pi pi-trash" @click="deleteTodo(slotProps.data.id)" class="p-button-rounded p-button-danger m-1" />
         </template>
       </Column>
     </DataTable>
