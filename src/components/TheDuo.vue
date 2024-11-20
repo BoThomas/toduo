@@ -24,7 +24,7 @@
       </Column>
     </DataTable>
 
-    <Button label="Trigger Reassignment" @click="triggerReassignment" class="p-mt-3" />
+    <Button label="Trigger Reassignment" @click="triggerReassignment" class="mt-3" />
   </div>
 </template>
 

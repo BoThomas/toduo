@@ -46,20 +46,24 @@
       </Column>
       <Column header="Actions">
         <template #body="slotProps">
-          <Button icon="pi pi-pencil" @click="editTodo(slotProps.data)" class="p-button-rounded p-button-success p-mr-2" />
+          <Button icon="pi pi-pencil" @click="editTodo(slotProps.data)" class="p-button-rounded p-button-success mr-2" />
           <Button icon="pi pi-trash" @click="deleteTodo(slotProps.data.id)" class="p-button-rounded p-button-danger" />
         </template>
       </Column>
     </DataTable>
 
-    <Button label="Add Todo" icon="pi pi-plus" @click="openNewTodoDialog" class="p-mt-3" />
+    <Button label="Add Todo" icon="pi pi-plus" @click="openNewTodoDialog" class="mt-3" />
 
-    <h3>Assign Shitty Points</h3>
+    <h3 class="mt-5">Assign Shitty Points</h3>
     <DataTable :value="todos" responsiveLayout="scroll">
       <Column field="name" header="Name"></Column>
       <Column field="shittyPoints" header="Shitty Points">
         <template #body="slotProps">
-          <InputNumber v-model="slotProps.data.shittyPoints" @input="updateShittyPoints(slotProps.data)" />
+          <div class="shitty-points-container">
+            <Button icon="pi pi-minus" @click="decreaseShittyPoints(slotProps.data)" class="p-button-rounded p-button-text" />
+            <span>{{ slotProps.data.shittyPoints }}</span>
+            <Button icon="pi pi-plus" @click="increaseShittyPoints(slotProps.data)" class="p-button-rounded p-button-text" />
+          </div>
         </template>
       </Column>
     </DataTable>
@@ -187,4 +191,25 @@ const updateShittyPoints = async (todo) => {
     console.error("Error updating shitty points:", error);
   }
 };
+
+const increaseShittyPoints = async (todo) => {
+  todo.shittyPoints += 1;
+  await updateShittyPoints(todo);
+};
+
+const decreaseShittyPoints = async (todo) => {
+  if (todo.shittyPoints > 0) {
+    todo.shittyPoints -= 1;
+    await updateShittyPoints(todo);
+  }
+};
 </script>
+
+<style>
+.shitty-points-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+</style>

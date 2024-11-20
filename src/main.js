@@ -1,4 +1,5 @@
 import "./assets/base.css";
+import "primeflex/primeflex.css";
 
 import { createApp } from "vue";
 import App from "./App.vue";
