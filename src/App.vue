@@ -1,22 +1,22 @@
 <template>
   <div class="app-container">
     <header>
-      <div class="dark-mode-toggle">
-        <span class="icon" @click="toggleDarkMode">
+      <div class="fixed cursor-pointer" style="top: 0.8rem; left: 1.2rem">
+        <span class="text-2xl" style="color: var(--p-primary-color)" @click="toggleDarkMode">
           <span v-if="isDarkMode" class="pi pi-sun"></span>
           <span v-else class="pi pi-moon"></span>
         </span>
       </div>
-      <div class="title">
-        <div class="left-section"></div>
-        <div class="center-section">
-          <img src="@/assets/logo.png" alt="ToDuo Logo" class="logo" />
+      <div class="flex align-items-center justify-content-between flex-column sm:flex-row" style="color: var(--p-primary-color)">
+        <div class="flex-1"></div>
+        <div class="flex align-items-center gap-1">
+          <img src="@/assets/logo.png" alt="ToDuo Logo" class="h-4rem w-4rem mb-2" />
           <h1>ToDuo</h1>
         </div>
-        <div class="right-section">
-          <div v-if="isAuthenticated" class="welcome-logout">
+        <div class="flex-1 justify-content-end">
+          <div v-if="isAuthenticated" class="flex gap-1 flex-column align-items-center sm:align-items-end sm:mr-2">
             <span>welcome {{ user }}!</span>
-            <a @click="logout" class="p-menuitem-link logout-link">
+            <a @click="logout" class="logout-link p-menuitem-link flex align-items-center gap-2 cursor-pointer">
               <span class="pi pi-sign-out"></span>
               <span>logout</span>
             </a>
@@ -24,11 +24,11 @@
         </div>
       </div>
       <div v-if="isLoading">Loading...</div>
-      <div v-else-if="isAuthenticated" class="navbar">
+      <div v-else-if="isAuthenticated" class="sm:flex sm:flex-column sm:align-items-center sm:my-2 mt-4 mb-2">
         <Menubar :model="items" breakpoint="0px" class="menubar" />
       </div>
     </header>
-    <main v-if="!isLoading && isAuthenticated">
+    <main v-if="!isLoading && isAuthenticated" class="py-2 sm:px-5 px-3">
       <router-view></router-view>
     </main>
   </div>
@@ -136,62 +136,13 @@ watch(isLoading, (nowLoading) => {
 </script>
 
 <style>
-main {
-  padding: 0.5rem 3rem;
-}
-
-.left-section {
-  flex: 1;
-}
-
-.center-section {
-  display: flex;
-  align-items: center;
-}
-
-.right-section {
-  display: flex;
-  justify-content: flex-end;
-  flex: 1;
-}
-
-.title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  color: var(--p-primary-color);
-  flex-wrap: wrap;
-}
-
-.logo {
-  height: 3.5rem;
-  width: 3.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.welcome-logout {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  margin-right: 0.5rem;
-}
-
 .logout-link {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
   color: var(--p-zinc-500);
   transition: color 0.3s;
 }
 
 .logout-link:hover {
   color: var(--p-primary-color);
-}
-
-.navbar {
-  margin: 1rem 0;
 }
 
 .active-menu-item div {
@@ -202,57 +153,7 @@ main {
   margin: auto;
 }
 
-.dark-mode-toggle {
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  cursor: pointer;
-}
-
-.dark-mode-toggle .icon {
-  font-size: 1.5rem;
-  color: var(--p-primary-color);
-}
-
-@media (max-width: 600px) {
-  main {
-    padding: 0.5rem 1rem;
-  }
-
-  .title {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .center-section,
-  .right-section {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .center-section {
-    text-align: center;
-  }
-
-  .right-section {
-    margin-bottom: 1rem;
-  }
-
-  .welcome-logout {
-    align-items: center;
-    margin-right: 0;
-  }
-
-  .navbar {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .menubar {
-    width: 100%;
-  }
-
+@media (max-width: 576px) {
   .menubar .p-menubar-root-list {
     flex-direction: column;
     margin: auto;
