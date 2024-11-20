@@ -3,10 +3,13 @@
     <h2>The Duo</h2>
 
     <h3>User Participation</h3>
-    <div v-for="user in users" :key="user.id" class="p-field">
-      <label :for="user.id">{{ user.name }}</label>
-      <Slider v-model="user.participation" @change="updateParticipation" />
-      <span>{{ user.participation }}%</span>
+    <div v-for="user in users" :key="user.id" class="field" style="user-select: none">
+      <label :for="user.id" class="m-0">{{ user.name }}</label>
+      <div class="flex align-items-center">
+        <Slider v-model="user.participation" :disabled="user.locked || (users.filter((u) => !u.locked).length === 1 && !user.locked)" @change="updateParticipation(user.id)" style="flex: 1; margin-right: 10px" />
+        <Button :icon="`pi ${user.locked ? 'pi-lock' : 'pi-unlock'}`" @click="toggleLock(user.id)" :class="{ 'p-button-secondary': user.locked }" class="p-button-rounded p-button-text" />
+        <span class="w-3rem">{{ user.participation }}%</span>
+      </div>
     </div>
 
     <h3>This Week's Assignments</h3>
@@ -14,12 +17,12 @@
       <Column field="todo.name" header="Todo"></Column>
       <Column field="assignedUser" header="Assigned To">
         <template #body="slotProps">
-          <Dropdown v-model="slotProps.data.assignedUser" :options="users" optionLabel="name" optionValue="id" @change="updateAssignment(slotProps.data)" />
+          <Select v-model="slotProps.data.assignedUser" :options="users" optionLabel="name" optionValue="id" @change="updateAssignment(slotProps.data)" />
         </template>
       </Column>
       <Column field="status" header="Status">
         <template #body="slotProps">
-          <Dropdown v-model="slotProps.data.status" :options="statusOptions" @change="updateStatus(slotProps.data)" />
+          <Select v-model="slotProps.data.status" :options="statusOptions" @change="updateStatus(slotProps.data)" />
         </template>
       </Column>
     </DataTable>
@@ -33,7 +36,7 @@ import { ref, onMounted } from "vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Slider from "primevue/slider";
-import Dropdown from "primevue/dropdown";
+import Select from "primevue/select";
 import Button from "primevue/button";
 import { mockApi } from "@/services/mockApi";
 
@@ -55,6 +58,7 @@ const fetchUsers = async () => {
     // });
     // users.value = await response.json();
     users.value = await mockApi.fetchUsers();
+    users.value.forEach((user) => (user.locked = false)); // Initialize locked property
   } catch (error) {
     console.error("Error fetching users:", error);
   }
@@ -74,7 +78,32 @@ const fetchWeeklyAssignments = async () => {
   }
 };
 
-const updateParticipation = async () => {
+const toggleLock = (userId) => {
+  const user = users.value.find((user) => user.id === userId);
+  if (user) {
+    user.locked = !user.locked;
+  }
+};
+
+const updateParticipation = async (changedUserId) => {
+  const totalParticipation = users.value.reduce((sum, user) => sum + user.participation, 0);
+  const excess = totalParticipation - 100;
+
+  if (excess !== 0) {
+    const otherUsers = users.value.filter((user) => user.id !== changedUserId && !user.locked);
+    if (otherUsers.length === 0) {
+      const changedUser = users.value.find((user) => user.id === changedUserId);
+      if (changedUser) {
+        changedUser.participation -= excess;
+      }
+    } else {
+      const adjustment = Math.round(excess / otherUsers.length);
+      otherUsers.forEach((user) => {
+        user.participation = Math.max(0, Math.round(user.participation - adjustment));
+      });
+    }
+  }
+
   try {
     // await fetch("/api/users/participation", {
     //   method: "PUT",
