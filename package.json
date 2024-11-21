@@ -2,8 +2,7 @@
   "name": "toduo",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts & cd frontend && bun run dev"
   },
   "dependencies": {
     "@elysiajs/static": "^1.1.1",
