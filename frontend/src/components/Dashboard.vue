@@ -25,7 +25,10 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Checkbox from 'primevue/checkbox';
 import { mockApi } from '@/services/mockApi';
+import { fetchApi } from '@/services/apiService';
+import { useAuth0 } from '@auth0/auth0-vue';
 
+const auth0 = useAuth0();
 const username = ref('');
 const weeklyTodos = ref([]);
 
@@ -36,13 +39,12 @@ onMounted(async () => {
 
 const fetchWeeklyTodos = async () => {
   try {
-    // const response = await fetch("/api/todos/weekly", {
-    //   headers: {
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    // });
-    // weeklyTodos.value = await response.json();
-    weeklyTodos.value = await mockApi.fetchTodos();
+    const response = await fetchApi(
+      '/todos/weekly',
+      auth0.getAccessTokenSilently(),
+    );
+    weeklyTodos.value = await response.json();
+    //weeklyTodos.value = await mockApi.fetchTodos();
   } catch (error) {
     console.error('Error fetching weekly todos:', error);
   }

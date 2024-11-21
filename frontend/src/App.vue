@@ -152,7 +152,6 @@ watch(isLoading, (nowLoading) => {
       const targetUrl = localStorage.getItem('targetUrl');
       if (targetUrl) {
         localStorage.removeItem('targetUrl');
-        console.log('redirecting to', targetUrl);
         router.push(targetUrl);
         setActiveItem(targetUrl);
       }
