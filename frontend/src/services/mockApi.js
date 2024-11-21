@@ -1,11 +1,11 @@
 const todos = [
   {
     id: 1,
-    name: "Clean the kitchen",
-    description: "Clean all surfaces and mop the floor",
-    repetition: "weekly",
+    name: 'Clean the kitchen',
+    description: 'Clean all surfaces and mop the floor',
+    repetition: 'weekly',
     effort: 60,
-    notice: "",
+    notice: '',
     active: true,
     shittyPoints: 5,
   },
@@ -15,12 +15,12 @@ const todos = [
 const users = [
   {
     id: 1,
-    name: "Thomas",
+    name: 'Thomas',
     participation: 50,
   },
   {
     id: 2,
-    name: "Wife",
+    name: 'Wife',
     participation: 50,
   },
   // ...other mock users...
@@ -31,7 +31,7 @@ const weeklyAssignments = [
     id: 1,
     todo: todos[0],
     assignedUser: users[0],
-    status: "Pending",
+    status: 'Pending',
   },
   // ...other mock assignments...
 ];
@@ -70,7 +70,9 @@ export const mockApi = {
     return Promise.resolve();
   },
   async updateAssignment(updatedAssignment) {
-    const index = weeklyAssignments.findIndex((assignment) => assignment.id === updatedAssignment.id);
+    const index = weeklyAssignments.findIndex(
+      (assignment) => assignment.id === updatedAssignment.id,
+    );
     if (index !== -1) {
       weeklyAssignments[index] = updatedAssignment;
     }

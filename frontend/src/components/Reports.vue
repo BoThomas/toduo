@@ -47,11 +47,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import Chart from "primevue/chart";
-import TabView from "primevue/tabview";
-import TabPanel from "primevue/tabpanel";
-import { mockApi } from "@/services/mockApi";
+import { ref, onMounted } from 'vue';
+import Chart from 'primevue/chart';
+import TabView from 'primevue/tabview';
+import TabPanel from 'primevue/tabpanel';
+import { mockApi } from '@/services/mockApi';
 
 const completedTodosData = ref(null);
 const missedTodosData = ref(null);
@@ -89,7 +89,7 @@ const fetchCompletedTodos = async () => {
       datasets: data.datasets,
     };
   } catch (error) {
-    console.error("Error fetching completed todos:", error);
+    console.error('Error fetching completed todos:', error);
   }
 };
 
@@ -107,7 +107,7 @@ const fetchMissedTodos = async () => {
       datasets: data.datasets,
     };
   } catch (error) {
-    console.error("Error fetching missed todos:", error);
+    console.error('Error fetching missed todos:', error);
   }
 };
 
@@ -121,7 +121,7 @@ const fetchWorkDone = async () => {
     // workDone.value = await response.json();
     workDone.value = await mockApi.fetchWorkDone();
   } catch (error) {
-    console.error("Error fetching work done:", error);
+    console.error('Error fetching work done:', error);
   }
 };
 
@@ -135,7 +135,7 @@ const fetchUpcomingWork = async () => {
     // upcomingWork.value = await response.json();
     upcomingWork.value = await mockApi.fetchUpcomingWork();
   } catch (error) {
-    console.error("Error fetching upcoming work:", error);
+    console.error('Error fetching upcoming work:', error);
   }
 };
 </script>

@@ -5,8 +5,8 @@
 </template>
 
 <script setup>
-import Button from "primevue/button";
-import { useAuth0 } from "@auth0/auth0-vue";
+import Button from 'primevue/button';
+import { useAuth0 } from '@auth0/auth0-vue';
 
 const auth0 = useAuth0();
 

@@ -8,7 +8,11 @@
       <Column field="effort" header="Effort (minutes)"></Column>
       <Column header="Status">
         <template #body="slotProps">
-          <Checkbox v-model="slotProps.data.completed" @change="updateTodoStatus(slotProps.data)" :binary="true" />
+          <Checkbox
+            v-model="slotProps.data.completed"
+            @change="updateTodoStatus(slotProps.data)"
+            :binary="true"
+          />
         </template>
       </Column>
     </DataTable>
@@ -16,17 +20,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import DataTable from "primevue/datatable";
-import Column from "primevue/column";
-import Checkbox from "primevue/checkbox";
-import { mockApi } from "@/services/mockApi";
+import { ref, onMounted } from 'vue';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Checkbox from 'primevue/checkbox';
+import { mockApi } from '@/services/mockApi';
 
-const username = ref("");
+const username = ref('');
 const weeklyTodos = ref([]);
 
 onMounted(async () => {
-  username.value = localStorage.getItem("username") || "";
+  username.value = localStorage.getItem('username') || '';
   await fetchWeeklyTodos();
 });
 
@@ -40,7 +44,7 @@ const fetchWeeklyTodos = async () => {
     // weeklyTodos.value = await response.json();
     weeklyTodos.value = await mockApi.fetchTodos();
   } catch (error) {
-    console.error("Error fetching weekly todos:", error);
+    console.error('Error fetching weekly todos:', error);
   }
 };
 
@@ -56,7 +60,7 @@ const updateTodoStatus = async (todo) => {
     // });
     await mockApi.updateTodo(todo);
   } catch (error) {
-    console.error("Error updating todo status:", error);
+    console.error('Error updating todo status:', error);
   }
 };
 </script>
