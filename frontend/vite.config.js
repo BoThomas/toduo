@@ -16,4 +16,7 @@ export default defineConfig({
     port: 5111,
     https: true,
   },
+  build: {
+    chunkSizeWarningLimit: 1024,
+  },
 });
