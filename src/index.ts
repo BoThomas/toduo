@@ -26,8 +26,9 @@ if (process.env.NODE_ENV === "development") {
   app
     .use(
       staticPlugin({
-        assets: "./frontend/dist",
+        assets: "frontend/dist",
         prefix: "",
+        alwaysStatic: true,
       })
     )
     .get("/", async () => {
