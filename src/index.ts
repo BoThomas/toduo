@@ -3,7 +3,7 @@ import { staticPlugin } from "@elysiajs/static";
 import type { BunFile } from "bun";
 
 let tlsConfig: { cert: BunFile; key: BunFile } | undefined = undefined;
-if (process.env.NODE_ENV === "development") {
+if (process.env.LOCAL_TLS_CERT === "true") {
   tlsConfig = {
     cert: Bun.file("./tls/cert.pem"),
     key: Bun.file("./tls/key.pem"),
