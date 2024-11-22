@@ -2,11 +2,19 @@
   <div class="dashboard">
     <h2>Welcome, {{ username }}</h2>
     <h3>This Week's Todos</h3>
-    <DataTable :value="thisWeeksTodos" responsiveLayout="scroll">
+    <DataTable
+      :value="thisWeeksTodos"
+      responsiveLayout="scroll"
+      :rowClass="
+        (data) => {
+          return data.completed ? 'line-through' : '';
+        }
+      "
+    >
       <Column field="name" header="Name"></Column>
       <Column field="description" header="Description"></Column>
       <Column field="effort" header="Effort (minutes)"></Column>
-      <Column header="Status">
+      <Column header="Completed">
         <template #body="slotProps">
           <Checkbox
             v-model="slotProps.data.completed"
