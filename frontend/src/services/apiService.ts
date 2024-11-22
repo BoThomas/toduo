@@ -2,57 +2,52 @@ const baseUrl = import.meta.env.DEV
   ? `${import.meta.env.VITE_DEV_BACKEND_URL}/api`
   : `${window.location.origin}/api`;
 
-const fetchApi = async (
+const apiRequest = async (
   endpoint: string,
   token: string,
+  method: string,
+  data?: any,
   options: { headers?: Record<string, string> } = {},
 ) => {
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`Error: ${response.statusText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    handleError(error);
-  }
-};
-
-const postApi = async (
-  endpoint: string,
-  token: string,
-  data: any,
-  options: { headers?: Record<string, string> } = {},
-) => {
-  try {
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: 'POST',
+      method,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: data ? JSON.stringify(data) : undefined,
       ...options,
     });
     if (!response.ok) {
       throw new Error(`Error: ${response.statusText}`);
     }
-    return await response.json();
+    const responseData = await response.json();
+    if (!responseData.success) {
+      throw new Error(`API Error: ${responseData.message}`);
+    }
+    return responseData.message;
   } catch (error) {
     handleError(error);
   }
 };
+
+const readAPI = (endpoint: string, token: string, options = {}) =>
+  apiRequest(endpoint, token, 'GET', undefined, options);
+
+const createAPI = (endpoint: string, token: string, data: any, options = {}) =>
+  apiRequest(endpoint, token, 'POST', data, options);
+
+const updateApi = (endpoint: string, token: string, data: any, options = {}) =>
+  apiRequest(endpoint, token, 'PUT', data, options);
+
+const deleteApi = (endpoint: string, token: string, options = {}) =>
+  apiRequest(endpoint, token, 'DELETE', undefined, options);
 
 const handleError = (error: unknown) => {
   console.error('API Service Error:', error);
   // TODO: add toast notification etc.
 };
 
-export { fetchApi, postApi };
+export { readAPI, createAPI, updateApi, deleteApi };
