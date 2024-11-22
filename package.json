@@ -3,7 +3,7 @@
   "version": "1.0.50",
   "scripts": {
     "dev": "bun run --watch src/index.ts & cd frontend && bun run dev",
-    "build": "npm run build-frontend && npm run build-backend",
+    "build": "bun run build-frontend && bun run build-backend",
     "build-frontend": "cd frontend && bun run build",
     "build-backend": "bun build --target=bun src/index.ts --outdir dist",
     "start": "bun run dist/index.js",
@@ -18,6 +18,9 @@
   "devDependencies": {
     "bun-types": "latest",
     "prettier": "^3.3.3"
+  },
+  "engines": {
+    "bun": ">=0.1.0"
   },
   "module": "src/index.js"
 }
