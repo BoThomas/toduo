@@ -10,8 +10,10 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@elysiajs/cors": "^1.1.1",
     "@elysiajs/static": "^1.1.1",
-    "elysia": "latest"
+    "elysia": "latest",
+    "logestic": "^1.2.4"
   },
   "devDependencies": {
     "bun-types": "latest",

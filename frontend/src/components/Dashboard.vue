@@ -43,7 +43,7 @@ const fetchWeeklyTodos = async () => {
       '/todos/weekly',
       auth0.getAccessTokenSilently(),
     );
-    weeklyTodos.value = await response.json();
+    weeklyTodos.value = await response;
     //weeklyTodos.value = await mockApi.fetchTodos();
   } catch (error) {
     console.error('Error fetching weekly todos:', error);
