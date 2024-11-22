@@ -2,19 +2,19 @@
   <div class="reports">
     <h2>Reports</h2>
 
-    <div class="grid">
-      <div class="col-12 md:col-6">
+    <div class="grid grid-cols-12 gap-4">
+      <div class="col-span-12 md:col-span-6">
         <h3>Completed Todos per Person</h3>
         <Chart type="line" :data="completedTodosData" :options="chartOptions" />
       </div>
-      <div class="col-12 md:col-6">
+      <div class="col-span-12 md:col-span-6">
         <h3>Missed Todos per Person</h3>
         <Chart type="line" :data="missedTodosData" :options="chartOptions" />
       </div>
     </div>
 
-    <div class="grid">
-      <div class="col-12 md:col-6 md:mt-3">
+    <div class="grid grid-cols-12 gap-4">
+      <div class="col-span-12 md:col-span-6 md:mt-4">
         <h3>Work Done (in hours)</h3>
         <TabView>
           <TabPanel header="This Week" :value="0">
@@ -28,7 +28,7 @@
           </TabPanel>
         </TabView>
       </div>
-      <div class="col-12 md:col-6 md:mt-3">
+      <div class="col-span-12 md:col-span-6 md:mt-4">
         <h3>Upcoming Work (in hours)</h3>
         <TabView>
           <TabPanel header="This Week" :value="0">

@@ -7,8 +7,8 @@
       :modal="true"
       :style="{ width: '50vw' }"
     >
-      <div class="formgrid grid">
-        <div class="field col-12">
+      <div class="formgrid grid grid-cols-12 gap-4">
+        <div class="field col-span-12">
           <label for="name">Name</label>
           <InputText
             id="name"
@@ -17,7 +17,7 @@
             class="w-full"
           />
         </div>
-        <div class="field col-12">
+        <div class="field col-span-12">
           <label for="description">Description</label>
           <Textarea
             id="description"
@@ -27,7 +27,7 @@
             class="w-full"
           />
         </div>
-        <div class="field field col-12">
+        <div class="field field col-span-12">
           <label for="repetition">Repetition</label>
           <Dropdown
             id="repetition"
@@ -39,7 +39,7 @@
             class="w-full"
           />
         </div>
-        <div class="field field col-12 lg:col-6">
+        <div class="field field col-span-12 lg:col-span-6">
           <label for="effort">Effort (minutes)</label>
           <InputNumber
             id="effort"
@@ -48,11 +48,11 @@
             class="w-full"
           />
         </div>
-        <div class="field col-12 lg:col-6">
+        <div class="field col-span-12 lg:col-span-6">
           <label for="notice">Notice (optional)</label>
           <InputText id="notice" v-model="currentTodo.notice" class="w-full" />
         </div>
-        <div class="field-checkbox col-12 mt-2">
+        <div class="field-checkbox col-span-12 mt-2">
           <Checkbox id="active" v-model="currentTodo.active" :binary="true" />
           <label for="active">Active</label>
         </div>
@@ -103,10 +103,10 @@
       label="Add Todo"
       icon="pi pi-plus"
       @click="openNewTodoDialog"
-      class="mt-3"
+      class="mt-4"
     />
 
-    <h3 class="mt-5">Assign Shitty Points</h3>
+    <h3 class="mt-8">Assign Shitty Points</h3>
     <DataTable :value="todos" responsiveLayout="scroll">
       <Column field="name" header="Name"></Column>
       <Column field="shittyPoints" header="Shitty Points">

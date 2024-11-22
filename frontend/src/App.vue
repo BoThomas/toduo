@@ -12,27 +12,27 @@
         </span>
       </div>
       <div
-        class="flex align-items-center justify-content-between flex-column sm:flex-row"
+        class="flex items-center justify-between flex-col sm:flex-row"
         style="color: var(--p-primary-color)"
       >
         <div class="flex-1"></div>
-        <div class="flex align-items-center gap-1">
+        <div class="flex items-center gap-1">
           <img
             src="@/assets/logo.png"
             alt="ToDuo Logo"
-            class="h-4rem w-4rem mb-2"
+            class="h-16 w-16 mb-2"
           />
           <h1>ToDuo</h1>
         </div>
-        <div class="flex-1 justify-content-end">
+        <div class="flex-1 justify-end">
           <div
             v-if="isAuthenticated"
-            class="flex gap-1 flex-column align-items-center sm:align-items-end sm:mr-2"
+            class="flex gap-1 flex-col items-center sm:items-end sm:mr-2"
           >
             <span>welcome {{ user }}!</span>
             <a
               @click="logout"
-              class="logout-link p-menuitem-link flex align-items-center gap-2 cursor-pointer"
+              class="logout-link p-menuitem-link flex items-center gap-2 cursor-pointer"
             >
               <span class="pi pi-sign-out"></span>
               <span>logout</span>
@@ -43,12 +43,12 @@
       <div v-if="isLoading">Loading...</div>
       <div
         v-else-if="isAuthenticated"
-        class="sm:flex sm:flex-column sm:align-items-center sm:my-2 mt-4 mb-2"
+        class="sm:flex sm:flex-col sm:items-center sm:my-2 mt-6 mb-2"
       >
         <Menubar :model="items" breakpoint="0px" class="menubar" />
       </div>
     </header>
-    <main v-if="!isLoading && isAuthenticated" class="py-2 sm:px-5 px-3">
+    <main v-if="!isLoading && isAuthenticated" class="py-2 sm:px-8 px-4">
       <router-view></router-view>
     </main>
   </div>

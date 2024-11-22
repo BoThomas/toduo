@@ -1,5 +1,4 @@
 import './assets/base.css';
-import 'primeflex/primeflex.css';
 
 import { createApp } from 'vue';
 import App from './App.vue';
@@ -79,6 +78,10 @@ app.use(PrimeVue, {
     preset: MyPreset,
     options: {
       darkModeSelector: '.dark-mode',
+      cssLayer: {
+        name: 'primevue',
+        order: 'tailwind-base, primevue, tailwind-utilities',
+      },
     },
   },
 });

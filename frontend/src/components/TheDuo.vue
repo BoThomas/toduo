@@ -10,7 +10,7 @@
       style="user-select: none"
     >
       <label :for="user.id" class="m-0">{{ user.name }}</label>
-      <div class="flex align-items-center">
+      <div class="flex items-center">
         <Slider
           v-model="user.participation"
           :disabled="
@@ -26,7 +26,7 @@
           :class="{ 'p-button-secondary': user.locked }"
           class="p-button-rounded p-button-text"
         />
-        <span class="w-3rem">{{ user.participation }}%</span>
+        <span class="w-12">{{ user.participation }}%</span>
       </div>
     </div>
 
@@ -58,7 +58,7 @@
     <Button
       label="Trigger Reassignment"
       @click="triggerReassignment"
-      class="mt-3"
+      class="mt-4"
     />
   </div>
 </template>
