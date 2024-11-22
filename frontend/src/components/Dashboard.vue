@@ -7,7 +7,7 @@
       responsiveLayout="scroll"
       :rowClass="
         (data) => {
-          return data.completed ? 'line-through' : '';
+          return data.completed ? 'line-through  text-gray-400' : '';
         }
       "
     >

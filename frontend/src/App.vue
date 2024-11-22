@@ -2,18 +2,13 @@
   <div class="app-container">
     <header>
       <div class="fixed cursor-pointer" style="top: 0.8rem; left: 1.2rem">
-        <span
-          class="text-2xl"
-          style="color: var(--p-primary-color)"
-          @click="toggleDarkMode"
-        >
+        <span class="text-2xl text-primary" @click="toggleDarkMode">
           <span v-if="isDarkMode" class="pi pi-sun"></span>
           <span v-else class="pi pi-moon"></span>
         </span>
       </div>
       <div
-        class="flex items-center justify-between flex-col sm:flex-row"
-        style="color: var(--p-primary-color)"
+        class="flex items-center text-primary justify-between flex-col sm:flex-row"
       >
         <div class="flex-1"></div>
         <div class="flex items-center gap-1">
@@ -178,7 +173,7 @@ watch(isLoading, (nowLoading) => {
   margin: auto;
 }
 
-@media (max-width: 576px) {
+@media (max-width: 640px) {
   .menubar .p-menubar-root-list {
     flex-direction: column;
     margin: auto;
