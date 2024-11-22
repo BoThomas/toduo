@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "compounds": [
+    {
+      "name": "Dev Backend & Frontend",
+      "configurations": ["Dev Backend", "Dev Frontend"]
+    }
+  ],
+  "configurations": [
+    {
+      "name": "Dev Backend",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "bun",
+      "args": ["run", "dev-backend"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Dev Frontend",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "bun",
+      "args": ["run", "dev"],
+      "cwd": "${workspaceFolder}/frontend",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ]
+}
