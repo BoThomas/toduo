@@ -54,7 +54,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth0 } from '@auth0/auth0-vue';
@@ -82,12 +82,12 @@ onMounted(() => {
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value;
   document.documentElement.classList.toggle('dark-mode', isDarkMode.value);
-  localStorage.setItem('darkMode', isDarkMode.value);
+  localStorage.setItem('darkMode', isDarkMode.value.toString());
 };
 
 const activeItem = ref('Dashboard');
 
-const setActiveItem = (label) => {
+const setActiveItem = (label: string) => {
   activeItem.value = label;
 };
 

@@ -19,7 +19,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -41,7 +41,7 @@ const fetchWeeklyTodos = async () => {
   try {
     const response = await fetchApi(
       '/todos/weekly',
-      auth0.getAccessTokenSilently(),
+      await auth0.getAccessTokenSilently(),
     );
     weeklyTodos.value = await response;
     //weeklyTodos.value = await mockApi.fetchTodos();
@@ -50,7 +50,7 @@ const fetchWeeklyTodos = async () => {
   }
 };
 
-const updateTodoStatus = async (todo) => {
+const updateTodoStatus = async (todo: any) => {
   try {
     // await fetch(`/api/todos/${todo.id}`, {
     //   method: "PATCH",

@@ -46,22 +46,22 @@ export const mockApi = {
   async fetchWeeklyAssignments() {
     return Promise.resolve(weeklyAssignments);
   },
-  async updateTodo(updatedTodo) {
+  async updateTodo(updatedTodo: any) {
     const index = todos.findIndex((todo) => todo.id === updatedTodo.id);
     if (index !== -1) {
       todos[index] = updatedTodo;
     }
     return Promise.resolve();
   },
-  async deleteTodo(id) {
+  async deleteTodo(id: number) {
     const index = todos.findIndex((todo) => todo.id === id);
     if (index !== -1) {
       todos.splice(index, 1);
     }
     return Promise.resolve();
   },
-  async updateUserParticipation(updatedUsers) {
-    updatedUsers.forEach((updatedUser) => {
+  async updateUserParticipation(updatedUsers: any) {
+    updatedUsers.forEach((updatedUser: any) => {
       const index = users.findIndex((user) => user.id === updatedUser.id);
       if (index !== -1) {
         users[index].participation = updatedUser.participation;
@@ -69,12 +69,21 @@ export const mockApi = {
     });
     return Promise.resolve();
   },
-  async updateAssignment(updatedAssignment) {
+  async updateAssignment(updatedAssignment: any) {
     const index = weeklyAssignments.findIndex(
       (assignment) => assignment.id === updatedAssignment.id,
     );
     if (index !== -1) {
       weeklyAssignments[index] = updatedAssignment;
+    }
+    return Promise.resolve();
+  },
+  async updateAssignmentStatus(updatedAssignment: any) {
+    const index = weeklyAssignments.findIndex(
+      (assignment) => assignment.id === updatedAssignment.id,
+    );
+    if (index !== -1) {
+      weeklyAssignments[index].status = updatedAssignment.status;
     }
     return Promise.resolve();
   },

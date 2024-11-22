@@ -2,7 +2,11 @@ const baseUrl = import.meta.env.DEV
   ? `${import.meta.env.VITE_DEV_BACKEND_URL}/api`
   : `${window.location.origin}/api`;
 
-const fetchApi = async (endpoint, token, options = {}) => {
+const fetchApi = async (
+  endpoint: string,
+  token: string,
+  options: { headers?: Record<string, string> } = {},
+) => {
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
@@ -20,7 +24,12 @@ const fetchApi = async (endpoint, token, options = {}) => {
   }
 };
 
-const postApi = async (endpoint, token, data, options = {}) => {
+const postApi = async (
+  endpoint: string,
+  token: string,
+  data: any,
+  options: { headers?: Record<string, string> } = {},
+) => {
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'POST',
@@ -41,7 +50,7 @@ const postApi = async (endpoint, token, data, options = {}) => {
   }
 };
 
-const handleError = (error) => {
+const handleError = (error: unknown) => {
   console.error('API Service Error:', error);
   // TODO: add toast notification etc.
 };

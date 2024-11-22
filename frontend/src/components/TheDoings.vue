@@ -130,7 +130,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -143,9 +143,9 @@ import InputNumber from 'primevue/inputnumber';
 import Checkbox from 'primevue/checkbox';
 import { mockApi } from '@/services/mockApi';
 
-const todos = ref([]);
+const todos = ref<any>([]);
 const dialogVisible = ref(false);
-const currentTodo = ref({});
+const currentTodo = ref<any>({});
 const repetitionOptions = [
   { label: 'Once', value: 'once' },
   { label: 'Daily', value: 'daily' },
@@ -185,7 +185,7 @@ const openNewTodoDialog = () => {
   dialogVisible.value = true;
 };
 
-const editTodo = (todo) => {
+const editTodo = (todo: any) => {
   currentTodo.value = { ...todo };
   dialogVisible.value = true;
 };
@@ -218,7 +218,7 @@ const saveTodo = async () => {
   }
 };
 
-const deleteTodo = async (id) => {
+const deleteTodo = async (id: number) => {
   if (confirm('Are you sure you want to delete this todo?')) {
     try {
       // await fetch(`/api/todos/${id}`, {
@@ -236,7 +236,7 @@ const deleteTodo = async (id) => {
   }
 };
 
-const updateShittyPoints = async (todo) => {
+const updateShittyPoints = async (todo: any) => {
   try {
     // await fetch(`/api/todos/${todo.id}/shitty-points`, {
     //   method: "PATCH",
@@ -252,12 +252,12 @@ const updateShittyPoints = async (todo) => {
   }
 };
 
-const increaseShittyPoints = async (todo) => {
+const increaseShittyPoints = async (todo: any) => {
   todo.shittyPoints += 1;
   await updateShittyPoints(todo);
 };
 
-const decreaseShittyPoints = async (todo) => {
+const decreaseShittyPoints = async (todo: any) => {
   if (todo.shittyPoints > 0) {
     todo.shittyPoints -= 1;
     await updateShittyPoints(todo);

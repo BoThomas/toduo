@@ -17,13 +17,13 @@
       <div class="col-12 md:col-6 md:mt-3">
         <h3>Work Done (in hours)</h3>
         <TabView>
-          <TabPanel header="This Week">
+          <TabPanel header="This Week" :value="0">
             <h4>Total Hours: {{ workDone.week }}</h4>
           </TabPanel>
-          <TabPanel header="This Month">
+          <TabPanel header="This Month" :value="1">
             <h4>Total Hours: {{ workDone.month }}</h4>
           </TabPanel>
-          <TabPanel header="This Year">
+          <TabPanel header="This Year" :value="2">
             <h4>Total Hours: {{ workDone.year }}</h4>
           </TabPanel>
         </TabView>
@@ -31,13 +31,13 @@
       <div class="col-12 md:col-6 md:mt-3">
         <h3>Upcoming Work (in hours)</h3>
         <TabView>
-          <TabPanel header="This Week">
+          <TabPanel header="This Week" :value="0">
             <h4>Total Hours: {{ upcomingWork.week }}</h4>
           </TabPanel>
-          <TabPanel header="This Month">
+          <TabPanel header="This Month" :value="1">
             <h4>Total Hours: {{ upcomingWork.month }}</h4>
           </TabPanel>
-          <TabPanel header="This Year">
+          <TabPanel header="This Year" :value="2">
             <h4>Total Hours: {{ upcomingWork.year }}</h4>
           </TabPanel>
         </TabView>
@@ -46,15 +46,15 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import Chart from 'primevue/chart';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import { mockApi } from '@/services/mockApi';
 
-const completedTodosData = ref(null);
-const missedTodosData = ref(null);
+const completedTodosData = ref<any>(null);
+const missedTodosData = ref<any>(null);
 const workDone = ref({ week: 0, month: 0, year: 0 });
 const upcomingWork = ref({ week: 0, month: 0, year: 0 });
 
@@ -83,11 +83,11 @@ const fetchCompletedTodos = async () => {
     //   },
     // });
     // const data = await response.json();
-    const data = await mockApi.fetchCompletedTodos();
-    completedTodosData.value = {
-      labels: data.labels,
-      datasets: data.datasets,
-    };
+    // const data = await mockApi.fetchCompletedTodos();
+    // completedTodosData.value = {
+    //   labels: data.labels,
+    //   datasets: data.datasets,
+    // };
   } catch (error) {
     console.error('Error fetching completed todos:', error);
   }
@@ -101,11 +101,11 @@ const fetchMissedTodos = async () => {
     //   },
     // });
     // const data = await response.json();
-    const data = await mockApi.fetchMissedTodos();
-    missedTodosData.value = {
-      labels: data.labels,
-      datasets: data.datasets,
-    };
+    //const data = await mockApi.fetchMissedTodos();
+    // missedTodosData.value = {
+    //   labels: data.labels,
+    //   datasets: data.datasets,
+    // };
   } catch (error) {
     console.error('Error fetching missed todos:', error);
   }
@@ -119,7 +119,7 @@ const fetchWorkDone = async () => {
     //   },
     // });
     // workDone.value = await response.json();
-    workDone.value = await mockApi.fetchWorkDone();
+    //workDone.value = await mockApi.fetchWorkDone();
   } catch (error) {
     console.error('Error fetching work done:', error);
   }
@@ -133,7 +133,7 @@ const fetchUpcomingWork = async () => {
     //   },
     // });
     // upcomingWork.value = await response.json();
-    upcomingWork.value = await mockApi.fetchUpcomingWork();
+    //upcomingWork.value = await mockApi.fetchUpcomingWork();
   } catch (error) {
     console.error('Error fetching upcoming work:', error);
   }
