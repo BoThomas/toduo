@@ -1,6 +1,6 @@
 <template>
   <div class="the-doings">
-    <h2>The Doings</h2>
+    <h2 class="mb-2">The Doings</h2>
     <Dialog
       v-model:visible="dialogVisible"
       header="Todo Details"
@@ -106,7 +106,7 @@
       class="mt-4"
     />
 
-    <h3 class="mt-8">Assign Shitty Points</h3>
+    <h3 class="mt-10 mb-2">Assign Shitty Points</h3>
     <DataTable :value="todos" responsiveLayout="scroll">
       <Column field="name" header="Name"></Column>
       <Column field="shittyPoints" header="Shitty Points">

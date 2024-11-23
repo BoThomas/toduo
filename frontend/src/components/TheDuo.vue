@@ -1,8 +1,7 @@
 <template>
   <div class="the-duo">
-    <h2>The Duo</h2>
-
-    <h3>User Participation</h3>
+    <h2 class="mb-2">The Duo</h2>
+    <h3 class="mb-4">User Participation</h3>
     <div
       v-for="user in users"
       :key="user.id"
@@ -30,7 +29,7 @@
       </div>
     </div>
 
-    <h3>This Week's Assignments</h3>
+    <h3 class="mt-8 mb-3">This Week's Assignments</h3>
     <DataTable :value="weeklyAssignments" responsiveLayout="scroll">
       <Column field="todo.name" header="Todo"></Column>
       <Column field="assignedUser" header="Assigned To">

@@ -1,7 +1,7 @@
 <template>
   <div class="dashboard">
     <h2>Welcome, {{ username }}</h2>
-    <h3>This Week's Todos</h3>
+    <h3 class="mb-2">This Week's Todos</h3>
     <DataTable
       :value="thisWeeksTodos"
       responsiveLayout="scroll"
