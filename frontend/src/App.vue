@@ -27,7 +27,7 @@
             <span>welcome {{ user }}!</span>
             <a
               @click="logout"
-              class="logout-link p-menuitem-link flex items-center gap-2 cursor-pointer"
+              class="p-menuitem-link flex items-center gap-2 cursor-pointer text-gray-400 transition-colors duration-300 hover:text-primary"
             >
               <span class="pi pi-sign-out"></span>
               <span>logout</span>
@@ -156,15 +156,6 @@ watch(isLoading, (nowLoading) => {
 </script>
 
 <style>
-.logout-link {
-  color: var(--p-zinc-500);
-  transition: color 0.3s;
-}
-
-.logout-link:hover {
-  color: var(--p-primary-color);
-}
-
 .active-menu-item div {
   background-color: var(--p-primary-100) !important;
 }
