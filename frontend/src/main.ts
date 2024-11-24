@@ -1,6 +1,7 @@
 import './assets/base.css';
 
 import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 import App from './App.vue';
 import { createAuth0 } from '@auth0/auth0-vue';
 import router from './router';
@@ -10,6 +11,7 @@ import { definePreset } from '@primevue/themes';
 import 'primeicons/primeicons.css';
 
 const app = createApp(App);
+const pinia = createPinia();
 
 app.use(
   createAuth0({
@@ -20,6 +22,7 @@ app.use(
     },
   }),
 );
+app.use(pinia);
 app.use(router);
 
 // Define a custom preset

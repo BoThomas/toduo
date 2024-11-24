@@ -1,15 +1,18 @@
+import { useAuthStore } from '@/stores/auth';
+
 const baseUrl = import.meta.env.DEV
   ? `${import.meta.env.VITE_DEV_BACKEND_URL}/api`
   : `${window.location.origin}/api`;
 
 const apiRequest = async (
   endpoint: string,
-  token: string,
   method: string,
   data?: any,
   options: { headers?: Record<string, string> } = {},
 ) => {
   try {
+    const token = await useAuthStore().getAccessTokenSilently();
+    console.log(token);
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method,
       headers: {
@@ -33,17 +36,17 @@ const apiRequest = async (
   }
 };
 
-const readAPI = (endpoint: string, token: string, options = {}) =>
-  apiRequest(endpoint, token, 'GET', undefined, options);
+const readAPI = (endpoint: string, options = {}) =>
+  apiRequest(endpoint, 'GET', undefined, options);
 
-const createAPI = (endpoint: string, token: string, data: any, options = {}) =>
-  apiRequest(endpoint, token, 'POST', data, options);
+const createAPI = (endpoint: string, data: any, options = {}) =>
+  apiRequest(endpoint, 'POST', data, options);
 
-const updateApi = (endpoint: string, token: string, data: any, options = {}) =>
-  apiRequest(endpoint, token, 'PUT', data, options);
+const updateApi = (endpoint: string, data: any, options = {}) =>
+  apiRequest(endpoint, 'PUT', data, options);
 
-const deleteApi = (endpoint: string, token: string, options = {}) =>
-  apiRequest(endpoint, token, 'DELETE', undefined, options);
+const deleteApi = (endpoint: string, options = {}) =>
+  apiRequest(endpoint, 'DELETE', undefined, options);
 
 const handleError = (error: unknown) => {
   console.error('API Service Error:', error);

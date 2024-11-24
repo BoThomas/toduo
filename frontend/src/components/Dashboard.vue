@@ -33,9 +33,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Checkbox from 'primevue/checkbox';
 import { readAPI, updateApi } from '@/services/apiService';
-import { useAuth0 } from '@auth0/auth0-vue';
 
-const auth0 = useAuth0();
 const username = ref('');
 const thisWeeksTodos = ref([]);
 
@@ -46,10 +44,7 @@ onMounted(async () => {
 
 const fetchThisWeeksTodos = async () => {
   try {
-    const response = await readAPI(
-      '/todos/due-this-week',
-      await auth0.getAccessTokenSilently(),
-    );
+    const response = await readAPI('/todos/due-this-week');
     thisWeeksTodos.value = await response;
   } catch (error) {
     console.error('Error fetching weekly todos:', error);
@@ -58,7 +53,7 @@ const fetchThisWeeksTodos = async () => {
 
 const updateTodoStatus = async (todo: any) => {
   try {
-    await updateApi(`/todos/${todo.id}`, await auth0.getAccessTokenSilently(), {
+    await updateApi(`/todos/${todo.id}`, {
       completed: todo.completed,
     });
   } catch (error) {
