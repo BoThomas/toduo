@@ -11,8 +11,11 @@ const apiRequest = async (
   options: { headers?: Record<string, string> } = {},
 ) => {
   try {
-    const token = await useAuthStore().getAccessTokenSilently();
-    console.log(token);
+    const token = await useAuthStore().getAccessTokenSilently({
+      authorizationParams: {
+        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+      },
+    });
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method,
       headers: {

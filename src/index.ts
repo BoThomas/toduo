@@ -3,6 +3,7 @@ import { staticPlugin } from '@elysiajs/static';
 import { cors } from '@elysiajs/cors';
 import { Logestic } from 'logestic';
 import { ApiMock } from './apiMock';
+import { authMiddleware } from './authMiddleware';
 import type { BunFile } from 'bun';
 
 let tlsConfig: { cert: BunFile; key: BunFile } | undefined = undefined;
@@ -48,7 +49,12 @@ if (process.env.NODE_ENV === 'development') {
 
 app.group('/api', (apiGroup) =>
   apiGroup
-    .get('/todos/due-this-week', () => {
+    .guard({
+      beforeHandle: authMiddleware,
+    })
+    .get('/todos/due-this-week', (ctx) => {
+      // @ts-ignore (authMiddleware sets the userId)
+      const userId = ctx.userId;
       return { success: true, message: ApiMock.todos };
     })
     .put('/todos/:id', ({ params, body }) => {
