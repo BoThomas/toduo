@@ -9,17 +9,20 @@
     "build-frontend": "cd frontend && bun run build",
     "build-backend": "bun build --target=bun src/index.ts --outdir dist",
     "start": "bun run dist/index.js",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db": "bunx drizzle-kit generate --dialect sqlite --schema src/database/schema.ts --out src/database/migrations"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.1.1",
     "@elysiajs/static": "^1.1.1",
+    "drizzle-orm": "^0.36.4",
     "elysia": "latest",
     "jose": "^5.9.6",
     "logestic": "^1.2.4"
   },
   "devDependencies": {
     "bun-types": "latest",
+    "drizzle-kit": "^0.28.1",
     "prettier": "^3.3.3"
   },
   "engines": {

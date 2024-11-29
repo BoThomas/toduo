@@ -4,6 +4,8 @@ import { cors } from '@elysiajs/cors';
 import { Logestic } from 'logestic';
 import { ApiMock } from './apiMock';
 import { authMiddleware } from './authMiddleware';
+import { db } from './database/db';
+import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
 
 let tlsConfig: { cert: BunFile; key: BunFile } | undefined = undefined;
@@ -74,6 +76,13 @@ app.group('/api', (apiGroup) =>
       }
     }),
 );
+
+// seed the database
+await seedDatabase();
+
+// tmp query
+const result = await db.query.movies.findMany();
+console.log(result);
 
 // Start the server
 app.listen(process.env.PORT || 3000);
