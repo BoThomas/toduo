@@ -1,7 +1,122 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { relations } from 'drizzle-orm';
 
-export const movies = sqliteTable('movies', {
-  id: integer('id').primaryKey(),
-  title: text('name'),
-  releaseYear: integer('release_year'),
+export const users = sqliteTable('users', {
+  id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
+  username: text().unique().notNull(),
+  auth0_id: text().unique().notNull(),
+  deleted_at: integer({ mode: 'timestamp' }),
+  created_at: integer({ mode: 'timestamp' }).notNull(),
+  updated_at: integer({ mode: 'timestamp' }).notNull(),
 });
+
+export const doings = sqliteTable('doings', {
+  id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
+  name: text().notNull(),
+  description: text(),
+  notice: text(),
+  repetition: text({
+    enum: ['once', 'daily', 'weekly', 'monthly'],
+  }).notNull(),
+  effort_in_minutes: integer({ mode: 'number' }).notNull(),
+  is_active: integer({ mode: 'boolean' }), // TODO change to boolean when drizzle-orm supports it
+  deleted_at: integer({ mode: 'timestamp' }),
+  created_at: integer({ mode: 'timestamp' }).notNull(),
+  updated_at: integer({ mode: 'timestamp' }).notNull(),
+});
+
+export const assignments = sqliteTable('assignments', {
+  id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
+  doing_id: integer({ mode: 'number' })
+    .notNull()
+    .references(() => doings.id),
+  user_id: integer({ mode: 'number' })
+    .notNull()
+    .references(() => users.id),
+  due_date: integer({ mode: 'timestamp' }),
+  due_week: integer({ mode: 'number' }),
+  status: text({
+    enum: ['pending', 'completed', 'skipped', 'postponed', 'failed'],
+  }).notNull(),
+  created_at: integer({ mode: 'timestamp' }).notNull(),
+  updated_at: integer({ mode: 'timestamp' }).notNull(),
+});
+
+export const shitty_points = sqliteTable('shitty_points', {
+  id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
+  doing_id: integer({ mode: 'number' })
+    .notNull()
+    .references(() => doings.id),
+  user_id: integer({ mode: 'number' })
+    .notNull()
+    .references(() => users.id),
+  points: integer({ mode: 'number' }).notNull(),
+  created_at: integer({ mode: 'timestamp' }).notNull(),
+  updated_at: integer({ mode: 'timestamp' }).notNull(),
+});
+
+export const history = sqliteTable('history', {
+  id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
+  doing_id: integer({ mode: 'number' })
+    .notNull()
+    .references(() => doings.id),
+  user_id: integer({ mode: 'number' })
+    .notNull()
+    .references(() => users.id),
+  due_date: integer({ mode: 'timestamp' }),
+  due_week: integer({ mode: 'number' }),
+  effort_in_minutes: integer({ mode: 'number' }),
+  status: text(),
+  created_at: integer({ mode: 'timestamp' }),
+  updated_at: integer({ mode: 'timestamp' }),
+});
+
+export const usersRelations = relations(users, ({ many }) => ({
+  doings: many(doings),
+  assignments: many(assignments),
+  shitty_points: many(shitty_points),
+  history: many(history),
+}));
+
+export const doingsRelations = relations(doings, ({ one, many }) => ({
+  user: one(users, {
+    fields: [doings.id],
+    references: [users.id],
+  }),
+  assignments: many(assignments),
+  shitty_points: many(shitty_points),
+  history: many(history),
+}));
+
+export const assignmentsRelations = relations(assignments, ({ one }) => ({
+  doing: one(doings, {
+    fields: [assignments.doing_id],
+    references: [doings.id],
+  }),
+  user: one(users, {
+    fields: [assignments.user_id],
+    references: [users.id],
+  }),
+}));
+
+export const shittyPointsRelations = relations(shitty_points, ({ one }) => ({
+  doing: one(doings, {
+    fields: [shitty_points.doing_id],
+    references: [doings.id],
+  }),
+  user: one(users, {
+    fields: [shitty_points.user_id],
+    references: [users.id],
+  }),
+}));
+
+export const historyRelations = relations(history, ({ one }) => ({
+  doing: one(doings, {
+    fields: [history.doing_id],
+    references: [doings.id],
+  }),
+  user: one(users, {
+    fields: [history.user_id],
+    references: [users.id],
+  }),
+}));

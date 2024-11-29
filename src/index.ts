@@ -81,7 +81,7 @@ app.group('/api', (apiGroup) =>
 await seedDatabase();
 
 // tmp query
-const result = await db.query.movies.findMany();
+const result = await db.query.doings.findMany();
 console.log(result);
 
 // Start the server
