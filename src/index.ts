@@ -2,8 +2,7 @@ import { Elysia } from 'elysia';
 import { staticPlugin } from '@elysiajs/static';
 import { cors } from '@elysiajs/cors';
 import { Logestic } from 'logestic';
-import { ApiMock } from './apiMock';
-import { authMiddleware } from './authMiddleware';
+import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { db } from './database/db';
 import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
@@ -16,11 +15,35 @@ if (process.env.LOCAL_TLS_CERT === 'true') {
   };
 }
 
+// Auth service
+const JWKS = createRemoteJWKSet(
+  new URL('https://thmsdev.eu.auth0.com/.well-known/jwks.json'),
+);
+const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
+  { as: 'scoped' },
+  async ({ headers }) => ({
+    authenticatedUserId: async () => {
+      const authHeader = headers?.['authorization'];
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return '';
+      }
+      const token = authHeader.split(' ')[1];
+      const { payload } = await jwtVerify(token, JWKS, {
+        issuer: 'https://thmsdev.eu.auth0.com/',
+        audience: 'toduo-backend-api',
+      });
+      return payload.sub;
+    },
+  }),
+);
+
 const app = new Elysia({
   serve: {
     tls: tlsConfig,
   },
-}).use(Logestic.preset('common'));
+})
+  .use(Logestic.preset('common')) // Log all requests
+  .use(AuthService); // Add the auth service
 
 if (process.env.NODE_ENV === 'development') {
   // DEV: enable CORS for the frontend
@@ -52,28 +75,15 @@ if (process.env.NODE_ENV === 'development') {
 app.group('/api', (apiGroup) =>
   apiGroup
     .guard({
-      beforeHandle: authMiddleware,
+      // use auth service to guard the route
+      beforeHandle: async ({ authenticatedUserId, error }) => {
+        const userId = await authenticatedUserId();
+        if (!userId) return error(401);
+      },
     })
-    .get('/todos/due-this-week', (ctx) => {
-      // @ts-ignore (authMiddleware sets the userId)
-      const userId = ctx.userId;
-      return { success: true, message: ApiMock.todos };
-    })
-    .put('/todos/:id', ({ params, body }) => {
-      const todoId = parseInt(params.id, 10);
-      const updatedTodo = body;
-
-      const index = ApiMock.todos.findIndex((todo) => todo.id === todoId);
-      if (index !== -1) {
-        if (typeof updatedTodo === 'object' && updatedTodo !== null) {
-          ApiMock.todos[index] = { ...ApiMock.todos[index], ...updatedTodo };
-        } else {
-          return { success: false, message: 'Invalid update data' };
-        }
-        return { success: true, message: ApiMock.todos[index] };
-      } else {
-        return { success: false, message: 'Todo not found' };
-      }
+    .get('/todos/due-this-week', async (ctx) => {
+      const userId = await ctx.authenticatedUserId();
+      return { success: true, message: userId };
     }),
 );
 
@@ -81,8 +91,8 @@ app.group('/api', (apiGroup) =>
 await seedDatabase();
 
 // tmp query
-const result = await db.query.doings.findMany();
-console.log(result);
+// const result = await db.query.doings.findMany();
+// console.log(result);
 
 // Start the server
 app.listen(process.env.PORT || 3000);
