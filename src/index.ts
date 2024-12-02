@@ -15,10 +15,15 @@ if (process.env.LOCAL_TLS_CERT === 'true') {
   };
 }
 
+const JWKS_URI = process.env.AUTH0_JWKS_URI;
+if (!JWKS_URI) {
+  throw new Error('AUTH0_JWKS_URI is not defined');
+}
+
 // Auth service
-const JWKS = createRemoteJWKSet(
-  new URL('https://thmsdev.eu.auth0.com/.well-known/jwks.json'),
-);
+const JWKS = createRemoteJWKSet(new URL(JWKS_URI));
+// create elysia auth service to use in the elysia app
+// use derive to add a scoped function to the Context for usage in route handlers
 const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
   { as: 'scoped' },
   async ({ headers }) => ({
@@ -29,8 +34,8 @@ const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
       }
       const token = authHeader.split(' ')[1];
       const { payload } = await jwtVerify(token, JWKS, {
-        issuer: 'https://thmsdev.eu.auth0.com/',
-        audience: 'toduo-backend-api',
+        issuer: process.env.AUTH0_ISSUER,
+        audience: process.env.AUTH0_AUDIENCE,
       });
       return payload.sub;
     },
