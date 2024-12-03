@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1733264773560,
+      "tag": "0000_light_phalanx",
+      "breakpoints": true
+    }
+  ]
+}
