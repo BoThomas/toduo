@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { staticPlugin } from '@elysiajs/static';
+import { swagger } from '@elysiajs/swagger';
 import { cors } from '@elysiajs/cors';
 import { Logestic } from 'logestic';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
@@ -56,16 +57,24 @@ const app = new Elysia({
   .use(AuthService); // Add the auth service
 
 if (process.env.NODE_ENV === 'development') {
-  // DEV: enable CORS for the frontend
-  app.use(
+  app
+    .use(
     cors({
       origin: /^https:\/\/localhost:\d+$/,
     }),
-  );
+    ) // DEV: enable CORS for the frontend
+    .use(
+      swagger({
+        provider: 'scalar',
+        scalarVersion: '1.25.72',
+        path: 'api-docs',
+        exclude: ['/'],
+      }),
+    ); // DEV: add swagger ui
 
   // DEV: serve a simple message
-  app.get('/', () => {
-    return 'App running in development mode, frontend is served separately.';
+  app.get('/', ({ redirect }) => {
+    return redirect('/api-docs');
   });
 } else {
   // PROD: serve the frontend statically from the dist folder
