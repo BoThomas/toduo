@@ -53,6 +53,17 @@ const app = new Elysia({
     tls: tlsConfig,
   },
 })
+  // Workaround from https://github.com/elysiajs/elysia/issues/771#issuecomment-2282254317
+  // TODO: remove this once the issue is fixed
+  .onParse(async ({ request, contentType }) => {
+    try {
+      if (contentType === 'application/json') {
+        return await request.json();
+      }
+    } catch (error) {
+      return request.text();
+    }
+})
   .use(Logestic.preset('common')) // Log all requests
   .use(AuthService); // Add the auth service
 
