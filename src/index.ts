@@ -15,19 +15,24 @@ if (process.env.LOCAL_TLS_CERT === 'true') {
   };
 }
 
-const JWKS_URI = process.env.AUTH0_JWKS_URI;
-if (!JWKS_URI) {
-  throw new Error('AUTH0_JWKS_URI is not defined');
-}
-
 // Auth service
-const JWKS = createRemoteJWKSet(new URL(JWKS_URI));
+let JWKS: any = undefined;
+if (process.env.AUTH0_DISABLED === 'true') {
+  console.log('** Auth0 disabled, auth running in development mode **');
+} else {
+  const JWKS_URI = process.env.AUTH0_JWKS_URI || '';
+  JWKS = createRemoteJWKSet(new URL(JWKS_URI));
+}
 // create elysia auth service to use in the elysia app
 // use derive to add a scoped function to the Context for usage in route handlers
 const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
   { as: 'scoped' },
   async ({ headers }) => ({
     authenticatedUserId: async () => {
+      if (process.env.AUTH0_DISABLED === 'true') {
+        return 'test-user-id';
+      }
+
       const authHeader = headers?.['authorization'];
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return '';
