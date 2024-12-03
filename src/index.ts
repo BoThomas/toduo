@@ -1,12 +1,21 @@
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { staticPlugin } from '@elysiajs/static';
 import { swagger } from '@elysiajs/swagger';
 import { cors } from '@elysiajs/cors';
 import { Logestic } from 'logestic';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { db } from './database/db';
+import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
+import { eq } from 'drizzle-orm';
+
+// seed the database
+// await seedDatabase();
+
+// tmp query
+// const result = await db.query.doings.findMany();
+// console.log(result);
 
 let tlsConfig: { cert: BunFile; key: BunFile } | undefined = undefined;
 if (process.env.LOCAL_TLS_CERT === 'true') {
@@ -63,16 +72,16 @@ const app = new Elysia({
     } catch (error) {
       return request.text();
     }
-})
+  })
   .use(Logestic.preset('common')) // Log all requests
   .use(AuthService); // Add the auth service
 
 if (process.env.NODE_ENV === 'development') {
   app
     .use(
-    cors({
-      origin: /^https:\/\/localhost:\d+$/,
-    }),
+      cors({
+        origin: /^https:\/\/localhost:\d+$/,
+      }),
     ) // DEV: enable CORS for the frontend
     .use(
       swagger({
@@ -111,18 +120,403 @@ app.group('/api', (apiGroup) =>
         if (!userId) return error(401);
       },
     })
-    .get('/todos/due-this-week', async (ctx) => {
-      const userId = await ctx.authenticatedUserId();
-      return { success: true, message: userId };
-    }),
+    // User joins via invitation
+    .post(
+      '/users/join',
+      async (ctx) => {
+        const { username } = ctx.body;
+        const auth0UserId = (await ctx.authenticatedUserId()) as string;
+        // TODO: validate invitation code
+
+        await db.insert(schema.users).values({
+          username: username,
+          auth0_id: auth0UserId,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        return { success: true, message: 'User joined via invitation' };
+      },
+      {
+        body: t.Object({
+          username: t.String(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+    // get all users
+    .get(
+      '/users',
+      async () => {
+        const users = await db.query.users.findMany({
+          columns: {
+            username: true,
+            auth0_id: true,
+          },
+        });
+        return { success: true, users };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          users: t.Array(
+            t.Object({ username: t.String(), auth0_id: t.String() }),
+          ),
+        }),
+      },
+    )
+    // Create a new doing
+    .post(
+      '/doings',
+      async (ctx) => {
+        const { name, description, notice, repetition, effort_in_minutes } =
+          ctx.body;
+
+        // Logic to create a new doing
+        await db.insert(schema.doings).values({
+          name,
+          description,
+          notice,
+          repetition: repetition as 'once' | 'daily' | 'weekly' | 'monthly',
+          effort_in_minutes,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        return { success: true, message: 'Doing created' };
+      },
+      {
+        body: t.Object({
+          name: t.String(),
+          description: t.Optional(t.String()),
+          notice: t.Optional(t.String()),
+          repetition: t.Union([
+            t.Literal('once'),
+            t.Literal('daily'),
+            t.Literal('weekly'),
+            t.Literal('monthly'),
+          ]),
+          effort_in_minutes: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+    // Get all doings or a doing by id
+    .get(
+      '/doings/:id?',
+      async (ctx) => {
+        const { id } = ctx.params;
+        if (id) {
+          // Logic to get a doing by id
+          const doing = await db.query.doings.findFirst({
+            where: eq(schema.doings.id, Number(id)),
+          });
+          return { success: true, doing };
+        } else {
+          // Logic to get all doings
+          const doings = await db.query.doings.findMany();
+          return { success: true, doings };
+        }
+      },
+      {
+        params: t.Object({
+          id: t.Optional(t.Number()),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          doing: t.Optional(t.Any()),
+          doings: t.Optional(t.Array(t.Any())),
+        }),
+      },
+    )
+    // Update a doing by id
+    .put(
+      '/doings/:id',
+      async (ctx) => {
+        const { id } = ctx.params;
+        const { name, description, notice, repetition, effort_in_minutes } =
+          ctx.body;
+        // Logic to update a doing by id
+        await db
+          .update(schema.doings)
+          .set({
+            name,
+            description,
+            notice,
+            repetition: repetition as 'once' | 'daily' | 'weekly' | 'monthly',
+            effort_in_minutes,
+            updated_at: new Date(),
+          })
+          .where(eq(schema.doings.id, Number(id)));
+        return { success: true, message: 'Doing updated' };
+      },
+      {
+        params: t.Object({
+          id: t.Number(),
+        }),
+        body: t.Object({
+          name: t.Optional(t.String()),
+          description: t.Optional(t.String()),
+          notice: t.Optional(t.String()),
+          repetition: t.Optional(
+            t.Union([
+              t.Literal('once'),
+              t.Literal('daily'),
+              t.Literal('weekly'),
+              t.Literal('monthly'),
+            ]),
+          ),
+          effort_in_minutes: t.Optional(t.Number()),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+    // Delete a doing by id
+    .delete(
+      '/doings/:id',
+      async (ctx) => {
+        const { id } = ctx.params;
+        // Logic to delete a doing by id
+        await db.delete(schema.doings).where(eq(schema.doings.id, Number(id)));
+        return { success: true, message: 'Doing deleted' };
+      },
+      {
+        params: t.Object({
+          id: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+    // Autoassign
+    .post(
+      '/doings/:id/autoassign',
+      async (ctx) => {
+        const { id } = ctx.params;
+        // Logic to autoassign a doing
+        // Example: Insert assignment into the database
+        await db.insert(schema.assignments).values({
+          doing_id: id,
+          user_id: 1, // Example user_id
+          status: 'pending',
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        return { success: true, message: 'Doings autoassigned' };
+      },
+      {
+        params: t.Object({
+          id: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+    // Update assignment status or user
+    .put(
+      '/assignments/:id',
+      async (ctx) => {
+        const { id } = ctx.params;
+        const { status, user_id } = ctx.body;
+        // Logic to update assignment status or user
+        await db
+          .update(schema.assignments)
+          .set({
+            status: status as
+              | 'pending'
+              | 'completed'
+              | 'skipped'
+              | 'postponed'
+              | 'failed',
+            user_id,
+            updated_at: new Date(),
+          })
+          .where(eq(schema.assignments.id, Number(id)));
+        return { success: true, message: 'Assignment updated' };
+      },
+      {
+        params: t.Object({
+          id: t.Number(),
+        }),
+        body: t.Object({
+          status: t.Union([
+            t.Literal('pending'),
+            t.Literal('completed'),
+            t.Literal('skipped'),
+            t.Literal('postponed'),
+            t.Literal('failed'),
+          ]),
+          user_id: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+    // Get assignments
+    .get(
+      '/assignments',
+      async (ctx) => {
+        // Logic to get assignments
+        const assignmentsList = await db.query.assignments.findMany();
+        return { success: true, assignments: assignmentsList };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          assignments: t.Array(t.Any()),
+        }),
+      },
+    )
+    // Create shitty points
+    .post(
+      '/shittypoints',
+      async (ctx) => {
+        const { doing_id, points } = ctx.body;
+
+        const auth0UserId = (await ctx.authenticatedUserId()) as string;
+        const user_id = await db.query.users
+          .findFirst({
+            where: eq(schema.users.auth0_id, auth0UserId),
+            columns: { id: true },
+          })
+          .then((user) => user?.id);
+
+        if (!user_id) {
+          return { success: false, message: 'User not found' };
+        }
+
+        // Check if an entry already exists for the user and doing
+        const existingEntry = await db.query.shitty_points.findFirst({
+          where:
+            eq(schema.shitty_points.user_id, user_id) &&
+            eq(schema.shitty_points.doing_id, doing_id),
+        });
+
+        if (existingEntry) {
+          return {
+            success: false,
+            message: 'Shitty points already exists for this user and doing',
+          };
+        }
+
+        try {
+          await db.insert(schema.shitty_points).values({
+            doing_id,
+            user_id,
+            points,
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+        } catch (error) {
+          console.log(error);
+          return {
+            success: false,
+            message: `Failed to create shitty points, ${error}`,
+          };
+        }
+        return { success: true, message: 'Shitty points created' };
+      },
+      {
+        body: t.Object({
+          doing_id: t.Number(),
+          points: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+    // Get shitty points
+    .get(
+      '/shittypoints',
+      async (ctx) => {
+        const auth0UserId = (await ctx.authenticatedUserId()) as string;
+        const user_id = await db.query.users
+          .findFirst({
+            where: eq(schema.users.auth0_id, auth0UserId),
+            columns: { id: true },
+          })
+          .then((user) => user?.id);
+
+        if (!user_id) {
+          return { success: false, shittyPoints: [] };
+        }
+
+        const pointsList = await db.query.shitty_points.findMany({
+          where: eq(schema.shitty_points.user_id, user_id),
+          columns: {
+            id: true,
+            doing_id: true,
+            points: true,
+          },
+        });
+        return { success: true, shittyPoints: pointsList };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          shittyPoints: t.Array(
+            t.Object({
+              id: t.Number(),
+              doing_id: t.Number(),
+              points: t.Number(),
+            }),
+          ),
+        }),
+      },
+    )
+    // shitty points
+    .put(
+      '/shittypoints/:id',
+      async (ctx) => {
+        const { id } = ctx.params;
+        const { points } = ctx.body;
+        const updatedRows = await db
+          .update(schema.shitty_points)
+          .set({
+            points,
+            updated_at: new Date(),
+          })
+          .where(eq(schema.shitty_points.id, Number(id)))
+          .returning({
+            id: schema.shitty_points.id,
+          });
+
+        if (updatedRows.length > 0) {
+          return { success: true, message: 'Shitty points updated' };
+        } else {
+          return { success: false, message: 'Nothing to update' };
+        }
+      },
+      {
+        params: t.Object({
+          id: t.Number(),
+        }),
+        body: t.Object({
+          points: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    ),
 );
-
-// seed the database
-await seedDatabase();
-
-// tmp query
-// const result = await db.query.doings.findMany();
-// console.log(result);
 
 // Start the server
 app.listen(process.env.PORT || 3000);

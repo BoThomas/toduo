@@ -6,6 +6,8 @@
     "package.json": "package-lock.json, pnpm*, .yarnrc*, yarn*, .eslint*, eslint*, .prettier*, prettier*, .editorconfig"
   },
   "cSpell.words": [
+    "autoassign",
+    "autoassigned",
     "bunx",
     "datatable",
     "elysia",
@@ -17,6 +19,7 @@
     "primeicons",
     "primeui",
     "primevue",
+    "shittypoints",
     "sqlite",
     "SQLITE",
     "toduo",
