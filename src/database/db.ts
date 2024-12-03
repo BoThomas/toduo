@@ -13,4 +13,7 @@ migrate(db, {
   migrationsFolder: 'src/database/migrations',
 });
 
+// Enable foreign key constraints
+db.run('PRAGMA foreign_keys = ON');
+
 export { db };
