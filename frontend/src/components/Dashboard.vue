@@ -11,9 +11,12 @@
         }
       "
     >
-      <Column field="name" header="Name"></Column>
-      <Column field="description" header="Description"></Column>
-      <Column field="effort" header="Effort (minutes)"></Column>
+      <Column field="doing.name" header="Name"></Column>
+      <Column field="doing.description" header="Description"></Column>
+      <Column
+        field="doing.effort_in_minutes"
+        header="Effort (minutes)"
+      ></Column>
       <Column header="Completed">
         <template #body="slotProps">
           <Checkbox
@@ -44,8 +47,11 @@ onMounted(async () => {
 
 const fetchThisWeeksTodos = async () => {
   try {
-    const response = await readAPI('/todos/due-this-week');
-    thisWeeksTodos.value = await response;
+    const response = await readAPI('/todos/this-week');
+    response.forEach((todo: any) => {
+      todo.completed = todo.status === 'completed';
+    });
+    thisWeeksTodos.value = response;
   } catch (error) {
     console.error('Error fetching weekly todos:', error);
   }

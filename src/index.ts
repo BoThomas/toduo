@@ -11,7 +11,7 @@ import type { BunFile } from 'bun';
 import { eq } from 'drizzle-orm';
 
 // seed the database
-// await seedDatabase();
+await seedDatabase();
 
 // tmp query
 // const result = await db.query.doings.findMany();
@@ -370,17 +370,74 @@ app.group('/api', (apiGroup) =>
     .get(
       '/assignments',
       async (ctx) => {
-        // Logic to get assignments
         const assignmentsList = await db.query.assignments.findMany();
-        return { success: true, assignments: assignmentsList };
+        return { success: true, message: assignmentsList };
       },
       {
         response: t.Object({
           success: t.Boolean(),
-          assignments: t.Array(t.Any()),
+          message: t.Array(t.Any()),
         }),
       },
     )
+
+    // Get todos assigned to the current user for the current week
+    .get(
+      '/todos/this-week',
+      async (ctx) => {
+        const auth0UserId = (await ctx.authenticatedUserId()) as string;
+
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(
+          now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1),
+        ); // Adjust to Monday
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Sunday
+
+        console.log('Start of week:', startOfWeek);
+        console.log('End of week:', endOfWeek);
+
+        const currentWeekNumber = Math.ceil(
+          (now.getDate() - startOfWeek.getDate() + 1) / 7,
+        );
+
+        console.log('Current week number:', currentWeekNumber);
+
+        const assignments = await db.query.assignments.findMany({
+          columns: {
+            id: true,
+            status: true,
+          },
+          // where: (assignment, { eq, gt, lt }) =>
+          //   eq(assignment.due_week, currentWeekNumber) ||
+          //   (gt(assignment.due_date, startOfWeek) &&
+          //     lt(assignment.due_date, endOfWeek)),
+          with: {
+            doing: {
+              columns: {
+                name: true,
+                description: true,
+                effort_in_minutes: true,
+              },
+            },
+            user: {
+              where: (user) => eq(user.auth0_id, auth0UserId),
+            },
+          },
+        });
+
+        return { success: true, message: assignments };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.Array(t.Any()),
+        }),
+      },
+    )
+
     // Create shitty points
     .post(
       '/shittypoints',
