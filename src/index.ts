@@ -8,7 +8,7 @@ import { db } from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
-import { eq } from 'drizzle-orm';
+import { and, or, eq, gt, lt } from 'drizzle-orm';
 
 // seed the database
 await seedDatabase();
@@ -40,7 +40,7 @@ const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
   async ({ headers }) => ({
     authenticatedUserId: async () => {
       if (process.env.AUTH0_DISABLED === 'true') {
-        return 'test-user-id';
+        return 'auth0|123456789';
       }
 
       const authHeader = headers?.['authorization'];
@@ -386,47 +386,60 @@ app.group('/api', (apiGroup) =>
       '/todos/this-week',
       async (ctx) => {
         const auth0UserId = (await ctx.authenticatedUserId()) as string;
-
         const now = new Date();
         const dayOfWeek = now.getDay();
         const startOfWeek = new Date(now);
         startOfWeek.setDate(
           now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1),
         ); // Adjust to Monday
+        startOfWeek.setHours(0, 0, 0, 0); // Set to 0 AM
+
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Sunday
+        endOfWeek.setHours(23, 59, 59, 999); // Set to end of the day
 
-        console.log('Start of week:', startOfWeek);
-        console.log('End of week:', endOfWeek);
+        const getCalendarWeek = (date: Date) => {
+          let now = new Date();
+          let firstOfJanuary = new Date(now.getFullYear(), 0, 1);
+          return Math.ceil(
+            ((now.getTime() - firstOfJanuary.getTime()) / 86400000 +
+              firstOfJanuary.getDay() +
+              1) /
+              7,
+          );
+        };
+        const currentWeekNumber = getCalendarWeek(now);
 
-        const currentWeekNumber = Math.ceil(
-          (now.getDate() - startOfWeek.getDate() + 1) / 7,
-        );
-
-        console.log('Current week number:', currentWeekNumber);
-
-        const assignments = await db.query.assignments.findMany({
-          columns: {
-            id: true,
-            status: true,
-          },
-          // where: (assignment, { eq, gt, lt }) =>
-          //   eq(assignment.due_week, currentWeekNumber) ||
-          //   (gt(assignment.due_date, startOfWeek) &&
-          //     lt(assignment.due_date, endOfWeek)),
-          with: {
-            doing: {
-              columns: {
-                name: true,
-                description: true,
-                effort_in_minutes: true,
-              },
-            },
-            user: {
-              where: (user) => eq(user.auth0_id, auth0UserId),
-            },
-          },
-        });
+        const assignments = await db
+          .select({
+            assignmentId: schema.assignments.id,
+            status: schema.assignments.status,
+            doingName: schema.doings.name,
+            doingDescription: schema.doings.description,
+            doingEffort: schema.doings.effort_in_minutes,
+            dueDate: schema.assignments.due_date,
+          })
+          .from(schema.assignments)
+          .innerJoin(
+            schema.doings,
+            eq(schema.assignments.doing_id, schema.doings.id),
+          )
+          .innerJoin(
+            schema.users,
+            eq(schema.assignments.user_id, schema.users.id),
+          )
+          .where(
+            and(
+              eq(schema.users.auth0_id, auth0UserId),
+              or(
+                eq(schema.assignments.due_week, currentWeekNumber),
+                and(
+                  gt(schema.assignments.due_date, startOfWeek),
+                  lt(schema.assignments.due_date, endOfWeek),
+                ),
+              ),
+            ),
+          );
 
         return { success: true, message: assignments };
       },

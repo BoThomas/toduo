@@ -11,12 +11,9 @@
         }
       "
     >
-      <Column field="doing.name" header="Name"></Column>
-      <Column field="doing.description" header="Description"></Column>
-      <Column
-        field="doing.effort_in_minutes"
-        header="Effort (minutes)"
-      ></Column>
+      <Column field="doingName" header="Name"></Column>
+      <Column field="doingDescription" header="Description"></Column>
+      <Column field="doingEffort" header="Effort (minutes)"></Column>
       <Column header="Completed">
         <template #body="slotProps">
           <Checkbox
