@@ -329,8 +329,13 @@ app.group('/api', (apiGroup) =>
       '/assignments/:id',
       async (ctx) => {
         const { id } = ctx.params;
-        const { status, user_id } = ctx.body;
-        // Logic to update assignment status or user
+        const { status } = ctx.body;
+
+        const user_id = await getUserIdFromContext(ctx);
+        if (!user_id) {
+          return { success: false, message: 'User not found' };
+        }
+
         await db
           .update(schema.assignments)
           .set({
@@ -358,7 +363,6 @@ app.group('/api', (apiGroup) =>
             t.Literal('postponed'),
             t.Literal('failed'),
           ]),
-          user_id: t.Number(),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -381,7 +385,7 @@ app.group('/api', (apiGroup) =>
       },
     )
 
-    // Get todos assigned to the current user for the current week
+    // Get todos (= assigned doings) to the current user for the current week
     .get(
       '/todos/this-week',
       async (ctx) => {
@@ -457,13 +461,10 @@ app.group('/api', (apiGroup) =>
       async (ctx) => {
         const { doing_id, points } = ctx.body;
 
-        const auth0UserId = (await ctx.authenticatedUserId()) as string;
-        const user_id = await db.query.users
-          .findFirst({
-            where: eq(schema.users.auth0_id, auth0UserId),
-            columns: { id: true },
-          })
-          .then((user) => user?.id);
+        const user_id = await getUserIdFromContext(ctx);
+        if (!user_id) {
+          return { success: false, message: 'User not found' };
+        }
 
         if (!user_id) {
           return { success: false, message: 'User not found' };
@@ -515,14 +516,7 @@ app.group('/api', (apiGroup) =>
     .get(
       '/shittypoints',
       async (ctx) => {
-        const auth0UserId = (await ctx.authenticatedUserId()) as string;
-        const user_id = await db.query.users
-          .findFirst({
-            where: eq(schema.users.auth0_id, auth0UserId),
-            columns: { id: true },
-          })
-          .then((user) => user?.id);
-
+        const user_id = await getUserIdFromContext(ctx);
         if (!user_id) {
           return { success: false, shittyPoints: [] };
         }
@@ -587,6 +581,16 @@ app.group('/api', (apiGroup) =>
       },
     ),
 );
+
+// helper function to get user from context auth0 id
+const getUserIdFromContext = async (ctx: any) => {
+  const auth0UserId = (await ctx.authenticatedUserId()) as string;
+  const user = await db.query.users.findFirst({
+    where: eq(schema.users.auth0_id, auth0UserId),
+    columns: { id: true },
+  });
+  return user?.id;
+};
 
 // Start the server
 app.listen(process.env.PORT || 3000);

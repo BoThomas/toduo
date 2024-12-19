@@ -56,8 +56,8 @@ const fetchThisWeeksTodos = async () => {
 
 const updateTodoStatus = async (todo: any) => {
   try {
-    await updateApi(`/todos/${todo.id}`, {
-      completed: todo.completed,
+    await updateApi(`/assignments/${todo.assignmentId}`, {
+      status: todo.completed ? 'completed' : 'pending',
     });
   } catch (error) {
     console.error('Error updating todo status:', error);
