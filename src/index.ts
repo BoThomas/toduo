@@ -80,7 +80,7 @@ if (process.env.NODE_ENV === 'development') {
   app
     .use(
       cors({
-        origin: /^https:\/\/localhost:\d+$/,
+        origin: [/^http:\/\/localhost:\d+$/, /^https:\/\/localhost:\d+$/],
       }),
     ) // DEV: enable CORS for the frontend
     .use(
@@ -270,11 +270,11 @@ app.group('/api', (apiGroup) =>
           description: t.Optional(t.Union([t.String(), t.Null()])),
           notice: t.Optional(t.Union([t.String(), t.Null()])),
           repetition: t.Union([
-              t.Literal('once'),
-              t.Literal('daily'),
-              t.Literal('weekly'),
-              t.Literal('monthly'),
-            ]),
+            t.Literal('once'),
+            t.Literal('daily'),
+            t.Literal('weekly'),
+            t.Literal('monthly'),
+          ]),
           effort_in_minutes: t.Number(),
           is_active: t.Boolean(),
         }),
@@ -492,11 +492,11 @@ app.group('/api', (apiGroup) =>
           idObject = await db
             .insert(schema.shitty_points)
             .values({
-            doing_id,
-            user_id,
-            points,
-            created_at: new Date(),
-            updated_at: new Date(),
+              doing_id,
+              user_id,
+              points,
+              created_at: new Date(),
+              updated_at: new Date(),
             })
             .returning({ insertedId: schema.shitty_points.id });
         } catch (error) {
