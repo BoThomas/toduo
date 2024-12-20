@@ -1,4 +1,5 @@
 <template>
+  <Toast />
   <div class="app-container">
     <header>
       <div class="fixed cursor-pointer" style="top: 0.8rem; left: 1.2rem">
@@ -53,6 +54,7 @@
 import { ref, watch, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth0 } from '@auth0/auth0-vue';
+import Toast from 'primevue/toast';
 import Menubar from 'primevue/menubar';
 
 const router = useRouter();
