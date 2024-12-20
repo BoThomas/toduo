@@ -145,7 +145,6 @@ import Textarea from 'primevue/textarea';
 import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import Checkbox from 'primevue/checkbox';
-import { mockApi } from '@/services/mockApi';
 import {
   readAPI,
   createAPI,
@@ -173,7 +172,7 @@ const fetchTodos = async () => {
   try {
     todos.value = await readAPI('/doings');
   } catch (error) {
-    console.error('Error fetching todos:', error);
+    // TODO: negative toast
   }
 };
 
@@ -208,22 +207,20 @@ const saveTodo = async () => {
     } else {
       response = await createAPI('/doings', currentTodo.value);
     }
-    console.log(response);
     closeDialog();
     await fetchTodos();
   } catch (error) {
-    console.error('Error saving todo:', error);
+    // TODO: show error in form
   }
 };
 
 const deleteTodo = async (id: number) => {
   if (confirm('Are you sure you want to delete this todo?')) {
     try {
-      const result = await deleteApi(`/doings/${id}`);
-      console.log(result);
+      await deleteApi(`/doings/${id}`);
       await fetchTodos();
     } catch (error) {
-      console.error('Error deleting todo:', error);
+      // TODO: negative toast
     }
   }
 };
@@ -232,7 +229,7 @@ const fetchShittyPoints = async () => {
   try {
     shittyPoints.value = await readAPI('/shittypoints');
   } catch (error) {
-    console.error('Error fetching shitty points:', error);
+    // TODO: negative toast
   }
 };
 
@@ -243,7 +240,6 @@ const updateShittyPoints = async (shittypoints: any) => {
       result = await updateApi(`/shittypoints/${shittypoints.id}`, {
         points: shittypoints.points,
       });
-      console.log(result);
     } else {
       const newId = await createAPI('/shittypoints', {
         doing_id: shittypoints.doing_id,
@@ -253,7 +249,7 @@ const updateShittyPoints = async (shittypoints: any) => {
       console.log(`New shitty points created with id: ${newId}`);
     }
   } catch (error) {
-    console.error('Error updating shitty points:', error);
+    // TODO: negative toast
   }
 };
 

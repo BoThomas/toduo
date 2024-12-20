@@ -29,13 +29,15 @@ const apiRequest = async (
     if (!response.ok) {
       throw new Error(`Error: ${response.statusText}`);
     }
-    const responseData = await response.json();
-    if (!responseData.success) {
-      throw new Error(`API Error: ${responseData.message}`);
+    const responseJson = await response.json();
+    if (!responseJson.success) {
+      throw new Error(`API Error: ${responseJson.message}`);
     }
-    return responseData.message;
-  } catch (error) {
-    handleError(error);
+    console.log('API Response:', responseJson.message); // TODO: remove
+    return responseJson.data;
+  } catch (error: any) {
+    console.error(error.message);
+    throw new Error(error.message);
   }
 };
 
@@ -50,10 +52,5 @@ const updateApi = (endpoint: string, data: any, options = {}) =>
 
 const deleteApi = (endpoint: string, options = {}) =>
   apiRequest(endpoint, 'DELETE', undefined, options);
-
-const handleError = (error: unknown) => {
-  console.error('API Service Error:', error);
-  // TODO: add toast notification etc.
-};
 
 export { readAPI, createAPI, updateApi, deleteApi };

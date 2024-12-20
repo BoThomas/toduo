@@ -216,11 +216,11 @@ app.group('/api', (apiGroup) =>
           const doing = await db.query.doings.findFirst({
             where: eq(schema.doings.id, Number(id)),
           });
-          return { success: true, message: doing };
+          return { success: true, message: 'Doing selected', data: doing };
         } else {
           // Logic to get all doings
           const doings = await db.query.doings.findMany();
-          return { success: true, message: doings };
+          return { success: true, message: 'Doings selected', data: doings };
         }
       },
       {
@@ -229,7 +229,8 @@ app.group('/api', (apiGroup) =>
         }),
         response: t.Object({
           success: t.Boolean(),
-          message: t.Union([t.Any(), t.Array(t.Any())]),
+          message: t.String(),
+          data: t.Any(),
         }),
       },
     )
@@ -376,19 +377,19 @@ app.group('/api', (apiGroup) =>
       },
     )
     // Get assignments
-    .get(
-      '/assignments',
-      async (ctx) => {
-        const assignmentsList = await db.query.assignments.findMany();
-        return { success: true, message: assignmentsList };
-      },
-      {
-        response: t.Object({
-          success: t.Boolean(),
-          message: t.Array(t.Any()),
-        }),
-      },
-    )
+    // .get(
+    //   '/assignments',
+    //   async (ctx) => {
+    //     const assignmentsList = await db.query.assignments.findMany();
+    //     return { success: true, message: assignmentsList };
+    //   },
+    //   {
+    //     response: t.Object({
+    //       success: t.Boolean(),
+    //       message: t.Array(t.Any()),
+    //     }),
+    //   },
+    // )
 
     // Get todos (= assigned doings) to the current user for the current week
     .get(
@@ -450,12 +451,17 @@ app.group('/api', (apiGroup) =>
             ),
           );
 
-        return { success: true, message: assignments };
+        return {
+          success: true,
+          message: 'Assignments selected',
+          data: assignments,
+        };
       },
       {
         response: t.Object({
           success: t.Boolean(),
-          message: t.Array(t.Any()),
+          message: t.String(),
+          data: t.Array(t.Any()),
         }),
       },
     )
@@ -506,7 +512,11 @@ app.group('/api', (apiGroup) =>
             message: `Failed to create shitty points, ${error}`,
           };
         }
-        return { success: true, message: idObject[0].insertedId };
+        return {
+          success: true,
+          message: 'Shitty points created',
+          data: idObject[0].insertedId,
+        };
       },
       {
         body: t.Object({
@@ -515,7 +525,8 @@ app.group('/api', (apiGroup) =>
         }),
         response: t.Object({
           success: t.Boolean(),
-          message: t.Union([t.Number(), t.String()]),
+          message: t.String(),
+          data: t.Optional(t.Union([t.Number(), t.String()])),
         }),
       },
     )
@@ -525,7 +536,7 @@ app.group('/api', (apiGroup) =>
       async (ctx) => {
         const user_id = await getUserIdFromContext(ctx);
         if (!user_id) {
-          return { success: false, message: [] };
+          return { success: false, message: 'User not found' };
         }
 
         const result = await db
@@ -551,18 +562,25 @@ app.group('/api', (apiGroup) =>
           points: row.points || 0,
         }));
 
-        return { success: true, message: formattedResult };
+        return {
+          success: true,
+          message: 'Shitty points selected',
+          data: formattedResult,
+        };
       },
       {
         response: t.Object({
           success: t.Boolean(),
-          message: t.Array(
-            t.Object({
-              id: t.Union([t.Number(), t.Null()]),
-              doing_id: t.Number(),
-              name: t.String(),
-              points: t.Number(),
-            }),
+          message: t.String(),
+          data: t.Optional(
+            t.Array(
+              t.Object({
+                id: t.Union([t.Number(), t.Null()]),
+                doing_id: t.Number(),
+                name: t.String(),
+                points: t.Number(),
+              }),
+            ),
           ),
         }),
       },
