@@ -216,11 +216,11 @@ app.group('/api', (apiGroup) =>
           const doing = await db.query.doings.findFirst({
             where: eq(schema.doings.id, Number(id)),
           });
-          return { success: true, doing };
+          return { success: true, message: doing };
         } else {
           // Logic to get all doings
           const doings = await db.query.doings.findMany();
-          return { success: true, doings };
+          return { success: true, message: doings };
         }
       },
       {
@@ -229,8 +229,7 @@ app.group('/api', (apiGroup) =>
         }),
         response: t.Object({
           success: t.Boolean(),
-          doing: t.Optional(t.Any()),
-          doings: t.Optional(t.Array(t.Any())),
+          message: t.Union([t.Any(), t.Array(t.Any())]),
         }),
       },
     )
@@ -239,8 +238,14 @@ app.group('/api', (apiGroup) =>
       '/doings/:id',
       async (ctx) => {
         const { id } = ctx.params;
-        const { name, description, notice, repetition, effort_in_minutes } =
-          ctx.body;
+        const {
+          name,
+          description,
+          notice,
+          repetition,
+          effort_in_minutes,
+          is_active,
+        } = ctx.body;
         // Logic to update a doing by id
         await db
           .update(schema.doings)
@@ -250,6 +255,7 @@ app.group('/api', (apiGroup) =>
             notice,
             repetition: repetition as 'once' | 'daily' | 'weekly' | 'monthly',
             effort_in_minutes,
+            is_active,
             updated_at: new Date(),
           })
           .where(eq(schema.doings.id, Number(id)));
@@ -260,18 +266,17 @@ app.group('/api', (apiGroup) =>
           id: t.Number(),
         }),
         body: t.Object({
-          name: t.Optional(t.String()),
-          description: t.Optional(t.String()),
-          notice: t.Optional(t.String()),
-          repetition: t.Optional(
-            t.Union([
+          name: t.String(),
+          description: t.Optional(t.Union([t.String(), t.Null()])),
+          notice: t.Optional(t.Union([t.String(), t.Null()])),
+          repetition: t.Union([
               t.Literal('once'),
               t.Literal('daily'),
               t.Literal('weekly'),
               t.Literal('monthly'),
             ]),
-          ),
-          effort_in_minutes: t.Optional(t.Number()),
+          effort_in_minutes: t.Number(),
+          is_active: t.Boolean(),
         }),
         response: t.Object({
           success: t.Boolean(),

@@ -29,7 +29,7 @@
         </div>
         <div class="field field col-span-12">
           <label for="repetition">Repetition</label>
-          <Dropdown
+          <Select
             id="repetition"
             v-model="currentTodo.repetition"
             :options="repetitionOptions"
@@ -40,10 +40,10 @@
           />
         </div>
         <div class="field field col-span-12 lg:col-span-6">
-          <label for="effort">Effort (minutes)</label>
+          <label for="effort_in_minutes">Effort (minutes)</label>
           <InputNumber
-            id="effort"
-            v-model="currentTodo.effort"
+            id="effort_in_minutes"
+            v-model="currentTodo.effort_in_minutes"
             required
             class="w-full"
           />
@@ -52,9 +52,13 @@
           <label for="notice">Notice (optional)</label>
           <InputText id="notice" v-model="currentTodo.notice" class="w-full" />
         </div>
-        <div class="field-checkbox col-span-12 mt-2">
-          <Checkbox id="active" v-model="currentTodo.active" :binary="true" />
-          <label for="active">Active</label>
+        <div class="field-checkbox col-span-12 mt-2 flex gap-1">
+          <Checkbox
+            id="is_active"
+            v-model="currentTodo.is_active"
+            :binary="true"
+          />
+          <label for="is_active">Active</label>
         </div>
       </div>
       <template #footer>
@@ -72,13 +76,13 @@
       <Column field="name" header="Name"></Column>
       <Column field="description" header="Description"></Column>
       <Column field="repetition" header="Repetition"></Column>
-      <Column field="effort" header="Effort (minutes)"></Column>
-      <Column field="active" header="Active">
+      <Column field="effort_in_minutes" header="Effort (minutes)"></Column>
+      <Column field="is_active" header="Active">
         <template #body="slotProps">
           <i
             :class="{
-              'pi pi-check-circle': slotProps.data.active,
-              'pi pi-times-circle': !slotProps.data.active,
+              'pi pi-check-circle text-green-500': slotProps.data.is_active,
+              'pi pi-times-circle text-red-500': !slotProps.data.is_active,
             }"
           ></i>
         </template>
@@ -138,10 +142,16 @@ import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import Checkbox from 'primevue/checkbox';
 import { mockApi } from '@/services/mockApi';
+import {
+  readAPI,
+  createAPI,
+  updateApi,
+  deleteApi,
+} from '@/services/apiService';
 
 const todos = ref<any>([]);
 const dialogVisible = ref(false);
@@ -160,13 +170,7 @@ onMounted(async () => {
 
 const fetchTodos = async () => {
   try {
-    //   const response = await fetch("/api/todos", {
-    //     headers: {
-    //       Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //     },
-    //   });
-    //   todos.value = await response.json();
-    todos.value = await mockApi.fetchTodos();
+    todos.value = await readAPI('/doings');
   } catch (error) {
     console.error('Error fetching todos:', error);
   }
@@ -177,9 +181,9 @@ const openNewTodoDialog = () => {
     name: '',
     description: '',
     repetition: '',
-    effort: 0,
+    effort_in_minutes: 0,
     notice: '',
-    active: true,
+    is_active: true,
     shittyPoints: 0,
   };
   dialogVisible.value = true;
@@ -196,23 +200,19 @@ const closeDialog = () => {
 
 const saveTodo = async () => {
   try {
-    // const method = currentTodo.value.id ? "PUT" : "POST";
-    // const url = currentTodo.value.id ? `/api/todos/${currentTodo.value.id}` : "/api/todos";
+    const currentTodoId = currentTodo.value.id;
+    let response;
+    if (currentTodoId) {
+      response = await updateApi(`/doings/${currentTodoId}`, currentTodo.value);
+    } else {
+      response = await createAPI('/doings', currentTodo.value);
+    }
 
-    // await fetch(url, {
-    //   method,
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    //   body: JSON.stringify(currentTodo.value),
-    // });
+    console.log(response);
 
-    // await fetchTodos();
-    // closeDialog();
+    closeDialog();
 
-    await mockApi.updateTodo(currentTodo.value);
-    todos.value = await mockApi.fetchTodos();
+    todos.value = await readAPI('/doings');
   } catch (error) {
     console.error('Error saving todo:', error);
   }
@@ -221,15 +221,9 @@ const saveTodo = async () => {
 const deleteTodo = async (id: number) => {
   if (confirm('Are you sure you want to delete this todo?')) {
     try {
-      // await fetch(`/api/todos/${id}`, {
-      //   method: "DELETE",
-      //   headers: {
-      //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-      //   },
-      // });
-      // await fetchTodos();
-      await mockApi.deleteTodo(id);
-      todos.value = await mockApi.fetchTodos();
+      const result = await deleteApi(`/doings/${id}`);
+      console.log(result);
+      todos.value = await readAPI('/doings');
     } catch (error) {
       console.error('Error deleting todo:', error);
     }
