@@ -111,9 +111,9 @@
     />
 
     <h3 class="mt-10 mb-2">Assign Shitty Points</h3>
-    <DataTable :value="todos" responsiveLayout="scroll">
+    <DataTable :value="shittyPoints" responsiveLayout="scroll">
       <Column field="name" header="Name"></Column>
-      <Column field="shittyPoints" header="Shitty Points">
+      <Column field="points" header="Shitty Points">
         <template #body="slotProps">
           <div class="shitty-points-container">
             <Button
@@ -121,7 +121,7 @@
               @click="decreaseShittyPoints(slotProps.data)"
               class="p-button-rounded p-button-text"
             />
-            <span>{{ slotProps.data.shittyPoints }}</span>
+            <span>{{ slotProps.data.points }}</span>
             <Button
               icon="pi pi-plus"
               @click="increaseShittyPoints(slotProps.data)"
@@ -154,6 +154,7 @@ import {
 } from '@/services/apiService';
 
 const todos = ref<any>([]);
+const shittyPoints = ref<any>([]);
 const dialogVisible = ref(false);
 const currentTodo = ref<any>({});
 const repetitionOptions = [
@@ -165,7 +166,7 @@ const repetitionOptions = [
 ];
 
 onMounted(async () => {
-  await fetchTodos();
+  await Promise.all([fetchTodos(), fetchShittyPoints()]);
 });
 
 const fetchTodos = async () => {
@@ -207,12 +208,9 @@ const saveTodo = async () => {
     } else {
       response = await createAPI('/doings', currentTodo.value);
     }
-
     console.log(response);
-
     closeDialog();
-
-    todos.value = await readAPI('/doings');
+    await fetchTodos();
   } catch (error) {
     console.error('Error saving todo:', error);
   }
@@ -223,38 +221,51 @@ const deleteTodo = async (id: number) => {
     try {
       const result = await deleteApi(`/doings/${id}`);
       console.log(result);
-      todos.value = await readAPI('/doings');
+      await fetchTodos();
     } catch (error) {
       console.error('Error deleting todo:', error);
     }
   }
 };
 
-const updateShittyPoints = async (todo: any) => {
+const fetchShittyPoints = async () => {
   try {
-    // await fetch(`/api/todos/${todo.id}/shitty-points`, {
-    //   method: "PATCH",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    //   body: JSON.stringify({ shittyPoints: todo.shittyPoints }),
-    // });
-    await mockApi.updateTodo(todo);
+    shittyPoints.value = await readAPI('/shittypoints');
+  } catch (error) {
+    console.error('Error fetching shitty points:', error);
+  }
+};
+
+const updateShittyPoints = async (shittypoints: any) => {
+  try {
+    let result;
+    if (shittypoints.id) {
+      result = await updateApi(`/shittypoints/${shittypoints.id}`, {
+        points: shittypoints.points,
+      });
+      console.log(result);
+    } else {
+      const newId = await createAPI('/shittypoints', {
+        doing_id: shittypoints.doing_id,
+        points: shittypoints.points,
+      });
+      shittypoints.id = newId;
+      console.log(`New shitty points created with id: ${newId}`);
+    }
   } catch (error) {
     console.error('Error updating shitty points:', error);
   }
 };
 
-const increaseShittyPoints = async (todo: any) => {
-  todo.shittyPoints += 1;
-  await updateShittyPoints(todo);
+const increaseShittyPoints = async (shittypoints: any) => {
+  shittypoints.points += 1;
+  await updateShittyPoints(shittypoints);
 };
 
-const decreaseShittyPoints = async (todo: any) => {
-  if (todo.shittyPoints > 0) {
-    todo.shittyPoints -= 1;
-    await updateShittyPoints(todo);
+const decreaseShittyPoints = async (shittypoints: any) => {
+  if (shittypoints.points > 0) {
+    shittypoints.points -= 1;
+    await updateShittyPoints(shittypoints);
   }
 };
 </script>

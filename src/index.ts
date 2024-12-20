@@ -471,15 +471,12 @@ app.group('/api', (apiGroup) =>
           return { success: false, message: 'User not found' };
         }
 
-        if (!user_id) {
-          return { success: false, message: 'User not found' };
-        }
-
         // Check if an entry already exists for the user and doing
         const existingEntry = await db.query.shitty_points.findFirst({
-          where:
-            eq(schema.shitty_points.user_id, user_id) &&
+          where: and(
+            eq(schema.shitty_points.user_id, user_id),
             eq(schema.shitty_points.doing_id, doing_id),
+          ),
         });
 
         if (existingEntry) {
@@ -489,14 +486,19 @@ app.group('/api', (apiGroup) =>
           };
         }
 
+        let idObject;
+
         try {
-          await db.insert(schema.shitty_points).values({
+          idObject = await db
+            .insert(schema.shitty_points)
+            .values({
             doing_id,
             user_id,
             points,
             created_at: new Date(),
             updated_at: new Date(),
-          });
+            })
+            .returning({ insertedId: schema.shitty_points.id });
         } catch (error) {
           console.log(error);
           return {
@@ -504,7 +506,7 @@ app.group('/api', (apiGroup) =>
             message: `Failed to create shitty points, ${error}`,
           };
         }
-        return { success: true, message: 'Shitty points created' };
+        return { success: true, message: idObject[0].insertedId };
       },
       {
         body: t.Object({
@@ -513,7 +515,7 @@ app.group('/api', (apiGroup) =>
         }),
         response: t.Object({
           success: t.Boolean(),
-          message: t.String(),
+          message: t.Union([t.Number(), t.String()]),
         }),
       },
     )
@@ -523,26 +525,42 @@ app.group('/api', (apiGroup) =>
       async (ctx) => {
         const user_id = await getUserIdFromContext(ctx);
         if (!user_id) {
-          return { success: false, shittyPoints: [] };
+          return { success: false, message: [] };
         }
 
-        const pointsList = await db.query.shitty_points.findMany({
-          where: eq(schema.shitty_points.user_id, user_id),
-          columns: {
-            id: true,
-            doing_id: true,
-            points: true,
-          },
-        });
-        return { success: true, shittyPoints: pointsList };
+        const result = await db
+          .select({
+            id: schema.doings.id,
+            name: schema.doings.name,
+            points: schema.shitty_points.points,
+            shitty_points_id: schema.shitty_points.id,
+          })
+          .from(schema.doings)
+          .leftJoin(
+            schema.shitty_points,
+            and(
+              eq(schema.shitty_points.doing_id, schema.doings.id),
+              eq(schema.shitty_points.user_id, user_id),
+            ),
+          );
+
+        const formattedResult = result.map((row) => ({
+          id: row.shitty_points_id,
+          doing_id: row.id,
+          name: row.name,
+          points: row.points || 0,
+        }));
+
+        return { success: true, message: formattedResult };
       },
       {
         response: t.Object({
           success: t.Boolean(),
-          shittyPoints: t.Array(
+          message: t.Array(
             t.Object({
-              id: t.Number(),
+              id: t.Union([t.Number(), t.Null()]),
               doing_id: t.Number(),
+              name: t.String(),
               points: t.Number(),
             }),
           ),
