@@ -8,7 +8,7 @@ import { db } from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
-import { and, or, eq, gt, lt } from 'drizzle-orm';
+import { and, or, eq, gt, lt, asc } from 'drizzle-orm';
 
 // seed the database
 await seedDatabase();
@@ -189,7 +189,9 @@ app.group('/api', (apiGroup) =>
       },
       {
         body: t.Object({
-          name: t.String(),
+          name: t.String({
+            minLength: 1,
+          }),
           description: t.Optional(t.String()),
           notice: t.Optional(t.String()),
           repetition: t.Union([
@@ -219,7 +221,9 @@ app.group('/api', (apiGroup) =>
           return { success: true, message: 'Doing selected', data: doing };
         } else {
           // Logic to get all doings
-          const doings = await db.query.doings.findMany();
+          const doings = await db.query.doings.findMany({
+            orderBy: [asc(schema.doings.id)],
+          });
           return { success: true, message: 'Doings selected', data: doings };
         }
       },
@@ -267,7 +271,9 @@ app.group('/api', (apiGroup) =>
           id: t.Number(),
         }),
         body: t.Object({
-          name: t.String(),
+          name: t.String({
+            minLength: 1,
+          }),
           description: t.Optional(t.Union([t.String(), t.Null()])),
           notice: t.Optional(t.Union([t.String(), t.Null()])),
           repetition: t.Union([
@@ -553,7 +559,8 @@ app.group('/api', (apiGroup) =>
               eq(schema.shitty_points.doing_id, schema.doings.id),
               eq(schema.shitty_points.user_id, user_id),
             ),
-          );
+          )
+          .orderBy(asc(schema.doings.id));
 
         const formattedResult = result.map((row) => ({
           id: row.shitty_points_id,
