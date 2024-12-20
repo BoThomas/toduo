@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `doings_name_unique` ON `doings` (`name`);

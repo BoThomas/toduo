@@ -12,7 +12,7 @@ export const users = sqliteTable('users', {
 
 export const doings = sqliteTable('doings', {
   id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
+  name: text().unique().notNull(),
   description: text(),
   notice: text(),
   repetition: text({
