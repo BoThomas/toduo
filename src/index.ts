@@ -296,7 +296,17 @@ app.group('/api', (apiGroup) =>
       '/doings/:id',
       async (ctx) => {
         const { id } = ctx.params;
-        // Logic to delete a doing by id
+
+        // remove all assignments for this doing
+        await db
+          .delete(schema.assignments)
+          .where(eq(schema.assignments.doing_id, Number(id)));
+
+        // remove all shitty points for this doing
+        await db
+          .delete(schema.shitty_points)
+          .where(eq(schema.shitty_points.doing_id, Number(id)));
+
         await db.delete(schema.doings).where(eq(schema.doings.id, Number(id)));
         return { success: true, message: 'Doing deleted' };
       },
