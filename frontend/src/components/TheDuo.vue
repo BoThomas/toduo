@@ -8,10 +8,10 @@
       class="field"
       style="user-select: none"
     >
-      <label :for="user.id" class="m-0">{{ user.name }}</label>
+      <label :for="user.id" class="m-0">{{ user.username }}</label>
       <div class="flex items-center">
         <Slider
-          v-model="user.participation"
+          v-model="user.participation_percent"
           :disabled="
             user.locked ||
             (users.filter((u: any) => !u.locked).length === 1 && !user.locked)
@@ -25,20 +25,18 @@
           :class="{ 'p-button-secondary': user.locked }"
           class="p-button-rounded p-button-text"
         />
-        <span class="w-12">{{ user.participation }}%</span>
+        <span class="w-12">{{ user.participation_percent }}%</span>
       </div>
     </div>
 
     <h3 class="mt-8 mb-3">This Week's Assignments</h3>
-    <DataTable :value="weeklyAssignments" responsiveLayout="scroll">
-      <Column field="todo.name" header="Todo"></Column>
+    <DataTable :value="weeklyTodos" responsiveLayout="scroll">
+      <Column field="doingDescription" header="Todo"></Column>
       <Column field="assignedUser" header="Assigned To">
         <template #body="slotProps">
           <Select
-            v-model="slotProps.data.assignedUser"
-            :options="users"
-            optionLabel="name"
-            optionValue="id"
+            v-model="slotProps.data.username"
+            :options="users.map((user: any) => user.username)"
             @change="updateAssignment(slotProps.data)"
           />
         </template>
@@ -69,43 +67,55 @@ import Column from 'primevue/column';
 import Slider from 'primevue/slider';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
+import { useToast } from 'primevue/usetoast';
+import {
+  readAPI,
+  createAPI,
+  updateApi,
+  deleteApi,
+} from '@/services/apiService';
 import { mockApi } from '@/services/mockApi';
 
+const toast = useToast();
 const users = ref<any>([]);
-const weeklyAssignments = ref<any>([]);
-const statusOptions = ['Pending', 'Completed', 'Skipped', 'Postponed'];
+const weeklyTodos = ref<any>([]);
+const statusOptions = [
+  'pending',
+  'completed',
+  'skipped',
+  'postponed',
+  'failed',
+];
 
 onMounted(async () => {
   await fetchUsers();
-  await fetchWeeklyAssignments();
+  await fetchThisWeeksTodos();
 });
 
 const fetchUsers = async () => {
   try {
-    // const response = await fetch("/api/users", {
-    //   headers: {
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    // });
-    // users.value = await response.json();
-    users.value = await mockApi.fetchUsers();
+    users.value = await readAPI('/users');
     users.value.forEach((user: any) => (user.locked = false)); // Initialize locked property
   } catch (error) {
-    console.error('Error fetching users:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load users',
+      life: 3000,
+    });
   }
 };
 
-const fetchWeeklyAssignments = async () => {
+const fetchThisWeeksTodos = async () => {
   try {
-    // const response = await fetch("/api/assignments/weekly", {
-    //   headers: {
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    // });
-    // weeklyAssignments.value = await response.json();
-    weeklyAssignments.value = await mockApi.fetchWeeklyAssignments();
+    weeklyTodos.value = await readAPI('/todos/this-week?allUsers=true');
   } catch (error) {
-    console.error('Error fetching weekly assignments:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load weekly assignments',
+      life: 3000,
+    });
   }
 };
 
@@ -118,7 +128,7 @@ const toggleLock = (userId: number) => {
 
 const updateParticipation = async (changedUserId: number) => {
   const totalParticipation = users.value.reduce(
-    (sum: number, user: any) => sum + user.participation,
+    (sum: number, user: any) => sum + user.participation_percent,
     0,
   );
   const excess = totalParticipation - 100;
@@ -132,14 +142,14 @@ const updateParticipation = async (changedUserId: number) => {
         (user: any) => user.id === changedUserId,
       );
       if (changedUser) {
-        changedUser.participation -= excess;
+        changedUser.participation_percent -= excess;
       }
     } else {
       const adjustment = Math.round(excess / otherUsers.length);
       otherUsers.forEach((user: any) => {
-        user.participation = Math.max(
+        user.participation_percent = Math.max(
           0,
-          Math.round(user.participation - adjustment),
+          Math.round(user.participation_percent - adjustment),
         );
       });
     }
@@ -156,7 +166,12 @@ const updateParticipation = async (changedUserId: number) => {
     // });
     await mockApi.updateUserParticipation(users.value);
   } catch (error) {
-    console.error('Error updating user participation:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not update participation',
+      life: 3000,
+    });
   }
 };
 
@@ -172,7 +187,12 @@ const updateAssignment = async (assignment: any) => {
     // });
     await mockApi.updateAssignment(assignment);
   } catch (error) {
-    console.error('Error updating assignment:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not update assignment',
+      life: 3000,
+    });
   }
 };
 
@@ -188,7 +208,12 @@ const updateStatus = async (assignment: any) => {
     // });
     await mockApi.updateAssignmentStatus(assignment);
   } catch (error) {
-    console.error('Error updating assignment status:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not update assignment status',
+      life: 3000,
+    });
   }
 };
 
@@ -200,11 +225,15 @@ const triggerReassignment = async () => {
     //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
     //   },
     // });
-    // await fetchWeeklyAssignments();
     await mockApi.triggerReassignment();
-    weeklyAssignments.value = await mockApi.fetchWeeklyAssignments();
+    await fetchThisWeeksTodos();
   } catch (error) {
-    console.error('Error triggering reassignment:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Error during reassignment',
+      life: 3000,
+    });
   }
 };
 </script>

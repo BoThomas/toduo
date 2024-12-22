@@ -8,7 +8,7 @@ import { db } from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
-import { and, or, eq, gt, lt, asc } from 'drizzle-orm';
+import { sql, and, or, eq, gt, lt, asc, type SQL } from 'drizzle-orm';
 
 // seed the database
 await seedDatabase();
@@ -163,6 +163,7 @@ app.group('/api', (apiGroup) =>
       async () => {
         const users = await db.query.users.findMany({
           columns: {
+            id: true,
             username: true,
             participation_percent: true,
           },
@@ -175,6 +176,7 @@ app.group('/api', (apiGroup) =>
           message: t.String(),
           data: t.Array(
             t.Object({
+              id: t.Number(),
               username: t.String(),
               participation_percent: t.Number(),
             }),
@@ -371,6 +373,9 @@ app.group('/api', (apiGroup) =>
       async (ctx) => {
         const { id } = ctx.params;
         // Logic to autoassign a doing
+
+        //TODO: validate participation_percent to be between 0 and 100 and add up to 100 over all users
+
         // Example: Insert assignment into the database
         await db.insert(schema.assignments).values({
           doing_id: id,
@@ -456,7 +461,15 @@ app.group('/api', (apiGroup) =>
     .get(
       '/todos/this-week',
       async (ctx) => {
-        const auth0UserId = (await ctx.authenticatedUserId()) as string;
+        const { allUsers } = ctx.query;
+        let userFilter: SQL;
+        if (allUsers) {
+          userFilter = sql`1 = 1`;
+        } else {
+          const auth0UserId = (await ctx.authenticatedUserId()) as string;
+          userFilter = eq(schema.users.auth0_id, auth0UserId);
+        }
+
         const now = new Date();
         const dayOfWeek = now.getDay();
         const startOfWeek = new Date(now);
@@ -481,7 +494,7 @@ app.group('/api', (apiGroup) =>
         };
         const currentWeekNumber = getCalendarWeek(now);
 
-        const assignments = await db
+        const assignmentsQuery = db
           .select({
             assignmentId: schema.assignments.id,
             status: schema.assignments.status,
@@ -489,6 +502,7 @@ app.group('/api', (apiGroup) =>
             doingDescription: schema.doings.description,
             doingEffort: schema.doings.effort_in_minutes,
             dueDate: schema.assignments.due_date,
+            username: schema.users.username,
           })
           .from(schema.assignments)
           .innerJoin(
@@ -501,7 +515,7 @@ app.group('/api', (apiGroup) =>
           )
           .where(
             and(
-              eq(schema.users.auth0_id, auth0UserId),
+              userFilter,
               or(
                 eq(schema.assignments.due_week, currentWeekNumber),
                 and(
@@ -512,6 +526,8 @@ app.group('/api', (apiGroup) =>
             ),
           );
 
+        const assignments = await assignmentsQuery;
+
         return {
           success: true,
           message: 'Assignments selected',
@@ -519,6 +535,9 @@ app.group('/api', (apiGroup) =>
         };
       },
       {
+        query: t.Object({
+          allUsers: t.Optional(t.Boolean()),
+        }),
         response: t.Object({
           success: t.Boolean(),
           message: t.String(),
