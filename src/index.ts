@@ -128,9 +128,20 @@ app.group('/api', (apiGroup) =>
         const auth0UserId = (await ctx.authenticatedUserId()) as string;
         // TODO: validate invitation code
 
+        // check sum of all participation_percent
+        const users = await db.query.users.findMany({
+          columns: { participation_percent: true },
+        });
+        const sum = users.reduce(
+          (acc, user) => acc + user.participation_percent,
+          0,
+        );
+        const newParticipationPercent = 100 - sum;
+
         await db.insert(schema.users).values({
           username: username,
           auth0_id: auth0UserId,
+          participation_percent: newParticipationPercent,
           created_at: new Date(),
           updated_at: new Date(),
         });
@@ -153,20 +164,54 @@ app.group('/api', (apiGroup) =>
         const users = await db.query.users.findMany({
           columns: {
             username: true,
-            auth0_id: true,
+            participation_percent: true,
           },
         });
-        return { success: true, users };
+        return { success: true, message: 'Users selected', data: users };
       },
       {
         response: t.Object({
           success: t.Boolean(),
-          users: t.Array(
-            t.Object({ username: t.String(), auth0_id: t.String() }),
+          message: t.String(),
+          data: t.Array(
+            t.Object({
+              username: t.String(),
+              participation_percent: t.Number(),
+            }),
           ),
         }),
       },
     )
+    // update participation percent
+    .put(
+      '/users/:id',
+      async (ctx) => {
+        const { id } = ctx.params;
+        const { participation_percent } = ctx.body;
+
+        await db
+          .update(schema.users)
+          .set({
+            participation_percent,
+            updated_at: new Date(),
+          })
+          .where(eq(schema.users.id, Number(id)));
+        return { success: true, message: 'Participation percent updated' };
+      },
+      {
+        params: t.Object({
+          id: t.Number(),
+        }),
+        body: t.Object({
+          participation_percent: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+
     // Create a new doing
     .post(
       '/doings',

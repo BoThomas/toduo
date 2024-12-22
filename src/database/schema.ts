@@ -5,6 +5,7 @@ export const users = sqliteTable('users', {
   id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
   username: text().unique().notNull(),
   auth0_id: text().unique().notNull(),
+  participation_percent: integer({ mode: 'number' }).notNull().default(0),
   deleted_at: integer({ mode: 'timestamp' }),
   created_at: integer({ mode: 'timestamp' }).notNull(),
   updated_at: integer({ mode: 'timestamp' }).notNull(),

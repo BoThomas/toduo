@@ -15,6 +15,13 @@
       "when": 1734659884299,
       "tag": "0001_foamy_silver_surfer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1734896590876,
+      "tag": "0002_fancy_texas_twister",
+      "breakpoints": true
     }
   ]
 }

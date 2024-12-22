@@ -9,12 +9,14 @@ export async function seedDatabase() {
       {
         username: 'john_doe',
         auth0_id: 'auth0|123456789',
+        participation_percent: 50,
         created_at: new Date(),
         updated_at: new Date(),
       },
       {
         username: 'jane_doe',
         auth0_id: 'auth0|987654321',
+        participation_percent: 50,
         created_at: new Date(),
         updated_at: new Date(),
       },
