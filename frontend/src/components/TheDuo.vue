@@ -16,7 +16,8 @@
             user.locked ||
             (users.filter((u: any) => !u.locked).length === 1 && !user.locked)
           "
-          @change="updateParticipation(user.id)"
+          @change="updateParticipationLive(user.id)"
+          @slideend="updateParticipation"
           style="flex: 1; margin-right: 10px"
         />
         <Button
@@ -126,7 +127,7 @@ const toggleLock = (userId: number) => {
   }
 };
 
-const updateParticipation = async (changedUserId: number) => {
+const updateParticipationLive = async (changedUserId: number) => {
   const totalParticipation = users.value.reduce(
     (sum: number, user: any) => sum + user.participation_percent,
     0,
@@ -154,17 +155,16 @@ const updateParticipation = async (changedUserId: number) => {
       });
     }
   }
+};
 
+const updateParticipation = async () => {
   try {
-    // await fetch("/api/users/participation", {
-    //   method: "PUT",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    //   body: JSON.stringify(users.value.map((user) => ({ id: user.id, participation: user.participation }))),
-    // });
-    await mockApi.updateUserParticipation(users.value);
+    const usersParticipation = users.value.map((user: any) => ({
+      id: user.id,
+      participation_percent: user.participation_percent,
+    }));
+
+    await updateApi('/users/participation', usersParticipation);
   } catch (error) {
     toast.add({
       severity: 'error',

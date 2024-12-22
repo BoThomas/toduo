@@ -186,27 +186,44 @@ app.group('/api', (apiGroup) =>
     )
     // update participation percent
     .put(
-      '/users/:id',
+      '/users/participation/',
       async (ctx) => {
-        const { id } = ctx.params;
-        const { participation_percent } = ctx.body;
+        const userArray = ctx.body;
 
-        await db
-          .update(schema.users)
-          .set({
-            participation_percent,
-            updated_at: new Date(),
-          })
-          .where(eq(schema.users.id, Number(id)));
+        // check userArray for valid participation_percent
+        const sum = userArray.reduce(
+          (acc: number, user: any) => acc + user.participation_percent,
+          0,
+        );
+        if (sum !== 100) {
+          return {
+            success: false,
+            message: 'Sum of participation_percent must be 100',
+          };
+        }
+
+        // update participation_percent
+        await db.transaction(async (db) => {
+          for (const user of userArray) {
+            await db
+              .update(schema.users)
+              .set({
+                participation_percent: user.participation_percent,
+                updated_at: new Date(),
+              })
+              .where(eq(schema.users.id, user.id));
+          }
+        });
+
         return { success: true, message: 'Participation percent updated' };
       },
       {
-        params: t.Object({
-          id: t.Number(),
-        }),
-        body: t.Object({
-          participation_percent: t.Number(),
-        }),
+        body: t.Array(
+          t.Object({
+            id: t.Number(),
+            participation_percent: t.Number(),
+          }),
+        ),
         response: t.Object({
           success: t.Boolean(),
           message: t.String(),
@@ -373,8 +390,6 @@ app.group('/api', (apiGroup) =>
       async (ctx) => {
         const { id } = ctx.params;
         // Logic to autoassign a doing
-
-        //TODO: validate participation_percent to be between 0 and 100 and add up to 100 over all users
 
         // Example: Insert assignment into the database
         await db.insert(schema.assignments).values({
