@@ -47,7 +47,7 @@
           <Select
             v-model="slotProps.data.status"
             :options="statusOptions"
-            @change="updateStatus(slotProps.data)"
+            @change="updateAssignment(slotProps.data)"
           />
         </template>
       </Column>
@@ -175,43 +175,20 @@ const updateParticipation = async () => {
   }
 };
 
+// for updating the user and status of the assignment
 const updateAssignment = async (assignment: any) => {
+  // as the select component returns the username, we need to find the user id
+  const user = users.value.find((u: any) => u.username === assignment.username);
   try {
-    // await fetch(`/api/assignments/${assignment.id}`, {
-    //   method: "PATCH",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    //   body: JSON.stringify({ assignedUser: assignment.assignedUser }),
-    // });
-    await mockApi.updateAssignment(assignment);
+    await updateApi(`/assignments/${assignment.assignmentId}`, {
+      assignedUserId: user.id,
+      status: assignment.status,
+    });
   } catch (error) {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
       detail: 'Could not update assignment',
-      life: 3000,
-    });
-  }
-};
-
-const updateStatus = async (assignment: any) => {
-  try {
-    // await fetch(`/api/assignments/${assignment.id}/status`, {
-    //   method: "PATCH",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    //   body: JSON.stringify({ status: assignment.status }),
-    // });
-    await mockApi.updateAssignmentStatus(assignment);
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error Message',
-      detail: 'Could not update assignment status',
       life: 3000,
     });
   }

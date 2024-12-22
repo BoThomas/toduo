@@ -384,6 +384,7 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
+
     // Autoassign
     .post(
       '/doings/:id/autoassign',
@@ -411,18 +412,14 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
+
     // Update assignment status or user
     .put(
       '/assignments/:id',
       async (ctx) => {
         const { id } = ctx.params;
-        const { status } = ctx.body;
-
-        const user_id = await getUserIdFromContext(ctx);
-        if (!user_id) {
-          return { success: false, message: 'User not found' };
-        }
-
+        const { assignedUserId, status } = ctx.body;
+        console.log(id, assignedUserId, status);
         await db
           .update(schema.assignments)
           .set({
@@ -432,7 +429,7 @@ app.group('/api', (apiGroup) =>
               | 'skipped'
               | 'postponed'
               | 'failed',
-            user_id,
+            user_id: assignedUserId,
             updated_at: new Date(),
           })
           .where(eq(schema.assignments.id, Number(id)));
@@ -443,6 +440,7 @@ app.group('/api', (apiGroup) =>
           id: t.Number(),
         }),
         body: t.Object({
+          assignedUserId: t.Number(),
           status: t.Union([
             t.Literal('pending'),
             t.Literal('completed'),
@@ -457,20 +455,6 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
-    // Get assignments
-    // .get(
-    //   '/assignments',
-    //   async (ctx) => {
-    //     const assignmentsList = await db.query.assignments.findMany();
-    //     return { success: true, message: assignmentsList };
-    //   },
-    //   {
-    //     response: t.Object({
-    //       success: t.Boolean(),
-    //       message: t.Array(t.Any()),
-    //     }),
-    //   },
-    // )
 
     // Get todos (= assigned doings) to the current user for the current week
     .get(
@@ -517,6 +501,7 @@ app.group('/api', (apiGroup) =>
             doingDescription: schema.doings.description,
             doingEffort: schema.doings.effort_in_minutes,
             dueDate: schema.assignments.due_date,
+            userId: schema.users.id,
             username: schema.users.username,
           })
           .from(schema.assignments)
