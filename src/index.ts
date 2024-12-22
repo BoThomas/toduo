@@ -8,7 +8,7 @@ import { db } from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
-import { sql, and, or, eq, gt, lt, asc, type SQL } from 'drizzle-orm';
+import { sql, and, or, eq, gt, lt, asc, inArray, type SQL } from 'drizzle-orm';
 
 // seed the database
 await seedDatabase();
@@ -419,19 +419,24 @@ app.group('/api', (apiGroup) =>
       async (ctx) => {
         const { id } = ctx.params;
         const { assignedUserId, status } = ctx.body;
-        console.log(id, assignedUserId, status);
+
+        const updateData: any = {
+          status: status as
+            | 'pending'
+            | 'completed'
+            | 'skipped'
+            | 'postponed'
+            | 'failed',
+          updated_at: new Date(),
+        };
+
+        if (assignedUserId !== undefined) {
+          updateData.user_id = assignedUserId;
+        }
+
         await db
           .update(schema.assignments)
-          .set({
-            status: status as
-              | 'pending'
-              | 'completed'
-              | 'skipped'
-              | 'postponed'
-              | 'failed',
-            user_id: assignedUserId,
-            updated_at: new Date(),
-          })
+          .set(updateData)
           .where(eq(schema.assignments.id, Number(id)));
         return { success: true, message: 'Assignment updated' };
       },
@@ -440,7 +445,7 @@ app.group('/api', (apiGroup) =>
           id: t.Number(),
         }),
         body: t.Object({
-          assignedUserId: t.Number(),
+          assignedUserId: t.Optional(t.Number()),
           status: t.Union([
             t.Literal('pending'),
             t.Literal('completed'),
@@ -460,15 +465,50 @@ app.group('/api', (apiGroup) =>
     .get(
       '/todos/this-week',
       async (ctx) => {
-        const { allUsers } = ctx.query;
+        const { allUsers, status } = ctx.query;
+
+        // Optional filter by user
         let userFilter: SQL;
-        if (allUsers) {
+        if (allUsers === 'true') {
           userFilter = sql`1 = 1`;
         } else {
           const auth0UserId = (await ctx.authenticatedUserId()) as string;
           userFilter = eq(schema.users.auth0_id, auth0UserId);
         }
 
+        // Optional filter by status (comma separated list)
+        let statusFilter: SQL;
+        if (status) {
+          const statusArray = status.split(',').map((s: string) => s.trim());
+          if (
+            statusArray.some(
+              (s: string) =>
+                ![
+                  'pending',
+                  'completed',
+                  'skipped',
+                  'postponed',
+                  'failed',
+                ].includes(s),
+            )
+          ) {
+            return { success: false, message: 'Invalid status', data: [] };
+          }
+          statusFilter = inArray(
+            schema.assignments.status,
+            statusArray as (
+              | 'pending'
+              | 'completed'
+              | 'skipped'
+              | 'postponed'
+              | 'failed'
+            )[],
+          );
+        } else {
+          statusFilter = sql`1 = 1`;
+        }
+
+        // Get the start and end of the current week and the current calendar week
         const now = new Date();
         const dayOfWeek = now.getDay();
         const startOfWeek = new Date(now);
@@ -476,11 +516,9 @@ app.group('/api', (apiGroup) =>
           now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1),
         ); // Adjust to Monday
         startOfWeek.setHours(0, 0, 0, 0); // Set to 0 AM
-
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Sunday
         endOfWeek.setHours(23, 59, 59, 999); // Set to end of the day
-
         const getCalendarWeek = (date: Date) => {
           let now = new Date();
           let firstOfJanuary = new Date(now.getFullYear(), 0, 1);
@@ -523,6 +561,7 @@ app.group('/api', (apiGroup) =>
                   lt(schema.assignments.due_date, endOfWeek),
                 ),
               ),
+              statusFilter,
             ),
           );
 
@@ -536,7 +575,8 @@ app.group('/api', (apiGroup) =>
       },
       {
         query: t.Object({
-          allUsers: t.Optional(t.Boolean()),
+          allUsers: t.Optional(t.String()),
+          status: t.Optional(t.String()),
         }),
         response: t.Object({
           success: t.Boolean(),
