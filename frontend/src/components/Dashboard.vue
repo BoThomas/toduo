@@ -32,8 +32,10 @@ import { ref, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Checkbox from 'primevue/checkbox';
+import { useToast } from 'primevue/usetoast';
 import { readAPI, updateApi } from '@/services/apiService';
 
+const toast = useToast();
 const username = ref('');
 const thisWeeksTodos = ref([]);
 
@@ -50,7 +52,12 @@ const fetchThisWeeksTodos = async () => {
     });
     thisWeeksTodos.value = response;
   } catch (error) {
-    console.error('Error fetching weekly todos:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load weekly todos',
+      life: 3000,
+    });
   }
 };
 
@@ -60,7 +67,12 @@ const updateTodoStatus = async (todo: any) => {
       status: todo.completed ? 'completed' : 'pending',
     });
   } catch (error) {
-    console.error('Error updating todo status:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not update todo status',
+      life: 3000,
+    });
   }
 };
 </script>
