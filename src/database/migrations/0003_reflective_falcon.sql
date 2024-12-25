@@ -1,0 +1,1 @@
+ALTER TABLE `doings` ADD `days_per_week` integer;

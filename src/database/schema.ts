@@ -19,6 +19,7 @@ export const doings = sqliteTable('doings', {
   repetition: text({
     enum: ['once', 'daily', 'weekly', 'monthly'],
   }).notNull(),
+  days_per_week: integer({ mode: 'number' }),
   effort_in_minutes: integer({ mode: 'number' }).notNull(),
   is_active: integer({ mode: 'boolean' }), // TODO change to boolean when drizzle-orm supports it
   deleted_at: integer({ mode: 'timestamp' }),

@@ -9,6 +9,7 @@ import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
 import { sql, and, or, eq, gt, lt, asc, inArray, type SQL } from 'drizzle-orm';
+import { AssignmentService } from './autoAssign';
 
 // seed the database
 await seedDatabase();
@@ -235,8 +236,14 @@ app.group('/api', (apiGroup) =>
     .post(
       '/doings',
       async (ctx) => {
-        const { name, description, notice, repetition, effort_in_minutes } =
-          ctx.body;
+        const {
+          name,
+          description,
+          notice,
+          repetition,
+          days_per_week,
+          effort_in_minutes,
+        } = ctx.body;
 
         // Logic to create a new doing
         await db.insert(schema.doings).values({
@@ -244,6 +251,7 @@ app.group('/api', (apiGroup) =>
           description,
           notice,
           repetition: repetition as 'once' | 'daily' | 'weekly' | 'monthly',
+          days_per_week,
           effort_in_minutes,
           is_active: true,
           created_at: new Date(),
@@ -264,6 +272,7 @@ app.group('/api', (apiGroup) =>
             t.Literal('weekly'),
             t.Literal('monthly'),
           ]),
+          days_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
         }),
         response: t.Object({
@@ -312,6 +321,7 @@ app.group('/api', (apiGroup) =>
           description,
           notice,
           repetition,
+          days_per_week,
           effort_in_minutes,
           is_active,
         } = ctx.body;
@@ -323,6 +333,7 @@ app.group('/api', (apiGroup) =>
             description,
             notice,
             repetition: repetition as 'once' | 'daily' | 'weekly' | 'monthly',
+            days_per_week,
             effort_in_minutes,
             is_active,
             updated_at: new Date(),
@@ -346,6 +357,7 @@ app.group('/api', (apiGroup) =>
             t.Literal('weekly'),
             t.Literal('monthly'),
           ]),
+          days_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
           is_active: t.Boolean(),
         }),

@@ -9,7 +9,7 @@
     <Form
       v-slot="$form"
       :initialValues="currentDoing"
-      :resolver
+      :resolver="resolver"
       @submit="saveDoing"
       class="formgrid grid grid-cols-12 gap-4"
     >
@@ -28,7 +28,14 @@
         <label for="description">Description</label>
         <Textarea id="description" name="description" rows="3" class="w-full" />
       </div>
-      <div class="field field col-span-12">
+      <div
+        :class="[
+          'field',
+          $form.repetition && $form.repetition.value === 'daily'
+            ? 'col-span-12 lg:col-span-6'
+            : 'col-span-12',
+        ]"
+      >
         <label for="repetition">Repetition</label>
         <Select
           id="repetition"
@@ -47,7 +54,26 @@
           >{{ $form.repetition.error?.message }}</Message
         >
       </div>
-      <div class="field field col-span-12 lg:col-span-6">
+      <div
+        class="field col-span-12 lg:col-span-6"
+        v-if="$form.repetition && $form.repetition.value === 'daily'"
+      >
+        <label for="days_per_week">Days per Week</label>
+        <Select
+          id="days_per_week"
+          name="days_per_week"
+          :options="[2, 3, 4, 5, 6, 7]"
+          class="w-full"
+        />
+        <Message
+          v-if="$form.days_per_week?.invalid"
+          severity="error"
+          size="small"
+          variant="simple"
+          >{{ $form.days_per_week.error?.message }}
+        </Message>
+      </div>
+      <div class="field col-span-12 lg:col-span-6">
         <label for="effort_in_minutes">Effort (minutes)</label>
         <InputNumber
           id="effort_in_minutes"
@@ -85,7 +111,14 @@
   <DataTable :value="doings" responsiveLayout="scroll">
     <Column field="name" header="Name"></Column>
     <Column field="description" header="Description"></Column>
-    <Column field="repetition" header="Repetition"></Column>
+    <Column field="repetition" header="Repetition">
+      <template #body="slotProps">
+        {{ slotProps.data.repetition }}
+        <span v-if="slotProps.data.days_per_week">
+          ({{ slotProps.data.days_per_week }}x)
+        </span>
+      </template>
+    </Column>
     <Column field="effort_in_minutes" header="Effort (minutes)"></Column>
     <Column field="is_active" header="Active">
       <template #body="slotProps">
@@ -188,6 +221,10 @@ const resolver = ({ values }: any) => {
     errors.repetition = [{ message: 'required' }];
   }
 
+  if (values.repetition === 'daily' && !values.days_per_week) {
+    errors.days_per_week = [{ message: 'required' }];
+  }
+
   if (!values.effort_in_minutes) {
     errors.effort_in_minutes = [{ message: 'required' }];
   }
@@ -266,6 +303,9 @@ const saveDoing = async (formData: any) => {
       name: formData.states.name.value,
       description: formData.states.description.value,
       repetition: formData.states.repetition.value,
+      days_per_week: formData.states.days_per_week?.value
+        ? parseInt(formData.states.days_per_week.value)
+        : undefined,
       effort_in_minutes: formData.states.effort_in_minutes.value,
       notice: formData.states.notice.value,
       is_active: formData.states.is_active.value,
