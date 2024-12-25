@@ -80,7 +80,13 @@ import { mockApi } from '@/services/mockApi';
 const toast = useToast();
 const users = ref<any>([]);
 const weeklyTodos = ref<any>([]);
-const statusOptions = ['pending', 'completed', 'skipped', 'postponed'];
+const statusOptions = [
+  'waiting',
+  'pending',
+  'completed',
+  'skipped',
+  'postponed',
+];
 
 onMounted(async () => {
   await fetchUsers();

@@ -38,7 +38,7 @@ export const assignments = sqliteTable('assignments', {
   due_date: integer({ mode: 'timestamp' }),
   due_week: integer({ mode: 'number' }),
   status: text({
-    enum: ['pending', 'completed', 'skipped', 'postponed', 'failed'],
+    enum: ['waiting', 'pending', 'completed', 'skipped', 'postponed', 'failed'],
   }).notNull(),
   created_at: integer({ mode: 'timestamp' }).notNull(),
   updated_at: integer({ mode: 'timestamp' }).notNull(),

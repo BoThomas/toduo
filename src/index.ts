@@ -434,6 +434,7 @@ app.group('/api', (apiGroup) =>
 
         const updateData: any = {
           status: status as
+            | 'waiting'
             | 'pending'
             | 'completed'
             | 'skipped'
@@ -459,6 +460,7 @@ app.group('/api', (apiGroup) =>
         body: t.Object({
           assignedUserId: t.Optional(t.Number()),
           status: t.Union([
+            t.Literal('waiting'),
             t.Literal('pending'),
             t.Literal('completed'),
             t.Literal('skipped'),
@@ -509,6 +511,7 @@ app.group('/api', (apiGroup) =>
           statusFilter = inArray(
             schema.assignments.status,
             statusArray as (
+              | 'waiting'
               | 'pending'
               | 'completed'
               | 'skipped'
