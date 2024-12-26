@@ -66,6 +66,8 @@ export const history = sqliteTable('history', {
   user_id: integer({ mode: 'number' })
     .notNull()
     .references(() => users.id),
+  repetition: text(),
+  days_per_week: integer({ mode: 'number' }),
   due_date: integer({ mode: 'timestamp' }),
   due_week: integer({ mode: 'number' }),
   effort_in_minutes: integer({ mode: 'number' }),

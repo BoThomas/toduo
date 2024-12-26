@@ -178,6 +178,7 @@ export class AssignmentService {
         assignments.push({ doing, user: bestUser });
         if (ENABLE_LOGGING) {
           console.log(`Assigned doing ${doing.id} to user ${bestUser.id}`);
+          console.log('---');
         }
       }
     });
@@ -212,10 +213,10 @@ export class AssignmentService {
         }
 
         // Penalize if the user recently completed the doing
-        const historyEntry = todoHistory.find(
+        const recentCompletions = todoHistory.filter(
           (h) => h.doing_id === doing.id && h.user_id === user.id,
         );
-        if (historyEntry) {
+        recentCompletions.forEach((historyEntry) => {
           const recencyPenalty = this.calculateRecencyPenalty(historyEntry);
           score -= recencyPenalty;
           if (ENABLE_LOGGING) {
@@ -223,7 +224,7 @@ export class AssignmentService {
               `Penalized ${recencyPenalty} points for user ${user.id} on doing ${doing.id} due to recent completion`,
             );
           }
-        }
+        });
 
         // Add score to the map
         scores.set(`${doing.id}-${user.id}`, score);
@@ -279,7 +280,10 @@ export class AssignmentService {
     if (daysAgo > 60) {
       return 0;
     }
-    return Math.round(5 - (daysAgo / 60) * 4); // Linearly decay penalty from 5 to 1 over 60 days
+
+    return Math.round(
+      (5 - (daysAgo / 60) * 4) / (historyEntry.days_per_week ?? 1),
+    ); // Linearly decay penalty from 5 to 1 over 60 days
   }
 
   // Helper: Save assignments to the database
@@ -316,7 +320,7 @@ export class AssignmentService {
     });
 
     if (dryRun) {
-      console.log('Dry run: Assignments will not be saved to the database');
+      console.log('Dry run, assignments will not be saved to the database:');
       console.log(assignmentsToSave);
       return;
     }
