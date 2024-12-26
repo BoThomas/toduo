@@ -46,7 +46,9 @@ onMounted(async () => {
 
 const fetchThisWeeksTodos = async () => {
   try {
-    const response = await readAPI('/todos/this-week?status=pending,completed');
+    const response = await readAPI(
+      '/todos/this-week?status=pending,completed,waiting',
+    );
     response.forEach((todo: any) => {
       todo.completed = todo.status === 'completed';
     });

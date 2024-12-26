@@ -15,10 +15,6 @@ import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 // seed the database
 await seedDatabase();
 
-// tmp query
-// const result = await db.query.doings.findMany();
-// console.log(result);
-
 let tlsConfig: { cert: BunFile; key: BunFile } | undefined = undefined;
 if (process.env.LOCAL_TLS_CERT === 'true') {
   tlsConfig = {
@@ -511,6 +507,7 @@ app.group('/api', (apiGroup) =>
             statusArray.some(
               (s: string) =>
                 ![
+                  'waiting',
                   'pending',
                   'completed',
                   'skipped',
