@@ -32,8 +32,17 @@
 
     <h3 class="mt-8 mb-3">This Week's Assignments</h3>
     <DataTable :value="weeklyTodos" responsiveLayout="scroll">
-      <Column field="doingName" header="Todo"></Column>
-      <Column field="assignedUser" header="Assigned To">
+      <Column header="Todo">
+        <template #body="slotProps">
+          {{ slotProps.data.doingName }}
+          <span v-if="slotProps.data.doingRepetition === 'daily'">
+            ({{ slotProps.data.calcCounterCurrent }}/{{
+              slotProps.data.calcCounterTotal
+            }})
+          </span>
+        </template>
+      </Column>
+      <Column header="Assigned To">
         <template #body="slotProps">
           <Select
             v-model="slotProps.data.username"
@@ -42,7 +51,7 @@
           />
         </template>
       </Column>
-      <Column field="status" header="Status">
+      <Column header="Status">
         <template #body="slotProps">
           <Select
             v-model="slotProps.data.status"
@@ -110,6 +119,7 @@ const fetchUsers = async () => {
 const fetchThisWeeksTodos = async () => {
   try {
     weeklyTodos.value = await readAPI('/todos/this-week?allUsers=true');
+    console.log(weeklyTodos.value);
   } catch (error) {
     toast.add({
       severity: 'error',

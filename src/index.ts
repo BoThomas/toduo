@@ -550,10 +550,11 @@ app.group('/api', (apiGroup) =>
           .select({
             assignmentId: schema.assignments.id,
             status: schema.assignments.status,
+            doingId: schema.doings.id,
             doingName: schema.doings.name,
             doingDescription: schema.doings.description,
             doingEffort: schema.doings.effort_in_minutes,
-            dueDate: schema.assignments.due_date,
+            doingRepetition: schema.doings.repetition,
             userId: schema.users.id,
             username: schema.users.username,
           })
@@ -581,11 +582,35 @@ app.group('/api', (apiGroup) =>
           );
 
         const assignments = await assignmentsQuery;
+        // Add calcCounterCurrent and calcCounterTotal fields to the assignments
+        const assignmentsWithCounters = assignments.map(
+          (assignment, index, array) => {
+            const sameDoingAssignments = array.filter(
+              (a) =>
+                a.doingId === assignment.doingId &&
+                a.doingRepetition === 'daily',
+            );
+            if (sameDoingAssignments.length > 0) {
+              const calcCounterTotal = sameDoingAssignments.length;
+              const calcCounterCurrent =
+                sameDoingAssignments.findIndex(
+                  (a) => a.assignmentId === assignment.assignmentId,
+                ) + 1;
+
+              return {
+                ...assignment,
+                calcCounterCurrent,
+                calcCounterTotal,
+              };
+            }
+            return assignment;
+          },
+        );
 
         return {
           success: true,
           message: 'Assignments selected',
-          data: assignments,
+          data: assignmentsWithCounters,
         };
       },
       {
