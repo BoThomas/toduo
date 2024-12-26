@@ -242,7 +242,12 @@ app.group('/api', (apiGroup) =>
           effort_in_minutes,
         } = ctx.body;
 
-        // Logic to create a new doing
+        // prevent setting days_per_week for non-daily repetitions
+        let dpw = null;
+        if (repetition === 'daily') {
+          dpw = days_per_week;
+        }
+
         await db.insert(schema.doings).values({
           name,
           description,
@@ -253,7 +258,7 @@ app.group('/api', (apiGroup) =>
             | 'weekly'
             | 'monthly'
             | 'yearly',
-          days_per_week,
+          days_per_week: dpw,
           effort_in_minutes,
           is_active: true,
           created_at: new Date(),
@@ -328,7 +333,13 @@ app.group('/api', (apiGroup) =>
           effort_in_minutes,
           is_active,
         } = ctx.body;
-        // Logic to update a doing by id
+
+        // prevent setting days_per_week for non-daily repetitions
+        let dpw = null;
+        if (repetition === 'daily') {
+          dpw = days_per_week;
+        }
+
         await db
           .update(schema.doings)
           .set({
@@ -341,7 +352,7 @@ app.group('/api', (apiGroup) =>
               | 'weekly'
               | 'monthly'
               | 'yearly',
-            days_per_week,
+            days_per_week: dpw,
             effort_in_minutes,
             is_active,
             updated_at: new Date(),

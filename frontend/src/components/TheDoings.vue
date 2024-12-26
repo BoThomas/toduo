@@ -303,9 +303,11 @@ const saveDoing = async (formData: any) => {
       name: formData.states.name.value,
       description: formData.states.description.value,
       repetition: formData.states.repetition.value,
-      days_per_week: formData.states.days_per_week?.value
-        ? parseInt(formData.states.days_per_week.value)
-        : undefined,
+      days_per_week:
+        formData.states.days_per_week?.value &&
+        formData.states.repetition.value === 'daily'
+          ? parseInt(formData.states.days_per_week.value)
+          : undefined,
       effort_in_minutes: formData.states.effort_in_minutes.value,
       notice: formData.states.notice.value,
       is_active: formData.states.is_active.value,
