@@ -17,7 +17,7 @@ export const doings = sqliteTable('doings', {
   description: text(),
   notice: text(),
   repetition: text({
-    enum: ['once', 'daily', 'weekly', 'monthly'],
+    enum: ['once', 'daily', 'weekly', 'monthly', 'yearly'],
   }).notNull(),
   days_per_week: integer({ mode: 'number' }),
   effort_in_minutes: integer({ mode: 'number' }).notNull(),
@@ -35,7 +35,7 @@ export const assignments = sqliteTable('assignments', {
   user_id: integer({ mode: 'number' })
     .notNull()
     .references(() => users.id),
-  due_date: integer({ mode: 'timestamp' }),
+  due_date: integer({ mode: 'timestamp' }), // not needed for now
   due_week: integer({ mode: 'number' }),
   status: text({
     enum: ['waiting', 'pending', 'completed', 'skipped', 'postponed', 'failed'],

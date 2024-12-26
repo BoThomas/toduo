@@ -10,6 +10,7 @@ import { seedDatabase } from './database/seed';
 import type { BunFile } from 'bun';
 import { sql, and, or, eq, gt, lt, asc, inArray, type SQL } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
+import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 
 // seed the database
 await seedDatabase();
@@ -250,7 +251,12 @@ app.group('/api', (apiGroup) =>
           name,
           description,
           notice,
-          repetition: repetition as 'once' | 'daily' | 'weekly' | 'monthly',
+          repetition: repetition as
+            | 'once'
+            | 'daily'
+            | 'weekly'
+            | 'monthly'
+            | 'yearly',
           days_per_week,
           effort_in_minutes,
           is_active: true,
@@ -271,6 +277,7 @@ app.group('/api', (apiGroup) =>
             t.Literal('daily'),
             t.Literal('weekly'),
             t.Literal('monthly'),
+            t.Literal('yearly'),
           ]),
           days_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
@@ -332,7 +339,12 @@ app.group('/api', (apiGroup) =>
             name,
             description,
             notice,
-            repetition: repetition as 'once' | 'daily' | 'weekly' | 'monthly',
+            repetition: repetition as
+              | 'once'
+              | 'daily'
+              | 'weekly'
+              | 'monthly'
+              | 'yearly',
             days_per_week,
             effort_in_minutes,
             is_active,
@@ -356,6 +368,7 @@ app.group('/api', (apiGroup) =>
             t.Literal('daily'),
             t.Literal('weekly'),
             t.Literal('monthly'),
+            t.Literal('yearly'),
           ]),
           days_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
@@ -534,17 +547,7 @@ app.group('/api', (apiGroup) =>
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Sunday
         endOfWeek.setHours(23, 59, 59, 999); // Set to end of the day
-        const getCalendarWeek = (date: Date) => {
-          let now = new Date();
-          let firstOfJanuary = new Date(now.getFullYear(), 0, 1);
-          return Math.ceil(
-            ((now.getTime() - firstOfJanuary.getTime()) / 86400000 +
-              firstOfJanuary.getDay() +
-              1) /
-              7,
-          );
-        };
-        const currentWeekNumber = getCalendarWeek(now);
+        const currentWeekNumber = getCalendarWeekFromDateOfCurrentYear(now);
 
         const assignmentsQuery = db
           .select({
@@ -774,3 +777,7 @@ app.listen(process.env.PORT || 3000);
 console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttps://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
+
+// TODO: implement and remove
+const assignmentService = new AssignmentService();
+await assignmentService.assignTasksForWeek(true);
