@@ -23,7 +23,7 @@ export class AssignmentService {
     const users = await this.getActiveUsers();
     const doings = await this.getQualifiedDoings();
     const shittyPoints = await this.getShittyPoints();
-    const todoHistory = await this.getRecentTodoHistory();
+    const todoHistory = await this.getRecentCompletedTodoHistory();
 
     // Step 1: Randomize doing order
     const shuffledDoings = this.shuffleArray(doings);
@@ -125,12 +125,17 @@ export class AssignmentService {
   }
 
   // Helper: Fetch todo history
-  private async getRecentTodoHistory() {
+  private async getRecentCompletedTodoHistory() {
     const fourHundredDaysAgo = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000);
     return this.db
       .select()
       .from(history)
-      .where(gt(history.created_at, fourHundredDaysAgo));
+      .where(
+        and(
+          gt(history.created_at, fourHundredDaysAgo),
+          eq(history.status, 'completed'),
+        ),
+      );
   }
 
   // Helper: Randomly shuffle an array
