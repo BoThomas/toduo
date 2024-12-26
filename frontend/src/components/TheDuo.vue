@@ -32,7 +32,7 @@
 
     <h3 class="mt-8 mb-3">This Week's Assignments</h3>
     <DataTable :value="weeklyTodos" responsiveLayout="scroll">
-      <Column field="doingDescription" header="Todo"></Column>
+      <Column field="doingName" header="Todo"></Column>
       <Column field="assignedUser" header="Assigned To">
         <template #body="slotProps">
           <Select
