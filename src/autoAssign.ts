@@ -23,7 +23,7 @@ export class AssignmentService {
     const users = await this.getActiveUsers();
     const doings = await this.getQualifiedDoings();
     const shittyPoints = await this.getShittyPoints();
-    const todoHistory = await this.getRecentCompletedTodoHistory();
+    const todoHistory = await this.getRecentTodoHistory();
 
     // Step 1: Randomize doing order
     const shuffledDoings = this.shuffleArray(doings);
@@ -144,17 +144,13 @@ export class AssignmentService {
   }
 
   // Helper: Fetch todo history
-  private async getRecentCompletedTodoHistory() {
+  private async getRecentTodoHistory() {
     const fourHundredDaysAgo = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000);
     return this.db
       .select()
       .from(history)
-      .where(
-        and(
-          gt(history.created_at, fourHundredDaysAgo),
-          eq(history.status, 'completed'),
-        ),
-      );
+      .where(and(gt(history.created_at, fourHundredDaysAgo)))
+      .orderBy(desc(history.created_at));
   }
 
   // Helper: Randomly shuffle an array
@@ -238,7 +234,10 @@ export class AssignmentService {
 
         // Penalize if the user recently completed the doing
         const recentCompletions = todoHistory.filter(
-          (h) => h.doing_id === doing.id && h.user_id === user.id,
+          (h) =>
+            h.status === 'completed' &&
+            h.doing_id === doing.id &&
+            h.user_id === user.id,
         );
         recentCompletions.forEach((historyEntry) => {
           const recencyPenalty = this.calculateRecencyPenalty(historyEntry);
@@ -249,6 +248,22 @@ export class AssignmentService {
             );
           }
         });
+
+        // Add points if the user skipped, postponed, or failed the last time
+        const lastHistoryEntry = todoHistory.find(
+          (h) => h.doing_id === doing.id && h.user_id === user.id,
+        );
+        if (
+          lastHistoryEntry &&
+          ['skipped', 'postponed', 'failed'].includes(lastHistoryEntry.status)
+        ) {
+          score += 50;
+          if (ENABLE_LOGGING) {
+            console.log(
+              `Added 50 points for user ${user.id} on doing ${doing.id} due to last status being ${lastHistoryEntry.status}`,
+            );
+          }
+        }
 
         // Add score to the map
         scores.set(`${doing.id}-${user.id}`, score);
