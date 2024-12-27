@@ -55,7 +55,7 @@
         <template #body="slotProps">
           <Select
             v-model="slotProps.data.status"
-            :options="statusOptions"
+            :options="getStatusOptions(slotProps.data.doingRepetition)"
             @change="updateAssignment(slotProps.data)"
           />
         </template>
@@ -222,5 +222,14 @@ const triggerReassignment = async () => {
       life: 3000,
     });
   }
+};
+
+// for daily and weekly todos, we don't want to show postponed status
+// as it doesn't make sense because the todo will be reassigned the next day/week anyway
+const getStatusOptions = (repetition: string) => {
+  if (repetition === 'daily' || repetition === 'weekly') {
+    return statusOptions.filter((option) => option !== 'postponed');
+  }
+  return statusOptions;
 };
 </script>
