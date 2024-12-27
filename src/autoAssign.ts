@@ -63,6 +63,7 @@ export class AssignmentService {
     //   - its repetition is daily or weekly
     //   - its repetition is monthly and the last assignment was more than 30 days ago
     //   - its repetition is yearly and the last assignment was more than 365 days ago
+    //   - the last assignment was postponed or failed
 
     const thirtyDaysAgo = new Date(
       Date.now() - 30 * 24 * 60 * 60 * 1000,
@@ -111,6 +112,24 @@ export class AssignmentService {
                   .limit(1),
                 oneYearAgo,
               ),
+            ),
+            eq(
+              this.db
+                .select({ status: history.status })
+                .from(history)
+                .where(eq(history.doing_id, doings.id))
+                .orderBy(desc(history.created_at))
+                .limit(1),
+              'postponed',
+            ),
+            eq(
+              this.db
+                .select({ status: history.status })
+                .from(history)
+                .where(eq(history.doing_id, doings.id))
+                .orderBy(desc(history.created_at))
+                .limit(1),
+              'failed',
             ),
           ),
         ),
