@@ -11,7 +11,16 @@
         }
       "
     >
-      <Column field="doingName" header="Name"></Column>
+      <Column header="Name">
+        <template #body="slotProps">
+          {{ slotProps.data.doingName }}
+          <span v-if="slotProps.data.doingRepetition === 'daily'">
+            ({{ slotProps.data.calcCounterCurrent }}/{{
+              slotProps.data.calcCounterTotal
+            }})
+          </span>
+        </template>
+      </Column>
       <Column field="doingDescription" header="Description"></Column>
       <Column field="doingEffort" header="Effort (minutes)"></Column>
       <Column header="Completed">
@@ -46,9 +55,7 @@ onMounted(async () => {
 
 const fetchThisWeeksTodos = async () => {
   try {
-    const response = await readAPI(
-      '/todos/this-week?status=pending,completed,waiting',
-    );
+    const response = await readAPI('/todos/this-week?status=pending,completed');
     response.forEach((todo: any) => {
       todo.completed = todo.status === 'completed';
     });

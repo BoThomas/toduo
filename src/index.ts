@@ -593,30 +593,37 @@ app.group('/api', (apiGroup) =>
           );
 
         const assignments = await assignmentsQuery;
-        // Add calcCounterCurrent and calcCounterTotal fields to the assignments
-        const assignmentsWithCounters = assignments.map(
-          (assignment, index, array) => {
-            const sameDoingAssignments = array.filter(
-              (a) =>
-                a.doingId === assignment.doingId &&
-                a.doingRepetition === 'daily',
-            );
-            if (sameDoingAssignments.length > 0) {
-              const calcCounterTotal = sameDoingAssignments.length;
-              const calcCounterCurrent =
-                sameDoingAssignments.findIndex(
-                  (a) => a.assignmentId === assignment.assignmentId,
-                ) + 1;
 
-              return {
-                ...assignment,
-                calcCounterCurrent,
-                calcCounterTotal,
-              };
-            }
-            return assignment;
-          },
-        );
+        // Fetch all assignments for the same doing regardless of the filter
+        const allAssignmentsQuery = db
+          .select({
+            assignmentId: schema.assignments.id,
+            doingId: schema.assignments.doing_id,
+          })
+          .from(schema.assignments);
+
+        const allAssignments = await allAssignmentsQuery;
+
+        // Add calcCounterCurrent and calcCounterTotal fields to the assignments
+        const assignmentsWithCounters = assignments.map((assignment) => {
+          const sameDoingAssignments = allAssignments.filter(
+            (a) => a.doingId === assignment.doingId,
+          );
+          if (sameDoingAssignments.length > 0) {
+            const calcCounterTotal = sameDoingAssignments.length;
+            const calcCounterCurrent =
+              sameDoingAssignments.findIndex(
+                (a) => a.assignmentId === assignment.assignmentId,
+              ) + 1;
+
+            return {
+              ...assignment,
+              calcCounterCurrent,
+              calcCounterTotal,
+            };
+          }
+          return assignment;
+        });
 
         return {
           success: true,
