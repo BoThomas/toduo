@@ -7,10 +7,11 @@ import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { db } from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
-import type { BunFile } from 'bun';
 import { sql, and, or, eq, gt, lt, asc, inArray, type SQL } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
 import { getCalendarWeekFromDateOfCurrentYear } from './helper';
+import Timer from './timer';
+import type { BunFile } from 'bun';
 
 // seed the database
 await seedDatabase();
@@ -818,6 +819,22 @@ console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttps://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
 
-// TODO: implement and remove
+// Auto assign tasks for the week
 const assignmentService = new AssignmentService();
+const timer = new Timer();
+if (process.env.CRON_ENABLED === 'true') {
+  timer.addJob(
+    'assignTasksForWeek',
+    '0 23 * * 0', // every Sunday at 11 PM
+    async () => {
+      await assignmentService.assignTasksForWeek();
+    },
+    { autoStart: true },
+  );
+  console.log('Cron job for auto assigning tasks enabled');
+} else {
+  console.log('Cron job for auto assigning tasks disabled');
+}
+
+// test, TODO: remove
 await assignmentService.assignTasksForWeek(true);
