@@ -120,6 +120,7 @@ export async function seedDatabase() {
         status: 'completed',
         created_at: new Date(),
         updated_at: new Date(),
+        history_date: new Date(),
       },
       {
         doing_id: 2,
@@ -130,6 +131,7 @@ export async function seedDatabase() {
         status: 'completed',
         created_at: new Date(),
         updated_at: new Date(),
+        history_date: new Date(),
       },
       {
         doing_id: 2,
@@ -140,6 +142,7 @@ export async function seedDatabase() {
         status: 'completed',
         created_at: new Date(),
         updated_at: new Date(),
+        history_date: new Date(),
       },
       {
         doing_id: 2,
@@ -150,6 +153,7 @@ export async function seedDatabase() {
         status: 'completed',
         created_at: new Date(),
         updated_at: new Date(),
+        history_date: new Date(),
       },
     ]);
   }

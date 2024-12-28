@@ -57,7 +57,6 @@ export const shitty_points = sqliteTable('shitty_points', {
   updated_at: integer({ mode: 'timestamp' }).notNull(),
 });
 
-// TODO: male history independent from doings and other tables + use it on the server side
 export const history = sqliteTable('history', {
   id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
   doing_id: integer({ mode: 'number' })
@@ -74,6 +73,7 @@ export const history = sqliteTable('history', {
   status: text(),
   created_at: integer({ mode: 'timestamp' }),
   updated_at: integer({ mode: 'timestamp' }),
+  history_date: integer({ mode: 'timestamp' }),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

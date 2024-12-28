@@ -43,6 +43,13 @@
       "when": 1735222631753,
       "tag": "0005_keen_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1735420709613,
+      "tag": "0006_magical_tattoo",
+      "breakpoints": true
     }
   ]
 }

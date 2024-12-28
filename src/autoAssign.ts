@@ -108,7 +108,22 @@ export class AssignmentService {
 
   // PreHelper: Move current assignments to history
   private async moveCurrentAssignmentsToHistory() {
-    // keep postponed and failed assignments
+    const currentAssignments = await this.db
+      .select({
+        doing_id: assignments.doing_id,
+        user_id: assignments.user_id,
+        repetition: doings.repetition,
+        days_per_week: doings.days_per_week,
+        effort_in_minutes: doings.effort_in_minutes,
+        status: assignments.status,
+        created_at: assignments.created_at,
+        updated_at: assignments.updated_at,
+      })
+      .from(assignments)
+      .leftJoin(doings, eq(doings.id, assignments.doing_id));
+
+    await this.db.insert(history).values(currentAssignments);
+    await this.db.delete(assignments);
   }
 
   // Helper: Fetch all active users
