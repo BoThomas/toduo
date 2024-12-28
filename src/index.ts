@@ -482,6 +482,7 @@ app.group('/api', (apiGroup) =>
           return { success: false, message: 'Assignment not found' };
         }
 
+        // auto handling of daily assignments states for same doing
         if (updateData.status === 'completed') {
           // If there is no further pending assignment for the current doing, set the next waiting assignment to pending
           const pendingAssignment = await db
@@ -899,7 +900,10 @@ if (process.env.CRON_ENABLED === 'true') {
     'assignTasksForWeek',
     '0 23 * * 0', // every Sunday at 11 PM
     async () => {
-      await assignmentService.assignTasksForWeek();
+      await assignmentService.assignTasksForWeek({
+        dryRun: false,
+        groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
+      });
     },
     { autoStart: true },
   );

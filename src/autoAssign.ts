@@ -6,7 +6,7 @@ import {
   shitty_points,
   history,
 } from './database/schema';
-import { eq, and, or, isNull, gt, desc } from 'drizzle-orm';
+import { eq, and, or, isNull, gt, desc, inArray } from 'drizzle-orm';
 import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 
 const ENABLE_LOGGING = true;
@@ -24,6 +24,14 @@ export class AssignmentService {
     groupByRepetition?: boolean;
   }): Promise<void | any[]> {
     const { dryRun = false, groupByRepetition = true } = options || {};
+
+    // Step 0: Pre-assignment operations
+    if (!dryRun) {
+      await this.deactivateCompletedOnceDoings();
+      await this.changePendingAndWaitingAssignmentsToFailed();
+      await this.moveCurrentAssignmentsToHistory();
+    }
+
     const users = await this.getActiveUsers();
     const doings = await this.getQualifiedDoings();
     const shittyPoints = await this.getShittyPoints();
@@ -55,6 +63,42 @@ export class AssignmentService {
 
     // Step 4: Save assignments to the database
     await this.saveAssignments(assignments, dryRun);
+  }
+
+  // PreHelper: Deactivate completed "once" doings
+  private async deactivateCompletedOnceDoings() {
+    // select assignments with doings with repetition once, that are completed
+    const currentlyCompletedOnceDoingIds = await this.db
+      .select({ id: doings.id })
+      .from(assignments)
+      .leftJoin(doings, eq(doings.id, assignments.doing_id))
+      .where(
+        and(eq(doings.repetition, 'once'), eq(assignments.status, 'completed')),
+      );
+
+    // deactivate doings with ids from the above query
+    if (currentlyCompletedOnceDoingIds.length === 0) {
+      return;
+    }
+    await this.db
+      .update(doings)
+      .set({ is_active: false })
+      .where(
+        inArray(
+          doings.id,
+          currentlyCompletedOnceDoingIds
+            .map((doing) => doing.id)
+            .filter((id) => id !== null),
+        ),
+      );
+  }
+
+  // PreHelper: Change pending and waiting assignments to failed
+  private async changePendingAndWaitingAssignmentsToFailed() {}
+
+  // PreHelper: Move current assignments to history
+  private async moveCurrentAssignmentsToHistory() {
+    // keep postponed and failed assignments
   }
 
   // Helper: Fetch all active users
