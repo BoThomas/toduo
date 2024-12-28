@@ -1,9 +1,14 @@
 export const getCalendarWeekFromDateOfCurrentYear = (date: Date) => {
-  let firstOfJanuary = new Date(date.getFullYear(), 0, 1);
-  return Math.ceil(
-    ((date.getTime() - firstOfJanuary.getTime()) / 86400000 +
-      firstOfJanuary.getDay() +
-      1) /
-      7,
-  );
+  let target = new Date(date.valueOf());
+  let dayNr = (date.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayNr + 3);
+  let firstThursday = target.valueOf();
+  target.setMonth(0, 1);
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
+  }
+  let weekNumber =
+    1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+
+  return weekNumber;
 };
