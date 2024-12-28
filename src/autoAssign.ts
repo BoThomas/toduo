@@ -94,7 +94,17 @@ export class AssignmentService {
   }
 
   // PreHelper: Change pending and waiting assignments to failed
-  private async changePendingAndWaitingAssignmentsToFailed() {}
+  private async changePendingAndWaitingAssignmentsToFailed() {
+    await this.db
+      .update(assignments)
+      .set({ status: 'failed' })
+      .where(
+        or(
+          eq(assignments.status, 'pending'),
+          eq(assignments.status, 'waiting'),
+        ),
+      );
+  }
 
   // PreHelper: Move current assignments to history
   private async moveCurrentAssignmentsToHistory() {
