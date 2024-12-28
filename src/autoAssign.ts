@@ -19,7 +19,11 @@ export class AssignmentService {
   }
 
   // Main method to perform doing assignment
-  async assignTasksForWeek(dryRun = false): Promise<void | any[]> {
+  async assignTasksForWeek(options?: {
+    dryRun?: boolean;
+    groupByRepetition?: boolean;
+  }): Promise<void | any[]> {
+    const { dryRun = false, groupByRepetition = true } = options || {};
     const users = await this.getActiveUsers();
     const doings = await this.getQualifiedDoings();
     const shittyPoints = await this.getShittyPoints();
@@ -29,7 +33,12 @@ export class AssignmentService {
     const shuffledDoings = this.shuffleArray(doings);
 
     // Step 2: Group doings by repetition type
-    const doingGroups = this.groupDoingsByRepetition(shuffledDoings);
+    let doingGroups;
+    if (groupByRepetition) {
+      doingGroups = this.groupDoingsByRepetition(shuffledDoings);
+    } else {
+      doingGroups = { default: shuffledDoings };
+    }
 
     // Step 3: Assign doings in batches by repetition type
     const assignments = [];
@@ -198,7 +207,6 @@ export class AssignmentService {
         assignments.push({ doing, user: bestUser });
         if (ENABLE_LOGGING) {
           console.log(`Assigned doing ${doing.id} to user ${bestUser.id}`);
-          console.log('---');
         }
       }
     });
@@ -216,7 +224,15 @@ export class AssignmentService {
     const scores = new Map();
 
     doings.forEach((doing) => {
+      if (ENABLE_LOGGING) {
+        console.log(`Doing ${doing.id}`);
+      }
+
       users.forEach((user) => {
+        if (ENABLE_LOGGING) {
+          console.log(`User ${user.id}`);
+        }
+
         let score = 0;
 
         // Penalize based on shitty points
@@ -227,7 +243,7 @@ export class AssignmentService {
           score -= shittyPoint.points;
           if (ENABLE_LOGGING) {
             console.log(
-              `Penalized ${shittyPoint.points} points for user ${user.id} on doing ${doing.id} due to shitty points`,
+              `Penalized ${shittyPoint.points} points due to shitty points`,
             );
           }
         }
@@ -244,7 +260,7 @@ export class AssignmentService {
           score -= recencyPenalty;
           if (ENABLE_LOGGING) {
             console.log(
-              `Penalized ${recencyPenalty} points for user ${user.id} on doing ${doing.id} due to recent completion`,
+              `Penalized ${recencyPenalty} points due to recent completion`,
             );
           }
         });
@@ -260,13 +276,16 @@ export class AssignmentService {
           score += 50;
           if (ENABLE_LOGGING) {
             console.log(
-              `Added 50 points for user ${user.id} on doing ${doing.id} due to last status being ${lastHistoryEntry.status}`,
+              `Added 50 points due to last status being ${lastHistoryEntry.status}`,
             );
           }
         }
 
         // Add score to the map
         scores.set(`${doing.id}-${user.id}`, score);
+        if (ENABLE_LOGGING) {
+          console.log(`Score ${score}`);
+        }
       });
     });
 
@@ -302,7 +321,7 @@ export class AssignmentService {
     return eligibleUsers.reduce((bestUser, user) => {
       const score = scores.get(`${doing.id}-${user.id}`) || 0;
       if (ENABLE_LOGGING) {
-        console.log(`User ${user.id} has score ${score} for doing ${doing.id}`);
+        console.log(`Doing ${doing.id} User ${user.id} Score ${score}`);
       }
       return !bestUser ||
         score > (scores.get(`${doing.id}-${bestUser.id}`) || 0)

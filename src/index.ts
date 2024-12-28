@@ -837,4 +837,7 @@ if (process.env.CRON_ENABLED === 'true') {
 }
 
 // test, TODO: remove
-await assignmentService.assignTasksForWeek(true);
+await assignmentService.assignTasksForWeek({
+  dryRun: true,
+  groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
+});
