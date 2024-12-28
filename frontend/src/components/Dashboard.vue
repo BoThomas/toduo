@@ -75,6 +75,7 @@ const updateTodoStatus = async (todo: any) => {
     await updateApi(`/assignments/${todo.assignmentId}`, {
       status: todo.completed ? 'completed' : 'pending',
     });
+    await fetchThisWeeksTodos();
   } catch (error) {
     toast.add({
       severity: 'error',

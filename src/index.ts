@@ -453,14 +453,18 @@ app.group('/api', (apiGroup) =>
         const { id } = ctx.params;
         const { assignedUserId, status } = ctx.body;
 
-        const updateData: any = {
-          status: status as
+        const updateData: {
+          status:
             | 'waiting'
             | 'pending'
             | 'completed'
             | 'skipped'
             | 'postponed'
-            | 'failed',
+            | 'failed';
+          updated_at: Date;
+          user_id?: number;
+        } = {
+          status: status,
           updated_at: new Date(),
         };
 
@@ -468,10 +472,78 @@ app.group('/api', (apiGroup) =>
           updateData.user_id = assignedUserId;
         }
 
-        await db
+        const currentDoingId = await db
           .update(schema.assignments)
           .set(updateData)
-          .where(eq(schema.assignments.id, Number(id)));
+          .where(eq(schema.assignments.id, Number(id)))
+          .returning({ doing_id: schema.assignments.doing_id });
+
+        if (currentDoingId.length === 0) {
+          return { success: false, message: 'Assignment not found' };
+        }
+
+        if (updateData.status === 'completed') {
+          // If there is no further pending assignment for the current doing, set the next waiting assignment to pending
+          const pendingAssignment = await db
+            .select({
+              id: schema.assignments.id,
+            })
+            .from(schema.assignments)
+            .where(
+              and(
+                eq(schema.assignments.doing_id, currentDoingId[0].doing_id),
+                eq(schema.assignments.status, 'pending'),
+              ),
+            )
+            .limit(1);
+
+          if (pendingAssignment.length === 0) {
+            await db
+              .update(schema.assignments)
+              .set({
+                status: 'pending',
+                updated_at: new Date(),
+              })
+              .where(
+                and(
+                  eq(schema.assignments.doing_id, currentDoingId[0].doing_id),
+                  eq(schema.assignments.status, 'waiting'),
+                ),
+              )
+              .orderBy(asc(schema.assignments.id))
+              .limit(1);
+          }
+        } else if (updateData.status === 'pending') {
+          // If there are more than one pending assignments for the current doing, set the others to waiting
+          const pendingAssignments = await db
+            .select({
+              id: schema.assignments.id,
+            })
+            .from(schema.assignments)
+            .where(
+              and(
+                eq(schema.assignments.doing_id, currentDoingId[0].doing_id),
+                eq(schema.assignments.status, 'pending'),
+              ),
+            )
+            .orderBy(asc(schema.assignments.id));
+
+          if (pendingAssignments.length > 1) {
+            await db
+              .update(schema.assignments)
+              .set({
+                status: 'waiting',
+                updated_at: new Date(),
+              })
+              .where(
+                inArray(
+                  schema.assignments.id,
+                  pendingAssignments.slice(1).map((a) => a.id),
+                ),
+              );
+          }
+        }
+
         return { success: true, message: 'Assignment updated' };
       },
       {

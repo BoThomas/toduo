@@ -119,7 +119,6 @@ const fetchUsers = async () => {
 const fetchThisWeeksTodos = async () => {
   try {
     weeklyTodos.value = await readAPI('/todos/this-week?allUsers=true');
-    console.log(weeklyTodos.value);
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -194,6 +193,7 @@ const updateAssignment = async (assignment: any) => {
       assignedUserId: user.id,
       status: assignment.status,
     });
+    await fetchThisWeeksTodos();
   } catch (error) {
     toast.add({
       severity: 'error',
