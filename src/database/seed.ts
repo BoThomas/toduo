@@ -34,7 +34,7 @@ export async function seedDatabase() {
       {
         name: 'Do the dishes',
         description: 'Clean all the dishes in the sink',
-        repetition: 'daily',
+        repetition: 'weekly',
         effort_in_minutes: 30,
         is_active: true,
         created_at: new Date(),
@@ -43,7 +43,7 @@ export async function seedDatabase() {
       {
         name: 'Take out the trash',
         description: 'Take the trash out to the curb',
-        repetition: 'weekly',
+        repetition: 'daily',
         effort_in_minutes: 5,
         days_per_week: 3,
         is_active: true,
@@ -58,14 +58,14 @@ export async function seedDatabase() {
       {
         doing_id: 1,
         user_id: 1,
-        points: 5,
+        points: 1,
         created_at: new Date(),
         updated_at: new Date(),
       },
       {
         doing_id: 2,
         user_id: 2,
-        points: 10,
+        points: 3,
         created_at: new Date(),
         updated_at: new Date(),
       },
