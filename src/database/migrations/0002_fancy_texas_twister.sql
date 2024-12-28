@@ -1,1 +1,0 @@
-ALTER TABLE `users` ADD `participation_percent` integer DEFAULT 0 NOT NULL;
