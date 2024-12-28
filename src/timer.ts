@@ -11,7 +11,7 @@ class CronJobManager {
   }
 
   /**
-   * Adds a new cron job.
+   * Adds a new cron job. If a job with the same name already exists, it will be replaced.
    * @param {string} name - The name of the job.
    * @param {string} cronTime - The cron expression for the job.
    * @param {() => void} callback - The callback function to execute.
@@ -25,6 +25,10 @@ class CronJobManager {
     callback: () => void,
     options: { autoStart?: boolean; maxRuns?: number } = { autoStart: true },
   ) {
+    if (this.jobs.has(name)) {
+      this.cancelJob(name);
+    }
+
     const job = new Cron(
       cronTime,
       { name, paused: !options.autoStart, maxRuns: options.maxRuns },
