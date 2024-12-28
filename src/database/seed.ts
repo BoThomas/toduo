@@ -2,7 +2,7 @@ import { getCalendarWeekFromDateOfCurrentYear } from '../helper';
 import { db } from './db';
 import * as schema from './schema';
 
-const ENABLE_SEEDING = true;
+const ENABLE_SEEDING = process.env.SEED_DATABASE === 'true';
 
 export async function seedDatabase() {
   if (!ENABLE_SEEDING) {
