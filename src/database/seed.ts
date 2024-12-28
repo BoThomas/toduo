@@ -65,7 +65,7 @@ export async function seedDatabase() {
       {
         doing_id: 2,
         user_id: 2,
-        points: 3,
+        points: 2,
         created_at: new Date(),
         updated_at: new Date(),
       },

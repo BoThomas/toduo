@@ -7,7 +7,19 @@ import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { db } from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
-import { sql, and, or, eq, gt, lt, asc, inArray, type SQL } from 'drizzle-orm';
+import {
+  sql,
+  and,
+  or,
+  eq,
+  gt,
+  lt,
+  asc,
+  inArray,
+  sum,
+  count,
+  type SQL,
+} from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
 import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 import Timer from './timer';
@@ -744,6 +756,10 @@ app.group('/api', (apiGroup) =>
           };
         }
 
+        if (await maxShittyPointsExceeded(0, points, user_id)) {
+          return { success: false, message: 'Max shitty points reached' };
+        }
+
         let idObject;
 
         try {
@@ -773,7 +789,7 @@ app.group('/api', (apiGroup) =>
       {
         body: t.Object({
           doing_id: t.Number(),
-          points: t.Number(),
+          points: t.Number({ minimum: 0 }),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -838,19 +854,48 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
-    // shitty points
+    // Update shitty points
     .put(
       '/shittypoints/:id',
       async (ctx) => {
         const { id } = ctx.params;
         const { points } = ctx.body;
+
+        const user_id = await getUserIdFromContext(ctx);
+        if (!user_id) {
+          return { success: false, message: 'User not found' };
+        }
+
+        const currentPoints = await db.query.shitty_points.findFirst({
+          where: and(
+            eq(schema.shitty_points.id, Number(id)),
+            eq(schema.shitty_points.user_id, user_id),
+          ),
+          columns: { points: true },
+        });
+
+        if (!currentPoints) {
+          return { success: false, message: 'Shitty points not found' };
+        }
+
+        if (
+          await maxShittyPointsExceeded(currentPoints.points, points, user_id)
+        ) {
+          return { success: false, message: 'Max shitty points reached' };
+        }
+
         const updatedRows = await db
           .update(schema.shitty_points)
           .set({
             points,
             updated_at: new Date(),
           })
-          .where(eq(schema.shitty_points.id, Number(id)))
+          .where(
+            and(
+              eq(schema.shitty_points.id, Number(id)),
+              eq(schema.shitty_points.user_id, user_id),
+            ),
+          )
           .returning({
             id: schema.shitty_points.id,
           });
@@ -866,7 +911,7 @@ app.group('/api', (apiGroup) =>
           id: t.Number(),
         }),
         body: t.Object({
-          points: t.Number(),
+          points: t.Number({ minimum: 0 }),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -884,6 +929,36 @@ const getUserIdFromContext = async (ctx: any) => {
     columns: { id: true },
   });
   return user?.id;
+};
+
+// helper function to check if max shitty points is reached
+const maxShittyPoints = Number(process.env.MAX_SHITTY_POINTS_PER_DOING || 3);
+const maxShittyPointsExceeded = async (
+  currentPoints: number,
+  targetPoints: number,
+  user_id: number,
+) => {
+  if (targetPoints > maxShittyPoints) {
+    return true;
+  }
+
+  const totalNumberOfDoingsArray = await db
+    .select({
+      totalDoings: count(),
+    })
+    .from(schema.doings);
+
+  const totalNumberOfDoings = totalNumberOfDoingsArray[0].totalDoings ?? 0;
+
+  const totalPointsArray = await db
+    .select({
+      totalPoints: sum(schema.shitty_points.points),
+    })
+    .from(schema.shitty_points)
+    .where(eq(schema.shitty_points.user_id, user_id));
+
+  const totalPoints = Number(totalPointsArray[0].totalPoints ?? 0);
+  return totalPoints + targetPoints - currentPoints > totalNumberOfDoings;
 };
 
 // Start the server

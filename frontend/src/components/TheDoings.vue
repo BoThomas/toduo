@@ -161,13 +161,13 @@
         <div class="shitty-points-container">
           <Button
             icon="pi pi-minus"
-            @click="decreaseShittyPoints(slotProps.data)"
+            @click="updateShittyPoints(slotProps.data, -1)"
             class="p-button-rounded p-button-text"
           />
           <span>{{ slotProps.data.points }}</span>
           <Button
             icon="pi pi-plus"
-            @click="increaseShittyPoints(slotProps.data)"
+            @click="updateShittyPoints(slotProps.data, 1)"
             class="p-button-rounded p-button-text"
           />
         </div>
@@ -238,35 +238,35 @@ onMounted(async () => {
   await fetchDoingsAndShittyPoints();
 });
 
+const fetchDoings = async () => {
+  try {
+    const doingsData = await readAPI('/doings');
+    doings.value = doingsData;
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load doings',
+      life: 3000,
+    });
+  }
+};
+
+const fetchShittyPoints = async () => {
+  try {
+    const shittyPointsData = await readAPI('/shittypoints');
+    shittyPoints.value = shittyPointsData;
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load shitty points',
+      life: 3000,
+    });
+  }
+};
+
 const fetchDoingsAndShittyPoints = async () => {
-  const fetchDoings = async () => {
-    try {
-      const doingsData = await readAPI('/doings');
-      doings.value = doingsData;
-    } catch (error) {
-      toast.add({
-        severity: 'error',
-        summary: 'Error Message',
-        detail: 'Could not load doings',
-        life: 3000,
-      });
-    }
-  };
-
-  const fetchShittyPoints = async () => {
-    try {
-      const shittyPointsData = await readAPI('/shittypoints');
-      shittyPoints.value = shittyPointsData;
-    } catch (error) {
-      toast.add({
-        severity: 'error',
-        summary: 'Error Message',
-        detail: 'Could not load shitty points',
-        life: 3000,
-      });
-    }
-  };
-
   await Promise.all([fetchDoings(), fetchShittyPoints()]);
 };
 
@@ -350,21 +350,21 @@ const deleteDoing = async (id: number) => {
   }
 };
 
-const updateShittyPoints = async (shittypoints: any) => {
+const updateShittyPoints = async (shittypoints: any, amount: number) => {
   try {
     let result;
     if (shittypoints.id) {
       result = await updateApi(`/shittypoints/${shittypoints.id}`, {
-        points: shittypoints.points,
+        points: shittypoints.points + amount,
       });
     } else {
       const newId = await createAPI('/shittypoints', {
         doing_id: shittypoints.doing_id,
-        points: shittypoints.points,
+        points: shittypoints.points + amount,
       });
       shittypoints.id = newId;
-      console.log(`New shitty points created with id: ${newId}`);
     }
+    await fetchShittyPoints();
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -372,18 +372,6 @@ const updateShittyPoints = async (shittypoints: any) => {
       detail: 'Shitty points could not be updated',
       life: 3000,
     });
-  }
-};
-
-const increaseShittyPoints = async (shittypoints: any) => {
-  shittypoints.points += 1;
-  await updateShittyPoints(shittypoints);
-};
-
-const decreaseShittyPoints = async (shittypoints: any) => {
-  if (shittypoints.points > 0) {
-    shittypoints.points -= 1;
-    await updateShittyPoints(shittypoints);
   }
 };
 </script>
