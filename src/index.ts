@@ -122,6 +122,8 @@ if (process.env.NODE_ENV === 'development') {
     });
 }
 
+const INVITATION_CODE = process.env.USER_INVITATION_CODE || crypto.randomUUID();
+
 app.group('/api', (apiGroup) =>
   apiGroup
     .guard({
@@ -135,9 +137,13 @@ app.group('/api', (apiGroup) =>
     .post(
       '/users/join',
       async (ctx) => {
-        const { username } = ctx.body;
+        const { username, invitation_code } = ctx.body;
         const auth0UserId = (await ctx.authenticatedUserId()) as string;
-        // TODO: validate invitation code
+
+        // validate invitation code
+        if (invitation_code !== INVITATION_CODE) {
+          return { success: false, message: 'Invalid invitation code' };
+        }
 
         // check sum of all participation_percent
         const users = await db.query.users.findMany({
@@ -149,18 +155,30 @@ app.group('/api', (apiGroup) =>
         );
         const newParticipationPercent = 100 - sum;
 
-        await db.insert(schema.users).values({
-          username: username,
-          auth0_id: auth0UserId,
-          participation_percent: newParticipationPercent,
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        return { success: true, message: 'User joined via invitation' };
+        try {
+          await db.insert(schema.users).values({
+            username: username,
+            auth0_id: auth0UserId,
+            participation_percent: newParticipationPercent,
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+        } catch (error) {
+          console.log(error);
+          return {
+            success: false,
+            message: `Failed to create user, ${error}`,
+          };
+        }
+        return {
+          success: true,
+          message: 'User joined successfully',
+        };
       },
       {
         body: t.Object({
-          username: t.String(),
+          username: t.String({ minLength: 3, maxLength: 15 }),
+          invitation_code: t.String(),
         }),
         response: t.Object({
           success: t.Boolean(),
