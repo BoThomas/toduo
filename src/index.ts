@@ -105,7 +105,7 @@ if (process.env.NODE_ENV === 'development') {
       }),
     ); // DEV: add swagger ui
 
-  // DEV: serve a simple message
+  // DEV: redirect root to swagger ui
   app.get('/', ({ redirect }) => {
     return redirect('/api-docs');
   });
@@ -1009,7 +1009,7 @@ const maxShittyPointsExceeded = async (
 // Start the server
 app.listen(process.env.PORT || 3000);
 console.log(
-  `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttps://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
+  `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttp://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
 
 // Auto assign tasks for the week
