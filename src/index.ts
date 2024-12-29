@@ -19,6 +19,8 @@ import {
   sum,
   count,
   type SQL,
+  is,
+  isNull,
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
 import { getCalendarWeekFromDateOfCurrentYear } from './helper';
@@ -334,6 +336,7 @@ app.group('/api', (apiGroup) =>
         } else {
           // Logic to get all doings
           const doings = await db.query.doings.findMany({
+            where: isNull(schema.doings.deleted_at),
             orderBy: [asc(schema.doings.id)],
           });
           return { success: true, message: 'Doings selected', data: doings };
@@ -434,7 +437,24 @@ app.group('/api', (apiGroup) =>
           .delete(schema.shitty_points)
           .where(eq(schema.shitty_points.doing_id, Number(id)));
 
-        await db.delete(schema.doings).where(eq(schema.doings.id, Number(id)));
+        const currentDate = new Date();
+        const doing = await db.query.doings.findFirst({
+          where: eq(schema.doings.id, Number(id)),
+          columns: { name: true },
+        });
+
+        if (doing) {
+          const newName = `${doing.name}___deleted_${currentDate.getTime()}`;
+          await db
+            .update(schema.doings)
+            .set({
+              deleted_at: currentDate,
+              name: newName,
+              is_active: false,
+              updated_at: currentDate,
+            })
+            .where(eq(schema.doings.id, Number(id)));
+        }
         return { success: true, message: 'Doing deleted' };
       },
       {
@@ -838,6 +858,7 @@ app.group('/api', (apiGroup) =>
             shitty_points_id: schema.shitty_points.id,
           })
           .from(schema.doings)
+          .where(isNull(schema.doings.deleted_at))
           .leftJoin(
             schema.shitty_points,
             and(
@@ -969,7 +990,8 @@ const maxShittyPointsExceeded = async (
     .select({
       totalDoings: count(),
     })
-    .from(schema.doings);
+    .from(schema.doings)
+    .where(isNull(schema.doings.deleted_at));
 
   const totalNumberOfDoings = totalNumberOfDoingsArray[0].totalDoings ?? 0;
 
