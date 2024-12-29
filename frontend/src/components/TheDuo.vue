@@ -79,7 +79,6 @@ import Select from 'primevue/select';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
 import { readAPI, createAPI, updateApi } from '@/services/apiService';
-import { mockApi } from '@/services/mockApi';
 
 const toast = useToast();
 const users = ref<any>([]);

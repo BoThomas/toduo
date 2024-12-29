@@ -52,7 +52,6 @@ import { ref, onMounted } from 'vue';
 import Chart from 'primevue/chart';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
-import { mockApi } from '@/services/mockApi';
 
 const completedTodosData = ref<any>(null);
 const missedTodosData = ref<any>(null);
@@ -78,17 +77,7 @@ onMounted(async () => {
 
 const fetchCompletedTodos = async () => {
   try {
-    // const response = await fetch("/api/reports/completed-todos", {
-    //   headers: {
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    // });
-    // const data = await response.json();
-    // const data = await mockApi.fetchCompletedTodos();
-    // completedTodosData.value = {
-    //   labels: data.labels,
-    //   datasets: data.datasets,
-    // };
+    // TODO: implement
   } catch (error) {
     console.error('Error fetching completed todos:', error);
   }
@@ -96,17 +85,7 @@ const fetchCompletedTodos = async () => {
 
 const fetchMissedTodos = async () => {
   try {
-    // const response = await fetch("/api/reports/missed-todos", {
-    //   headers: {
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    // });
-    // const data = await response.json();
-    //const data = await mockApi.fetchMissedTodos();
-    // missedTodosData.value = {
-    //   labels: data.labels,
-    //   datasets: data.datasets,
-    // };
+    // TODO: implement
   } catch (error) {
     console.error('Error fetching missed todos:', error);
   }
@@ -114,13 +93,7 @@ const fetchMissedTodos = async () => {
 
 const fetchWorkDone = async () => {
   try {
-    // const response = await fetch("/api/reports/work-done", {
-    //   headers: {
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    // });
-    // workDone.value = await response.json();
-    //workDone.value = await mockApi.fetchWorkDone();
+    // TODO: implement
   } catch (error) {
     console.error('Error fetching work done:', error);
   }
@@ -128,13 +101,7 @@ const fetchWorkDone = async () => {
 
 const fetchUpcomingWork = async () => {
   try {
-    // const response = await fetch("/api/reports/upcoming-work", {
-    //   headers: {
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    // });
-    // upcomingWork.value = await response.json();
-    //upcomingWork.value = await mockApi.fetchUpcomingWork();
+    // TODO: implement
   } catch (error) {
     console.error('Error fetching upcoming work:', error);
   }
