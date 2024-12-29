@@ -119,7 +119,7 @@ if (process.env.NODE_ENV === 'development') {
         alwaysStatic: true,
       }),
     )
-    .get('/', () => {
+    .get('/*', () => {
       return Bun.file('./frontend/dist/index.html');
     });
 }
