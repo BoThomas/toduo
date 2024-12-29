@@ -382,17 +382,19 @@ export class AssignmentService {
       // Apply fairness constraints (e.g., workload balance)
 
       // get total effort of assignments assigned to this user in the current run
-      const userAssignments = assignments.filter((a) => a.user.id === user.id);
-      const totalEffort = userAssignments.reduce(
+      const usersAssignments = assignments.filter((a) => a.user.id === user.id);
+      const usersTotalEffort = usersAssignments.reduce(
         (sum, a) =>
           sum + a.doing.effort_in_minutes * (a.doing.days_per_week ?? 1),
         0,
       );
 
       return (
-        totalEffort <
+        user.participation_percent > 0 && // User participates
+        (usersTotalEffort <
           (user.participation_percent / 100) *
-            this.getTotalEffort(assignments) || totalEffort === 0
+            this.getTotalEffort(assignments) ||
+          usersTotalEffort === 0) // Make sure to include users with no assignments, otherwise the algorithm will get stuck
       );
     });
 
@@ -459,6 +461,11 @@ export class AssignmentService {
     if (dryRun) {
       console.log('Dry run, assignments will not be saved to the database:');
       console.log(assignmentsToSave);
+      return;
+    }
+
+    if (assignmentsToSave.length === 0) {
+      console.log('No assignments to save');
       return;
     }
 
