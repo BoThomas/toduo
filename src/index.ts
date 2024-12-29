@@ -448,26 +448,31 @@ app.group('/api', (apiGroup) =>
       },
     )
 
-    // Autoassign
+    // Trigger Autoassign
     .post(
-      '/doings/:id/autoassign',
+      '/doings/autoassign',
       async (ctx) => {
-        const { id } = ctx.params;
-        // Logic to autoassign a doing
-
-        // Example: Insert assignment into the database
-        await db.insert(schema.assignments).values({
-          doing_id: id,
-          user_id: 1, // Example user_id
-          status: 'pending',
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        return { success: true, message: 'Doings autoassigned' };
+        const { reassign } = ctx.body;
+        try {
+          await new AssignmentService().assignTasksForWeek({
+            dryRun: false,
+            clearAndReassign: reassign,
+            groupByRepetition:
+              process.env.ENABLE_REPETITION_GROUPING === 'true',
+          });
+        } catch (error) {
+          console.log(error);
+          return {
+            success: false,
+            message: `Failed during autoassign,
+          ${error}`,
+          };
+        }
+        return { success: true, message: 'Autoassign successful' };
       },
       {
-        params: t.Object({
-          id: t.Number(),
+        body: t.Object({
+          reassign: t.Optional(t.Boolean()),
         }),
         response: t.Object({
           success: t.Boolean(),

@@ -20,16 +20,26 @@ export class AssignmentService {
 
   // Main method to perform doing assignment
   async assignTasksForWeek(options?: {
-    dryRun?: boolean;
-    groupByRepetition?: boolean;
+    dryRun?: boolean; // If true, will not save assignments to the database and skip pre-assignment operations/evaluation
+    clearAndReassign?: boolean; // If true, will clear all current assignments and reassign without evaluation
+    groupByRepetition?: boolean; // If true, will group doings by repetition type and assign in batches
   }): Promise<void | any[]> {
-    const { dryRun = false, groupByRepetition = true } = options || {};
+    const {
+      dryRun = false,
+      clearAndReassign = false,
+      groupByRepetition = true,
+    } = options || {};
 
     // Step 0: Pre-assignment operations
-    if (!dryRun) {
+    if (!dryRun && !clearAndReassign) {
       await this.deactivateCompletedOnceDoings();
       await this.changePendingAndWaitingAssignmentsToFailed();
       await this.moveCurrentAssignmentsToHistory();
+    }
+
+    if (clearAndReassign) {
+      // Clear all current assignments
+      await this.db.delete(assignments);
     }
 
     const users = await this.getActiveUsers();
@@ -49,7 +59,7 @@ export class AssignmentService {
     }
 
     // Step 3: Assign doings in batches by repetition type
-    const assignments = [];
+    const assignmentArray = [];
     for (const repetition in doingGroups) {
       const group = doingGroups[repetition];
       const groupAssignments = this.optimizeAssignments(
@@ -58,11 +68,11 @@ export class AssignmentService {
         shittyPoints,
         todoHistory,
       );
-      assignments.push(...groupAssignments);
+      assignmentArray.push(...groupAssignments);
     }
 
     // Step 4: Save assignments to the database
-    await this.saveAssignments(assignments, dryRun);
+    await this.saveAssignments(assignmentArray, dryRun);
   }
 
   // PreHelper: Deactivate completed "once" doings

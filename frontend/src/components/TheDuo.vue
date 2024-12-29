@@ -78,12 +78,7 @@ import Slider from 'primevue/slider';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
-import {
-  readAPI,
-  createAPI,
-  updateApi,
-  deleteApi,
-} from '@/services/apiService';
+import { readAPI, createAPI, updateApi } from '@/services/apiService';
 import { mockApi } from '@/services/mockApi';
 
 const toast = useToast();
@@ -219,13 +214,9 @@ const updateAssignment = async (assignment: any) => {
 
 const triggerReassignment = async () => {
   try {
-    // await fetch("/api/assignments/reassign", {
-    //   method: "POST",
-    //   headers: {
-    //     Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-    //   },
-    // });
-    await mockApi.triggerReassignment();
+    await createAPI('/doings/autoassign', {
+      reassign: true,
+    });
     await fetchThisWeeksTodos();
   } catch (error) {
     toast.add({
