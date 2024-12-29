@@ -106,7 +106,7 @@ if (process.env.NODE_ENV === 'development') {
     ); // DEV: add swagger ui
 
   // DEV: redirect root to swagger ui
-  app.get('/', ({ redirect }) => {
+  app.get('/', ({ redirect }: { redirect: (url: string) => void }) => {
     return redirect('/api-docs');
   });
 } else {
@@ -130,7 +130,13 @@ app.group('/api', (apiGroup) =>
   apiGroup
     .guard({
       // use auth service to guard the route
-      beforeHandle: async ({ authenticatedUserId, error }) => {
+      beforeHandle: async ({
+        authenticatedUserId,
+        error,
+      }: {
+        authenticatedUserId: () => Promise<string>;
+        error: (status: number) => void;
+      }) => {
         const userId = await authenticatedUserId();
         if (!userId) return error(401);
       },
@@ -138,7 +144,7 @@ app.group('/api', (apiGroup) =>
     // User joins via invitation
     .post(
       '/users/join',
-      async (ctx) => {
+      async (ctx: any) => {
         const { username, invitation_code } = ctx.body;
         const auth0UserId = (await ctx.authenticatedUserId()) as string;
 
@@ -218,7 +224,7 @@ app.group('/api', (apiGroup) =>
     // update participation percent
     .put(
       '/users/participation/',
-      async (ctx) => {
+      async (ctx: any) => {
         const userArray = ctx.body;
 
         // check userArray for valid participation_percent
@@ -265,7 +271,7 @@ app.group('/api', (apiGroup) =>
     // Create a new doing
     .post(
       '/doings',
-      async (ctx) => {
+      async (ctx: any) => {
         const {
           name,
           description,
@@ -325,7 +331,7 @@ app.group('/api', (apiGroup) =>
     // Get all doings or a doing by id
     .get(
       '/doings/:id?',
-      async (ctx) => {
+      async (ctx: any) => {
         const { id } = ctx.params;
         if (id) {
           // Logic to get a doing by id
@@ -356,7 +362,7 @@ app.group('/api', (apiGroup) =>
     // Update a doing by id
     .put(
       '/doings/:id',
-      async (ctx) => {
+      async (ctx: any) => {
         const { id } = ctx.params;
         const {
           name,
@@ -424,7 +430,7 @@ app.group('/api', (apiGroup) =>
     // Delete a doing by id
     .delete(
       '/doings/:id',
-      async (ctx) => {
+      async (ctx: any) => {
         const { id } = ctx.params;
 
         // remove all assignments for this doing
@@ -471,7 +477,7 @@ app.group('/api', (apiGroup) =>
     // Trigger Autoassign
     .post(
       '/doings/autoassign',
-      async (ctx) => {
+      async (ctx: any) => {
         const { reassign } = ctx.body;
         try {
           await new AssignmentService().assignTasksForWeek({
@@ -504,7 +510,7 @@ app.group('/api', (apiGroup) =>
     // Update assignment status or user
     .put(
       '/assignments/:id',
-      async (ctx) => {
+      async (ctx: any) => {
         const { id } = ctx.params;
         const { assignedUserId, status } = ctx.body;
 
@@ -627,7 +633,7 @@ app.group('/api', (apiGroup) =>
     // Get todos (= assigned doings) to the current user for the current week
     .get(
       '/todos/this-week',
-      async (ctx) => {
+      async (ctx: any) => {
         const { allUsers, status } = ctx.query;
 
         // Optional filter by user
@@ -776,7 +782,7 @@ app.group('/api', (apiGroup) =>
     // Create shitty points
     .post(
       '/shittypoints',
-      async (ctx) => {
+      async (ctx: any) => {
         const { doing_id, points } = ctx.body;
 
         const user_id = await getUserIdFromContext(ctx);
@@ -844,7 +850,7 @@ app.group('/api', (apiGroup) =>
     // Get shitty points
     .get(
       '/shittypoints',
-      async (ctx) => {
+      async (ctx: any) => {
         const user_id = await getUserIdFromContext(ctx);
         if (!user_id) {
           return { success: false, message: 'User not found' };
@@ -901,7 +907,7 @@ app.group('/api', (apiGroup) =>
     // Update shitty points
     .put(
       '/shittypoints/:id',
-      async (ctx) => {
+      async (ctx: any) => {
         const { id } = ctx.params;
         const { points } = ctx.body;
 
