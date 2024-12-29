@@ -62,9 +62,10 @@
       </Column>
     </DataTable>
 
+    <ConfirmDialog class="max-w-lg m-5"></ConfirmDialog>
     <Button
       label="Trigger Reassignment"
-      @click="triggerReassignment"
+      @click="confirmReassignment"
       class="mt-4"
     />
   </div>
@@ -77,10 +78,13 @@ import Column from 'primevue/column';
 import Slider from 'primevue/slider';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
+import ConfirmDialog from 'primevue/confirmdialog';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
 import { readAPI, createAPI, updateApi } from '@/services/apiService';
 
 const toast = useToast();
+const confirm = useConfirm();
 const users = ref<any>([]);
 const weeklyTodos = ref<any>([]);
 const statusOptions = [
@@ -225,6 +229,26 @@ const triggerReassignment = async () => {
       life: 3000,
     });
   }
+};
+
+const confirmReassignment = () => {
+  confirm.require({
+    header: 'Are you sure you want to reassign?',
+    message: 'All current assignments will be lost and progress will be reset.',
+    defaultFocus: 'reject',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    acceptProps: {
+      label: 'Reassign',
+    },
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      await triggerReassignment();
+    },
+  });
 };
 
 // for daily and weekly todos, we don't want to show postponed status

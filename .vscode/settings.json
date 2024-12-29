@@ -9,6 +9,8 @@
     "autoassign",
     "autoassigned",
     "bunx",
+    "confirmationservice",
+    "confirmdialog",
     "datatable",
     "elysia",
     "elysiajs",
@@ -23,7 +25,9 @@
     "slideend",
     "sqlite",
     "SQLITE",
+    "toastservice",
     "toduo",
+    "useconfirm",
     "usetoast",
     "VITE"
   ]
