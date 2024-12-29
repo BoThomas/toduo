@@ -155,13 +155,26 @@ const updateParticipationLive = async (changedUserId: number) => {
         changedUser.participation_percent -= excess;
       }
     } else {
-      const adjustment = Math.round(excess / otherUsers.length);
+      const adjustment = Math.floor(excess / otherUsers.length);
       otherUsers.forEach((user: any) => {
         user.participation_percent = Math.max(
           0,
           Math.round(user.participation_percent - adjustment),
         );
       });
+
+      // if the sum of participation is still not 100, adjust the changed user
+      const remainingExcess =
+        users.value.reduce(
+          (sum: number, user: any) => sum + user.participation_percent,
+          0,
+        ) - 100;
+      const changedUser = users.value.find(
+        (user: any) => user.id === changedUserId,
+      );
+      if (changedUser) {
+        changedUser.participation_percent -= remainingExcess;
+      }
     }
   }
 };
