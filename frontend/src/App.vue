@@ -2,7 +2,7 @@
   <Toast />
   <div class="app-container">
     <header>
-      <div class="fixed cursor-pointer" style="top: 0.8rem; left: 1.2rem">
+      <div class="absolute cursor-pointer" style="top: 0.8rem; left: 1.2rem">
         <span class="text-2xl text-primary" @click="toggleDarkMode">
           <span v-if="isDarkMode" class="pi pi-sun"></span>
           <span v-else class="pi pi-moon"></span>
@@ -44,7 +44,7 @@
         <Menubar :model="items" breakpoint="0px" class="menubar" />
       </div>
     </header>
-    <main v-if="!isLoading && isAuthenticated" class="py-2 sm:px-8 px-4">
+    <main v-if="!isLoading && isAuthenticated" class="py-2 sm:px-8 px-4 mb-10">
       <router-view></router-view>
     </main>
   </div>
