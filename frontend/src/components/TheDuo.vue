@@ -62,7 +62,6 @@
       </Column>
     </DataTable>
 
-    <ConfirmDialog class="max-w-lg m-5"></ConfirmDialog>
     <Button
       label="Trigger Reassignment"
       @click="confirmReassignment"
@@ -78,7 +77,6 @@ import Column from 'primevue/column';
 import Slider from 'primevue/slider';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
-import ConfirmDialog from 'primevue/confirmdialog';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { readAPI, createAPI, updateApi } from '@/services/apiService';

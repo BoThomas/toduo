@@ -190,6 +190,7 @@ import InputNumber from 'primevue/inputnumber';
 import Checkbox from 'primevue/checkbox';
 import Message from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
 import {
   readAPI,
   createAPI,
@@ -198,6 +199,7 @@ import {
 } from '@/services/apiService';
 
 const toast = useToast();
+const confirm = useConfirm();
 const doings = ref<any>([]);
 const shittyPoints = ref<any>([]);
 const dialogVisible = ref(false);
@@ -335,19 +337,34 @@ const saveDoing = async (formData: any) => {
 };
 
 const deleteDoing = async (id: number) => {
-  if (confirm('Are you sure you want to delete this todo?')) {
-    try {
-      await deleteApi(`/doings/${id}`);
-      await fetchDoingsAndShittyPoints();
-    } catch (error) {
-      toast.add({
-        severity: 'error',
-        summary: 'Error Message',
-        detail: 'Doing could not be deleted',
-        life: 3000,
-      });
-    }
-  }
+  confirm.require({
+    header: 'Are you sure you want to delete this doing?',
+    message:
+      'All shitty-points and assignments regarding this doing will be lost. This action cannot be undone.',
+    defaultFocus: 'reject',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    acceptProps: {
+      label: 'Delete',
+    },
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      try {
+        await deleteApi(`/doings/${id}`);
+        await fetchDoingsAndShittyPoints();
+      } catch (error) {
+        toast.add({
+          severity: 'error',
+          summary: 'Error Message',
+          detail: 'Doing could not be deleted',
+          life: 3000,
+        });
+      }
+    },
+  });
 };
 
 const updateShittyPoints = async (shittypoints: any, amount: number) => {

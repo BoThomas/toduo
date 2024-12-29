@@ -1,5 +1,6 @@
 <template>
   <Toast />
+  <ConfirmDialog class="max-w-lg m-5" />
   <div class="app-container">
     <header>
       <div class="absolute cursor-pointer" style="top: 0.8rem; left: 1.2rem">
@@ -55,6 +56,7 @@ import { ref, watch, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth0 } from '@auth0/auth0-vue';
 import Toast from 'primevue/toast';
+import ConfirmDialog from 'primevue/confirmdialog';
 import Menubar from 'primevue/menubar';
 
 const router = useRouter();
