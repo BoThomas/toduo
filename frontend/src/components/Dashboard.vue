@@ -21,9 +21,13 @@
           </span>
         </template>
       </Column>
-      <Column field="doingDescription" header="Description"></Column>
-      <Column field="doingEffort" header="Effort (minutes)"></Column>
-      <Column header="Completed">
+      <Column
+        field="doingDescription"
+        header="Description"
+        :class="{ 'hidden sm:table-cell': true }"
+      ></Column>
+      <Column field="doingEffort" header="Effort (min)"></Column>
+      <Column header="Done">
         <template #body="slotProps">
           <Checkbox
             v-model="slotProps.data.completed"
