@@ -4,7 +4,7 @@
     v-model:visible="dialogVisible"
     header="Todo Details"
     :modal="true"
-    :style="{ width: '50vw' }"
+    class="w-full mx-5 max-w-2xl"
   >
     <Form
       v-slot="$form"
@@ -32,7 +32,7 @@
         :class="[
           'field',
           $form.repetition && $form.repetition.value === 'daily'
-            ? 'col-span-12 lg:col-span-6'
+            ? 'col-span-12 sm:col-span-6'
             : 'col-span-12',
         ]"
       >
@@ -55,7 +55,7 @@
         >
       </div>
       <div
-        class="field col-span-12 lg:col-span-6"
+        class="field col-span-12 sm:col-span-6"
         v-if="$form.repetition && $form.repetition.value === 'daily'"
       >
         <label for="days_per_week">Days per Week</label>
@@ -73,7 +73,7 @@
           >{{ $form.days_per_week.error?.message }}
         </Message>
       </div>
-      <div class="field col-span-12 lg:col-span-6">
+      <div class="field col-span-12 sm:col-span-6">
         <label for="effort_in_minutes">Effort (minutes)</label>
         <InputNumber
           id="effort_in_minutes"
@@ -88,7 +88,7 @@
           >{{ $form.effort_in_minutes.error?.message }}</Message
         >
       </div>
-      <div class="field col-span-12 lg:col-span-6">
+      <div class="field col-span-12 sm:col-span-6">
         <label for="notice">Notice (optional)</label>
         <InputText id="notice" name="notice" class="w-full" />
       </div>
