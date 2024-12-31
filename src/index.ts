@@ -544,74 +544,10 @@ app.group('/api', (apiGroup) =>
         }
 
         // auto handling of daily assignments states for same doing
-        try {
-          if (updateData.status === 'completed') {
-            // If there is no further pending assignment for the current doing, set the next waiting assignment to pending
-            const pendingAssignment = await db
-              .select({
-                id: schema.assignments.id,
-              })
-              .from(schema.assignments)
-              .where(
-                and(
-                  eq(schema.assignments.doing_id, currentDoingId[0].doing_id),
-                  eq(schema.assignments.status, 'pending'),
-                ),
-              )
-              .limit(1);
-
-            if (pendingAssignment.length === 0) {
-              await db
-                .update(schema.assignments)
-                .set({
-                  status: 'pending',
-                  updated_at: new Date(),
-                })
-                .where(
-                  and(
-                    eq(schema.assignments.doing_id, currentDoingId[0].doing_id),
-                    eq(schema.assignments.status, 'waiting'),
-                  ),
-                )
-                .orderBy(asc(schema.assignments.id))
-                .limit(1);
-            }
-          } else if (updateData.status === 'pending') {
-            // If there are more than one pending assignments for the current doing, set the others to waiting
-            const pendingAssignments = await db
-              .select({
-                id: schema.assignments.id,
-              })
-              .from(schema.assignments)
-              .where(
-                and(
-                  eq(schema.assignments.doing_id, currentDoingId[0].doing_id),
-                  eq(schema.assignments.status, 'pending'),
-                ),
-              )
-              .orderBy(asc(schema.assignments.id));
-
-            if (pendingAssignments.length > 1) {
-              await db
-                .update(schema.assignments)
-                .set({
-                  status: 'waiting',
-                  updated_at: new Date(),
-                })
-                .where(
-                  inArray(
-                    schema.assignments.id,
-                    pendingAssignments.slice(1).map((a) => a.id),
-                  ),
-                );
-            }
-          }
-        } catch (error) {
-          console.log(
-            'Error during auto handling of daily assignments states for same doing. Skipping this step.',
-            error,
-          );
-        }
+        await autoHandleDailyAssignments(
+          currentDoingId[0].doing_id,
+          updateData.status,
+        );
 
         return { success: true, message: 'Assignment updated' };
       },
@@ -1017,6 +953,102 @@ const maxShittyPointsExceeded = async (
 
   const totalPoints = Number(totalPointsArray[0].totalPoints ?? 0);
   return totalPoints + targetPoints - currentPoints > totalNumberOfDoings;
+};
+
+// helper function to auto handle status of next daily assignment
+const autoHandleDailyAssignments = async (
+  parentDoingId: number,
+  parentStatus: string,
+) => {
+  try {
+    if (parentStatus === 'completed') {
+      // check if there is a pending assignment for the current doing
+      const pendingAssignment = await db
+        .select({
+          id: schema.assignments.id,
+        })
+        .from(schema.assignments)
+        .where(
+          and(
+            eq(schema.assignments.doing_id, parentDoingId),
+            eq(schema.assignments.status, 'pending'),
+          ),
+        )
+        .limit(1);
+
+      // If there is a pending assignment, do not change the status of the next waiting assignment
+      if (pendingAssignment.length > 0) {
+        return;
+      }
+
+      // get the next waiting assignment for the current doing
+      const nextWaitingAssignment = await db
+        .select({
+          id: schema.assignments.id,
+        })
+        .from(schema.assignments)
+        .where(
+          and(
+            eq(schema.assignments.doing_id, parentDoingId),
+            eq(schema.assignments.status, 'waiting'),
+          ),
+        )
+        .orderBy(asc(schema.assignments.id))
+        .limit(1);
+
+      // If there is no next waiting assignment, do nothing
+      if (nextWaitingAssignment.length === 0) {
+        return;
+      }
+
+      // Set the status of the next waiting assignment to pending
+      await db
+        .update(schema.assignments)
+        .set({
+          status: 'pending',
+          updated_at: new Date(),
+        })
+        .where(eq(schema.assignments.id, nextWaitingAssignment[0].id));
+    } else if (parentStatus === 'pending') {
+      // Get all pending assignments for the current doing
+      const pendingAssignments = await db
+        .select({
+          id: schema.assignments.id,
+        })
+        .from(schema.assignments)
+        .where(
+          and(
+            eq(schema.assignments.doing_id, parentDoingId),
+            eq(schema.assignments.status, 'pending'),
+          ),
+        )
+        .orderBy(asc(schema.assignments.id));
+
+      // If there are no pending assignments, do nothing
+      if (pendingAssignments.length === 0) {
+        return;
+      }
+
+      // Set the status of every pending assignment except the first one to waiting
+      await db
+        .update(schema.assignments)
+        .set({
+          status: 'waiting',
+          updated_at: new Date(),
+        })
+        .where(
+          inArray(
+            schema.assignments.id,
+            pendingAssignments.slice(1).map((a) => a.id), // Skip the first pending assignment
+          ),
+        );
+    }
+  } catch (error) {
+    console.log(
+      'Error during auto handling of daily assignments states for same doing. Skipping this step.',
+      error,
+    );
+  }
 };
 
 // Start the server
