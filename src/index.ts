@@ -322,6 +322,7 @@ app.group('/api', (apiGroup) =>
           ]),
           days_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
+          is_active: t.Boolean(),
         }),
         response: t.Object({
           success: t.Boolean(),
