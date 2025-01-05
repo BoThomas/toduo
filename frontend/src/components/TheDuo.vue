@@ -159,17 +159,23 @@ const updateParticipationLive = async (changedUserId: number) => {
         );
       });
 
-      // if the sum of participation is still not 100, adjust the changed user
+      // if the sum of participation is still not 100, adjust an unlocked user that is not the changed user
       const remainingExcess =
         users.value.reduce(
           (sum: number, user: any) => sum + user.participation_percent,
           0,
         ) - 100;
-      const changedUser = users.value.find(
-        (user: any) => user.id === changedUserId,
+      if (remainingExcess === 0) {
+        return;
+      }
+      const remainingUser = users.value.find(
+        (user: any) =>
+          user.id !== changedUserId &&
+          !user.locked &&
+          user.participation_percent > 0,
       );
-      if (changedUser) {
-        changedUser.participation_percent -= remainingExcess;
+      if (remainingUser) {
+        remainingUser.participation_percent -= remainingExcess;
       }
     }
   }
