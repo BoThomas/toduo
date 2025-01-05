@@ -85,16 +85,52 @@
       </Column>
     </DataTable>
 
-    <Button
-      label="Trigger Reassignment"
-      @click="confirmReassignment"
-      class="mt-4"
-    />
+    <div class="mt-4 flex gap-3">
+      <Button label="Trigger Reassignment" @click="confirmReassignment" />
+
+      <Button
+        :label="
+          showStatusExplanation
+            ? 'Hide Status Explanation'
+            : 'Show Status Explanation'
+        "
+        @click="showStatusExplanation = !showStatusExplanation"
+      />
+    </div>
+
+    <div v-if="showStatusExplanation" class="mt-10">
+      <h3 class="mb-2">Status Explanation</h3>
+      <ul class="list-disc pl-5">
+        <li>
+          <strong>Waiting:</strong> The task is waiting to be pending. Only for
+          daily doings.
+        </li>
+        <li><strong>Pending:</strong> The task is open for completion.</li>
+        <li>
+          <strong>Completed:</strong> The task has been finished successfully.
+        </li>
+        <li>
+          <strong>Skipped:</strong> The task will not be completed this
+          iteration and is reassigned the next time it is due based on the
+          repetition.
+        </li>
+        <li>
+          <strong>Postponed:</strong> The task will not be completed this
+          iteration but is reassigned the next week, regardless of the
+          repetition. Not possible for daily and weekly doings.
+        </li>
+        <li>
+          <strong>Failed:</strong> The task has been failed and will be
+          reassigned the next week, regardless of the repetition. Can not be set
+          manually.
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, h } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Slider from 'primevue/slider';
@@ -115,6 +151,7 @@ const weeklyTodos = ref<any>([]);
 const weeklyTodosFilters = ref<any>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
+const showStatusExplanation = ref(false);
 const STATUS_OPTIONS = [
   'waiting',
   'pending',
