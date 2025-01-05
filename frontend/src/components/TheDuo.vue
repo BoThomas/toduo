@@ -31,8 +31,8 @@
     </div>
 
     <h3 class="mt-8 mb-3">This Week's Assignments</h3>
-    <DataTable :value="weeklyTodos" responsiveLayout="scroll">
-      <Column header="Todo">
+    <DataTable :value="weeklyTodos" responsiveLayout="scroll" removableSort>
+      <Column header="Todo" sortable sortField="doingName">
         <template #body="slotProps">
           {{ slotProps.data.doingName }}
           <span v-if="slotProps.data.doingRepetition === 'daily'">
@@ -42,7 +42,7 @@
           </span>
         </template>
       </Column>
-      <Column header="Assigned To">
+      <Column header="Assigned To" sortable sortField="username">
         <template #body="slotProps">
           <Select
             v-model="slotProps.data.username"
@@ -51,7 +51,7 @@
           />
         </template>
       </Column>
-      <Column header="Status">
+      <Column header="Status" sortable sortField="status">
         <template #body="slotProps">
           <Select
             v-model="slotProps.data.status"

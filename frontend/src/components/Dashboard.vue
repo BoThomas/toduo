@@ -10,8 +10,9 @@
           return data.completed ? 'line-through  text-gray-400' : '';
         }
       "
+      removableSort
     >
-      <Column header="Name">
+      <Column header="Name" sortable sortField="doingName">
         <template #body="slotProps">
           {{ slotProps.data.doingName }}
           <span v-if="slotProps.data.doingRepetition === 'daily'">
@@ -24,10 +25,11 @@
       <Column
         field="doingDescription"
         header="Description"
+        sortable
         :class="{ 'hidden sm:table-cell': true }"
       ></Column>
-      <Column field="doingEffort" header="Effort (min)"></Column>
-      <Column header="Done">
+      <Column field="doingEffort" header="Effort (min)" sortable></Column>
+      <Column header="Done" sortable sortField="completed">
         <template #body="slotProps">
           <Checkbox
             v-model="slotProps.data.completed"

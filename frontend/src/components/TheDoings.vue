@@ -108,10 +108,10 @@
     </Form>
   </Dialog>
 
-  <DataTable :value="doings" responsiveLayout="scroll">
-    <Column field="name" header="Name"></Column>
-    <Column field="description" header="Description"></Column>
-    <Column field="repetition" header="Repetition">
+  <DataTable :value="doings" responsiveLayout="scroll" removableSort>
+    <Column field="name" header="Name" sortable></Column>
+    <Column field="description" header="Description" sortable></Column>
+    <Column header="Repetition" sortable sortField="repetition">
       <template #body="slotProps">
         {{ slotProps.data.repetition }}
         <span v-if="slotProps.data.days_per_week">
@@ -119,8 +119,12 @@
         </span>
       </template>
     </Column>
-    <Column field="effort_in_minutes" header="Effort (minutes)"></Column>
-    <Column field="is_active" header="Active">
+    <Column
+      field="effort_in_minutes"
+      header="Effort (minutes)"
+      sortable
+    ></Column>
+    <Column header="Active" sortable sortField="is_active">
       <template #body="slotProps">
         <i
           :class="{
@@ -154,9 +158,9 @@
   />
 
   <h3 class="mt-10 mb-2">Assign Shitty Points</h3>
-  <DataTable :value="shittyPoints" responsiveLayout="scroll">
-    <Column field="name" header="Name"></Column>
-    <Column field="points" header="Shitty Points">
+  <DataTable :value="shittyPoints" responsiveLayout="scroll" removableSort>
+    <Column field="name" header="Name" sortable></Column>
+    <Column header="Shitty Points" sortable sortField="points">
       <template #body="slotProps">
         <div class="shitty-points-container">
           <Button
