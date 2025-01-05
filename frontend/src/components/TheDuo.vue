@@ -115,13 +115,13 @@ const weeklyTodos = ref<any>([]);
 const weeklyTodosFilters = ref<any>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
-const statusOptions = [
+const STATUS_OPTIONS = [
   'waiting',
   'pending',
   'completed',
   'skipped',
   'postponed',
-];
+]; //TODO: move to type model
 
 onMounted(async () => {
   await fetchUsers();
@@ -291,10 +291,15 @@ const confirmReassignment = () => {
 
 // for daily and weekly todos, we don't want to show postponed status
 // as it doesn't make sense because the todo will be reassigned the next day/week anyway
+// only for daily todos is waiting status allowed
 const getStatusOptions = (repetition: string) => {
+  let options = [...STATUS_OPTIONS];
   if (repetition === 'daily' || repetition === 'weekly') {
-    return statusOptions.filter((option) => option !== 'postponed');
+    options = options.filter((option) => option !== 'postponed');
   }
-  return statusOptions;
+  if (repetition !== 'daily') {
+    options = options.filter((option) => option !== 'waiting');
+  }
+  return options;
 };
 </script>
