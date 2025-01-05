@@ -279,6 +279,7 @@ app.group('/api', (apiGroup) =>
           repetition,
           days_per_week,
           effort_in_minutes,
+          is_active,
         } = ctx.body;
 
         // prevent setting days_per_week for non-daily repetitions
@@ -299,7 +300,7 @@ app.group('/api', (apiGroup) =>
             | 'yearly',
           days_per_week: dpw,
           effort_in_minutes,
-          is_active: true,
+          is_active,
           created_at: new Date(),
           updated_at: new Date(),
         });
