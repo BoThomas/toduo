@@ -108,7 +108,35 @@
     </Form>
   </Dialog>
 
-  <DataTable :value="doings" responsiveLayout="scroll" removableSort>
+  <DataTable
+    :value="doings"
+    responsiveLayout="scroll"
+    removableSort
+    v-model:filters="doingsFilters"
+    :globalFilterFields="[
+      'name',
+      'description',
+      'repetition',
+      'effort_in_minutes',
+    ]"
+  >
+    <div class="flex justify-end gap-2 mb-2">
+      <Button
+        type="button"
+        icon="pi pi-filter-slash"
+        outlined
+        @click="clearFilter()"
+      />
+      <IconField>
+        <InputIcon>
+          <i class="pi pi-search" />
+        </InputIcon>
+        <InputText
+          v-model="doingsFilters['global'].value"
+          placeholder="Keyword Search"
+        />
+      </IconField>
+    </div>
     <Column field="name" header="Name" sortable></Column>
     <Column field="description" header="Description" sortable></Column>
     <Column header="Repetition" sortable sortField="repetition">
@@ -193,8 +221,11 @@ import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import Checkbox from 'primevue/checkbox';
 import Message from 'primevue/message';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
+import { FilterMatchMode } from '@primevue/core/api';
 import {
   readAPI,
   createAPI,
@@ -205,6 +236,9 @@ import {
 const toast = useToast();
 const confirm = useConfirm();
 const doings = ref<any>([]);
+const doingsFilters = ref<any>({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
 const shittyPoints = ref<any>([]);
 const dialogVisible = ref(false);
 const currentDoing = ref<any>({});
@@ -215,6 +249,10 @@ const repetitionOptions = [
   { label: 'Monthly', value: 'monthly' },
   { label: 'Yearly', value: 'yearly' },
 ];
+
+const clearFilter = () => {
+  doingsFilters.value.global.value = null;
+};
 
 const resolver = ({ values }: any) => {
   const errors: any = {};

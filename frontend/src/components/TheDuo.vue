@@ -31,7 +31,30 @@
     </div>
 
     <h3 class="mt-8 mb-3">This Week's Assignments</h3>
-    <DataTable :value="weeklyTodos" responsiveLayout="scroll" removableSort>
+    <DataTable
+      :value="weeklyTodos"
+      responsiveLayout="scroll"
+      removableSort
+      v-model:filters="weeklyTodosFilters"
+      :globalFilterFields="['doingName', 'username', 'status']"
+    >
+      <div class="flex justify-end gap-2 mb-2">
+        <Button
+          type="button"
+          icon="pi pi-filter-slash"
+          outlined
+          @click="clearFilter()"
+        />
+        <IconField>
+          <InputIcon>
+            <i class="pi pi-search" />
+          </InputIcon>
+          <InputText
+            v-model="weeklyTodosFilters['global'].value"
+            placeholder="Keyword Search"
+          />
+        </IconField>
+      </div>
       <Column header="Todo" sortable sortField="doingName">
         <template #body="slotProps">
           {{ slotProps.data.doingName }}
@@ -77,14 +100,21 @@ import Column from 'primevue/column';
 import Slider from 'primevue/slider';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
+import { FilterMatchMode } from '@primevue/core/api';
 import { readAPI, createAPI, updateApi } from '@/services/apiService';
 
 const toast = useToast();
 const confirm = useConfirm();
 const users = ref<any>([]);
 const weeklyTodos = ref<any>([]);
+const weeklyTodosFilters = ref<any>({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
 const statusOptions = [
   'waiting',
   'pending',
@@ -97,6 +127,10 @@ onMounted(async () => {
   await fetchUsers();
   await fetchThisWeeksTodos();
 });
+
+const clearFilter = () => {
+  weeklyTodosFilters.value.global.value = null;
+};
 
 const fetchUsers = async () => {
   try {
