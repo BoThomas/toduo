@@ -36,6 +36,9 @@
       responsiveLayout="scroll"
       removableSort
       size="small"
+      paginator
+      :rows="10"
+      :rowsPerPageOptions="[5, 10, 20, 50]"
       v-model:filters="weeklyTodosFilters"
       :globalFilterFields="['doingName', 'username', 'status']"
     >
