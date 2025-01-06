@@ -3,7 +3,7 @@
     <h2>Welcome, {{ username }}</h2>
     <h3 class="mb-2">This Week's Todos</h3>
     <DataTable
-      :value="thisWeeksTodos"
+      :value="todos"
       responsiveLayout="scroll"
       :rowClass="
         (data) => {
@@ -52,20 +52,20 @@ import { readAPI, updateApi } from '@/services/apiService';
 
 const toast = useToast();
 const username = ref('');
-const thisWeeksTodos = ref([]);
+const todos = ref([]);
 
 onMounted(async () => {
   username.value = localStorage.getItem('username') || '';
-  await fetchThisWeeksTodos();
+  await fetchTodos();
 });
 
-const fetchThisWeeksTodos = async () => {
+const fetchTodos = async () => {
   try {
-    const response = await readAPI('/todos/this-week?status=pending,completed');
+    const response = await readAPI('/todos?status=pending,completed');
     response.forEach((todo: any) => {
       todo.completed = todo.status === 'completed';
     });
-    thisWeeksTodos.value = response;
+    todos.value = response;
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -81,7 +81,7 @@ const updateTodoStatus = async (todo: any) => {
     await updateApi(`/assignments/${todo.assignmentId}`, {
       status: todo.completed ? 'completed' : 'pending',
     });
-    await fetchThisWeeksTodos();
+    await fetchTodos();
   } catch (error) {
     toast.add({
       severity: 'error',

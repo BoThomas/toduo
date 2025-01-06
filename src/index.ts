@@ -617,9 +617,9 @@ app.group('/api', (apiGroup) =>
       },
     )
 
-    // Get todos (= assigned doings) to the current user for the current week
+    // Get todos (= assigned doings) to the current user
     .get(
-      '/todos/this-week',
+      '/todos',
       async (ctx: any) => {
         const { allUsers, status } = ctx.query;
 
@@ -667,17 +667,17 @@ app.group('/api', (apiGroup) =>
         }
 
         // Get the start and end of the current week and the current calendar week
-        const now = new Date();
-        const dayOfWeek = now.getDay();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(
-          now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1),
-        ); // Adjust to Monday
-        startOfWeek.setHours(0, 0, 0, 0); // Set to 0 AM
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Sunday
-        endOfWeek.setHours(23, 59, 59, 999); // Set to end of the day
-        const currentWeekNumber = getCalendarWeekFromDateOfCurrentYear(now);
+        // const now = new Date();
+        // const dayOfWeek = now.getDay();
+        // const startOfWeek = new Date(now);
+        // startOfWeek.setDate(
+        //   now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1),
+        // ); // Adjust to Monday
+        // startOfWeek.setHours(0, 0, 0, 0); // Set to 0 AM
+        // const endOfWeek = new Date(startOfWeek);
+        // endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Sunday
+        // endOfWeek.setHours(23, 59, 59, 999); // Set to end of the day
+        // const currentWeekNumber = getCalendarWeekFromDateOfCurrentYear(now);
 
         const assignmentsQuery = db
           .select({
@@ -703,13 +703,13 @@ app.group('/api', (apiGroup) =>
           .where(
             and(
               userFilter,
-              or(
-                eq(schema.assignments.due_week, currentWeekNumber),
-                and(
-                  gt(schema.assignments.due_date, startOfWeek),
-                  lt(schema.assignments.due_date, endOfWeek),
-                ),
-              ),
+              // or(
+              //   eq(schema.assignments.due_week, currentWeekNumber),
+              //   and(
+              //     gt(schema.assignments.due_date, startOfWeek),
+              //     lt(schema.assignments.due_date, endOfWeek),
+              //   ),
+              // ),
               statusFilter,
             ),
           );

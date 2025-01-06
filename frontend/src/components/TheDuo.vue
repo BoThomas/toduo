@@ -221,7 +221,7 @@ const fetchUsers = async () => {
 
 const fetchThisWeeksTodos = async () => {
   try {
-    weeklyTodos.value = await readAPI('/todos/this-week?allUsers=true');
+    weeklyTodos.value = await readAPI('/todos?allUsers=true');
   } catch (error) {
     toast.add({
       severity: 'error',
