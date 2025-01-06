@@ -70,6 +70,24 @@ class CronJobManager {
       this.jobs.delete(name);
     }
   }
+
+  /**
+   * Get info about a cron job.
+   * @param {string} name - The name of the job to get info about.
+   * @returns {Object} - The job info.
+   */
+  public getJobInfo(name: string): object {
+    const job = this.jobs.get(name);
+    if (job) {
+      return {
+        name: job.name,
+        cronTime: job.getPattern(),
+        nextDates: job.nextRuns(3),
+        running: job.isRunning(),
+      };
+    }
+    return {};
+  }
 }
 
 export default CronJobManager;

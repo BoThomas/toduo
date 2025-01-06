@@ -87,7 +87,6 @@
 
     <div class="mt-4 flex gap-3">
       <Button label="Trigger Reassignment" @click="confirmReassignment" />
-
       <Button
         :label="
           showStatusExplanation
@@ -96,6 +95,28 @@
         "
         @click="showStatusExplanation = !showStatusExplanation"
       />
+      <Button
+        :label="
+          autoassignCronInfo?.running
+            ? 'Stop Autoassign Cron'
+            : 'Start Autoassign Cron'
+        "
+        @click="confirmCronControl"
+      />
+    </div>
+
+    <div v-if="autoassignCronInfo?.name" class="mt-10">
+      <p>The autoassign cron is currently running.</p>
+      <p><strong>Cron Time:</strong> {{ autoassignCronInfo.cronTime }}</p>
+      <p><strong>Next Dates:</strong></p>
+      <ul class="list-disc pl-5">
+        <li v-for="date in autoassignCronInfo.nextDates" :key="date">
+          {{ new Date(date).toLocaleString() }}
+        </li>
+      </ul>
+    </div>
+    <div v-else class="mt-10">
+      <p>The autoassign cron is currently stopped.</p>
     </div>
 
     <div v-if="showStatusExplanation" class="mt-10">
@@ -146,6 +167,7 @@ import { readAPI, createAPI, updateApi } from '@/services/apiService';
 
 const toast = useToast();
 const confirm = useConfirm();
+const autoassignCronInfo = ref<any>({});
 const users = ref<any>([]);
 const weeklyTodos = ref<any>([]);
 const weeklyTodosFilters = ref<any>({
@@ -163,10 +185,24 @@ const STATUS_OPTIONS = [
 onMounted(async () => {
   await fetchUsers();
   await fetchThisWeeksTodos();
+  await fetchAutoassignCronInfo();
 });
 
 const clearFilter = () => {
   weeklyTodosFilters.value.global.value = null;
+};
+
+const fetchAutoassignCronInfo = async () => {
+  try {
+    autoassignCronInfo.value = await readAPI('/doings/autoassign/cron');
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load autoassign cron info',
+      life: 3000,
+    });
+  }
 };
 
 const fetchUsers = async () => {
@@ -265,6 +301,50 @@ const updateParticipation = async () => {
       severity: 'error',
       summary: 'Error Message',
       detail: 'Could not update participation',
+      life: 3000,
+    });
+  }
+};
+
+const confirmCronControl = async () => {
+  confirm.require({
+    header: `Are you sure you want to ${
+      autoassignCronInfo.value.running ? 'stop' : 'start'
+    } the autoassign cron?`,
+    message: 'This only affects new future assignments.',
+    defaultFocus: 'reject',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    acceptProps: {
+      label: autoassignCronInfo.value.running ? 'Stop' : 'Start',
+    },
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      await controlAutoassignCron();
+    },
+  });
+};
+
+const controlAutoassignCron = async () => {
+  try {
+    if (autoassignCronInfo.value.running) {
+      await updateApi('/doings/autoassign/cron', {
+        enable: false,
+      });
+    } else {
+      await updateApi('/doings/autoassign/cron', {
+        enable: true,
+      });
+    }
+    await fetchAutoassignCronInfo();
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not control autoassign cron',
       life: 3000,
     });
   }

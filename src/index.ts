@@ -27,6 +27,8 @@ import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 import Timer from './timer';
 import type { BunFile } from 'bun';
 
+const AUTO_ASSIGN_CRON_NAME = 'autoAssignCron';
+
 // seed the database
 await seedDatabase();
 
@@ -501,6 +503,46 @@ app.group('/api', (apiGroup) =>
       {
         body: t.Object({
           reassign: t.Optional(t.Boolean()),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+    // get autoassign cron info
+    .get(
+      '/doings/autoassign/cron',
+      async () => {
+        return {
+          success: true,
+          message: 'Autoassign cron info',
+          data: timer.getJobInfo(AUTO_ASSIGN_CRON_NAME),
+        };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+          data: t.Any(),
+        }),
+      },
+    )
+    // enable or disable autoassign cron job
+    .put(
+      '/doings/autoassign/cron',
+      async (ctx: any) => {
+        const { enable, cronTime } = ctx.body;
+        controlAssignmentCronJob(enable, cronTime);
+        return {
+          success: true,
+          message: `Autoassign cron job ${enable ? 'enabled' : 'disabled'}`,
+        };
+      },
+      {
+        body: t.Object({
+          enable: t.Boolean(),
+          cronTime: t.Optional(t.String()),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -1053,31 +1095,48 @@ const autoHandleDailyAssignments = async (
   }
 };
 
+// helper function to enable or disable assignemnt cron job
+const assignmentService = new AssignmentService();
+const timer = new Timer();
+let assignmentCronTime: string = '';
+/**
+ * Enable or disable the cron job for auto assigning tasks
+ * @param enable true to enable, false to disable the cron job
+ * @param cronTime cron time string, default is '0 23 * * 0' (every sunday at 23:00)
+ */
+const controlAssignmentCronJob = async (
+  enable: boolean,
+  cronTime: string = '0 23 * * 0',
+) => {
+  if (enable) {
+    assignmentCronTime = cronTime;
+    timer.addJob(
+      AUTO_ASSIGN_CRON_NAME,
+      cronTime,
+      async () => {
+        await assignmentService.assignTasksForWeek({
+          dryRun: false,
+          groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
+        });
+      },
+      { autoStart: true },
+    );
+    console.log('Cron job for auto assigning tasks enabled');
+  } else {
+    timer.cancelJob(AUTO_ASSIGN_CRON_NAME);
+    console.log('Cron job for auto assigning tasks disabled');
+  }
+};
+
+if (process.env.CRON_ENABLED === 'true') {
+  controlAssignmentCronJob(true);
+}
+
 // Start the server
 app.listen(process.env.PORT || 3000);
 console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttp://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
-
-// Auto assign tasks for the week
-const assignmentService = new AssignmentService();
-const timer = new Timer();
-if (process.env.CRON_ENABLED === 'true') {
-  timer.addJob(
-    'assignTasksForWeek',
-    '0 23 * * 0', // every Sunday at 11 PM
-    async () => {
-      await assignmentService.assignTasksForWeek({
-        dryRun: false,
-        groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
-      });
-    },
-    { autoStart: true },
-  );
-  console.log('Cron job for auto assigning tasks enabled');
-} else {
-  console.log('Cron job for auto assigning tasks disabled');
-}
 
 // test, TODO: remove
 // await assignmentService.assignTasksForWeek({
