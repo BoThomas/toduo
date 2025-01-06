@@ -55,12 +55,15 @@
 import { ref, watch, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth0 } from '@auth0/auth0-vue';
+import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Menubar from 'primevue/menubar';
+import { readAPI } from '@/services/apiService';
 
 const router = useRouter();
 const auth0 = useAuth0();
+const toast = useToast();
 
 const isLoading = computed(() => auth0.isLoading.value);
 const isAuthenticated = computed(() => auth0.isAuthenticated.value);
@@ -156,6 +159,30 @@ watch(isLoading, (nowLoading) => {
       }
     }
   }
+});
+
+const checkShittyPointsMinus = async () => {
+  try {
+    const availableShittyPoints = await readAPI('/shittypoints/available');
+    if (availableShittyPoints < 0) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Warning',
+        detail:
+          'Your shitty points are in the negative. Remove some shitty points or they will be removed automatically on the next assignment day.',
+        life: 10000,
+      });
+      return;
+    }
+  } catch (error) {
+    console.log('Error checking shitty points', error);
+  }
+};
+
+// Before each route navigation
+router.beforeEach((to, from, next) => {
+  checkShittyPointsMinus();
+  next();
 });
 </script>
 
