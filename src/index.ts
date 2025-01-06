@@ -891,6 +891,49 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
+    // Get available shitty points for a user
+    .get(
+      '/shittypoints/available',
+      async (ctx: any) => {
+        const user_id = await getUserIdFromContext(ctx);
+        if (!user_id) {
+          return { success: false, message: 'User not found' };
+        }
+
+        const totalNumberOfDoingsArray = await db
+          .select({
+            totalDoings: count(),
+          })
+          .from(schema.doings)
+          .where(isNull(schema.doings.deleted_at));
+
+        const totalNumberOfDoings =
+          totalNumberOfDoingsArray[0].totalDoings ?? 0;
+
+        const totalPointsArray = await db
+          .select({
+            totalPoints: sum(schema.shitty_points.points),
+          })
+          .from(schema.shitty_points)
+          .where(eq(schema.shitty_points.user_id, user_id));
+
+        const totalPoints = Number(totalPointsArray[0].totalPoints ?? 0);
+        const availablePoints = totalNumberOfDoings - totalPoints;
+
+        return {
+          success: true,
+          message: 'Available shitty points selected',
+          data: availablePoints,
+        };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+          data: t.Number(),
+        }),
+      },
+    )
     // Update shitty points
     .put(
       '/shittypoints/:id',

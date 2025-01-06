@@ -192,6 +192,9 @@
   />
 
   <h3 class="mt-10 mb-2">Assign Shitty Points</h3>
+  <div class="mb-1" :class="{ 'text-red-500': availableShittyPoints < 0 }">
+    Available: {{ availableShittyPoints }}
+  </div>
   <DataTable
     :value="shittyPoints"
     responsiveLayout="scroll"
@@ -259,6 +262,7 @@ const doingsFilters = ref<any>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
 const shittyPoints = ref<any>([]);
+const availableShittyPoints = ref<any>();
 const dialogVisible = ref(false);
 const currentDoing = ref<any>({});
 const repetitionOptions = [
@@ -315,6 +319,20 @@ const fetchDoings = async () => {
   }
 };
 
+const fetchAvailableShittyPoints = async () => {
+  try {
+    const availableShittyPointsData = await readAPI('/shittypoints/available');
+    availableShittyPoints.value = availableShittyPointsData;
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load available shitty points',
+      life: 3000,
+    });
+  }
+};
+
 const fetchShittyPoints = async () => {
   try {
     const shittyPointsData = await readAPI('/shittypoints');
@@ -330,7 +348,11 @@ const fetchShittyPoints = async () => {
 };
 
 const fetchDoingsAndShittyPoints = async () => {
-  await Promise.all([fetchDoings(), fetchShittyPoints()]);
+  await Promise.all([
+    fetchDoings(),
+    fetchShittyPoints(),
+    fetchAvailableShittyPoints(),
+  ]);
 };
 
 const openNewTodoDialog = () => {
@@ -442,7 +464,7 @@ const updateShittyPoints = async (shittypoints: any, amount: number) => {
       });
       shittypoints.id = newId;
     }
-    await fetchShittyPoints();
+    Promise.all([fetchShittyPoints(), fetchAvailableShittyPoints()]);
   } catch (error) {
     toast.add({
       severity: 'error',
