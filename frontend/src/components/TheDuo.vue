@@ -35,6 +35,7 @@
       :value="weeklyTodos"
       responsiveLayout="scroll"
       removableSort
+      size="small"
       v-model:filters="weeklyTodosFilters"
       :globalFilterFields="['doingName', 'username', 'status']"
     >

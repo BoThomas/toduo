@@ -5,6 +5,7 @@
     <DataTable
       :value="todos"
       responsiveLayout="scroll"
+      size="small"
       :rowClass="
         (data) => {
           return data.completed ? 'line-through  text-gray-400' : '';

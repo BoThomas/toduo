@@ -112,6 +112,10 @@
     :value="doings"
     responsiveLayout="scroll"
     removableSort
+    size="small"
+    paginator
+    :rows="10"
+    :rowsPerPageOptions="[5, 10, 20, 50]"
     v-model:filters="doingsFilters"
     :globalFilterFields="[
       'name',
@@ -162,18 +166,20 @@
         ></i>
       </template>
     </Column>
-    <Column header="Actions">
+    <Column>
       <template #body="slotProps">
-        <Button
-          icon="pi pi-pencil"
-          @click="editDoing(slotProps.data)"
-          class="p-button-rounded p-button-success m-1"
-        />
-        <Button
-          icon="pi pi-trash"
-          @click="deleteDoing(slotProps.data.id)"
-          class="p-button-rounded p-button-danger m-1"
-        />
+        <div class="flex gap-2">
+          <Button
+            icon="pi pi-pencil"
+            @click="editDoing(slotProps.data)"
+            class="p-button-rounded p-button-success"
+          />
+          <Button
+            icon="pi pi-trash"
+            @click="deleteDoing(slotProps.data.id)"
+            class="p-button-rounded p-button-danger"
+          />
+        </div>
       </template>
     </Column>
   </DataTable>
@@ -186,9 +192,22 @@
   />
 
   <h3 class="mt-10 mb-2">Assign Shitty Points</h3>
-  <DataTable :value="shittyPoints" responsiveLayout="scroll" removableSort>
+  <DataTable
+    :value="shittyPoints"
+    responsiveLayout="scroll"
+    removableSort
+    paginator
+    :rows="10"
+    :rowsPerPageOptions="[5, 10, 20, 50]"
+    size="small"
+  >
     <Column field="name" header="Name" sortable></Column>
-    <Column header="Shitty Points" sortable sortField="points">
+    <Column
+      header="Shitty Points"
+      sortable
+      sortField="points"
+      headerStyle="display: flex; justify-content: center;"
+    >
       <template #body="slotProps">
         <div class="shitty-points-container">
           <Button
