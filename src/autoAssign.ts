@@ -6,7 +6,17 @@ import {
   shitty_points,
   history,
 } from './database/schema';
-import { eq, and, or, isNull, gt, desc, inArray } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  or,
+  isNull,
+  gt,
+  desc,
+  inArray,
+  count,
+  sum,
+} from 'drizzle-orm';
 import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 
 const ENABLE_LOGGING = true;
@@ -35,6 +45,7 @@ export class AssignmentService {
       await this.deactivateCompletedOnceDoings();
       await this.changePendingAndWaitingAssignmentsToFailed();
       await this.moveCurrentAssignmentsToHistory();
+      await this.correctNegativeShittyPoints();
     }
 
     if (clearAndReassign) {
@@ -134,6 +145,127 @@ export class AssignmentService {
 
     await this.db.insert(history).values(currentAssignments);
     await this.db.delete(assignments);
+  }
+
+  // PreHelper: Correct negative shitty points
+  private async correctNegativeShittyPoints() {
+    if (ENABLE_LOGGING) {
+      console.log('Starting correction of negative shitty points');
+    }
+
+    // get the sum of all doings that are not deleted
+    const sumOfAllDoings = await this.db
+      .select({
+        totalDoings: count(),
+      })
+      .from(doings)
+      .where(isNull(doings.deleted_at));
+
+    if (ENABLE_LOGGING) {
+      console.log('Total doings:', sumOfAllDoings[0].totalDoings);
+    }
+
+    // get the sum of shitty points for each user
+    const shittyPointsUnserSums = await this.db
+      .select({
+        user_id: shitty_points.user_id,
+        shittyPointsSum: sum(shitty_points.points),
+      })
+      .from(shitty_points)
+      .groupBy(shitty_points.user_id);
+
+    if (ENABLE_LOGGING) {
+      console.log('Sum of shitty points for each user:', shittyPointsUnserSums);
+    }
+
+    // loop through each users sum of shitty points and correct if necessary
+    for (const user of shittyPointsUnserSums) {
+      const availablePoints =
+        sumOfAllDoings[0].totalDoings - Number(user.shittyPointsSum ?? 0);
+
+      if (ENABLE_LOGGING) {
+        console.log(
+          `User ${user.user_id} - Available points: ${availablePoints}`,
+        );
+      }
+
+      // if the users available shitty points are greater than or equal to 0, everything is fine
+      if (availablePoints >= 0) {
+        continue;
+      }
+
+      // get all shitty points greater than 0 for the user for possible correction
+      const shittyPointsToCorrect = await this.db
+        .select({
+          user_id: shitty_points.user_id,
+          doing_id: shitty_points.doing_id,
+          points: shitty_points.points,
+        })
+        .from(shitty_points)
+        .where(
+          and(
+            eq(shitty_points.user_id, user.user_id),
+            gt(shitty_points.points, 0),
+          ),
+        )
+        .orderBy(desc(shitty_points.points));
+
+      if (ENABLE_LOGGING) {
+        console.log(
+          `User ${user.user_id} - Shitty points to correct:`,
+          shittyPointsToCorrect,
+        );
+      }
+
+      // loop through the shitty points and correct them until the available points are greater than or equal to 0
+      let pointsToReduce = Math.abs(availablePoints);
+      for (const shittyPoint of shittyPointsToCorrect) {
+        if (pointsToReduce <= 0) {
+          break;
+        }
+
+        if (ENABLE_LOGGING) {
+          console.log(
+            `User ${user.user_id} - Reducing points for doing ${shittyPoint.doing_id} by ${pointsToReduce}`,
+          );
+        }
+
+        // if the shitty point is less than or equal to the points to reduce, delete the shitty point
+        if (shittyPoint.points <= pointsToReduce) {
+          await this.db
+            .delete(shitty_points)
+            .where(
+              and(
+                eq(shitty_points.user_id, user.user_id),
+                eq(shitty_points.doing_id, shittyPoint.doing_id),
+              ),
+            );
+          pointsToReduce -= shittyPoint.points;
+        } else {
+          // if the shitty point is greater than the points to reduce, reduce the points
+          await this.db
+            .update(shitty_points)
+            .set({ points: shittyPoint.points - pointsToReduce })
+            .where(
+              and(
+                eq(shitty_points.user_id, user.user_id),
+                eq(shitty_points.doing_id, shittyPoint.doing_id),
+              ),
+            );
+          pointsToReduce = 0;
+        }
+
+        if (ENABLE_LOGGING) {
+          console.log(
+            `User ${user.user_id} - Remaining points to reduce: ${pointsToReduce}`,
+          );
+        }
+      }
+    }
+
+    if (ENABLE_LOGGING) {
+      console.log('Completed correction of negative shitty points');
+    }
   }
 
   // Helper: Fetch all active users
