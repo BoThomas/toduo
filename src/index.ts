@@ -91,41 +91,6 @@ const app = new Elysia({
   .use(Logestic.preset('common')) // Log all requests
   .use(AuthService); // Add the auth service
 
-if (process.env.NODE_ENV === 'development') {
-  app
-    .use(
-      cors({
-        origin: [/^http:\/\/localhost:\d+$/, /^https:\/\/localhost:\d+$/],
-      }),
-    ) // DEV: enable CORS for the frontend
-    .use(
-      swagger({
-        provider: 'scalar',
-        scalarVersion: '1.25.72',
-        path: 'api-docs',
-        exclude: ['/'],
-      }),
-    ); // DEV: add swagger ui
-
-  // DEV: redirect root to swagger ui
-  app.get('/', ({ redirect }: { redirect: (url: string) => void }) => {
-    return redirect('/api-docs');
-  });
-} else {
-  // PROD: serve the frontend statically from the dist folder
-  app
-    .use(
-      staticPlugin({
-        assets: 'frontend/dist',
-        prefix: '',
-        alwaysStatic: true,
-      }),
-    )
-    .get('/*', () => {
-      return Bun.file('./frontend/dist/index.html');
-    });
-}
-
 const INVITATION_CODE = process.env.USER_INVITATION_CODE || crypto.randomUUID();
 
 app.group('/api', (apiGroup) =>
@@ -1066,6 +1031,42 @@ app.group('/siri', (siriGroup) =>
     },
   ),
 );
+
+// serve frontend
+if (process.env.NODE_ENV === 'development') {
+  app
+    .use(
+      cors({
+        origin: [/^http:\/\/localhost:\d+$/, /^https:\/\/localhost:\d+$/],
+      }),
+    ) // DEV: enable CORS for the frontend
+    .use(
+      swagger({
+        provider: 'scalar',
+        scalarVersion: '1.25.72',
+        path: 'api-docs',
+        exclude: ['/'],
+      }),
+    ); // DEV: add swagger ui
+
+  // DEV: redirect root to swagger ui
+  app.get('/', ({ redirect }: { redirect: (url: string) => void }) => {
+    return redirect('/api-docs');
+  });
+} else {
+  // PROD: serve the frontend statically from the dist folder
+  app
+    .use(
+      staticPlugin({
+        assets: 'frontend/dist',
+        prefix: '',
+        alwaysStatic: true,
+      }),
+    )
+    .get('/*', () => {
+      return Bun.file('./frontend/dist/index.html');
+    });
+}
 
 // helper function to get user from context auth0 id
 const getUserIdFromContext = async (ctx: any) => {
