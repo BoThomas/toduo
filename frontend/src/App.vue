@@ -181,7 +181,9 @@ const checkShittyPointsMinus = async () => {
 
 // Before each route navigation
 router.beforeEach((to, from, next) => {
-  checkShittyPointsMinus();
+  if (isAuthenticated.value) {
+    checkShittyPointsMinus();
+  }
   next();
 });
 </script>
