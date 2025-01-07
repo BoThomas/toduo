@@ -1013,9 +1013,9 @@ app.group('/siri', (siriGroup) =>
         }
 
         if (userName) {
-          return `Hallo ${userName}. Du hast diese Woche noch folgende offene Aufgaben. ${assignments.map((assignment) => assignment.doingName).join(', ')}.`;
+          return `Hallo ${userName}. Du hast diese Woche noch ${assignments.length} offene Aufgaben. ${assignments.map((assignment) => assignment.doingName).join(', ')}.`;
         }
-        return `Diese Woche sind noch folgende Aufgaben offen. ${assignments.map((assignment) => assignment.doingName).join(', ')}.`;
+        return `Diese Woche sind noch ${assignments.length} Aufgaben offen. ${assignments.map((assignment) => assignment.doingName).join(', ')}.`;
       } catch (error) {
         return 'Leider ist ein Fehler beim Abrufen der Aufgaben aufgetreten.';
       }
