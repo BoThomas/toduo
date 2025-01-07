@@ -1001,6 +1001,72 @@ app.group('/api', (apiGroup) =>
     ),
 );
 
+app.group('/siri', (siriGroup) =>
+  siriGroup.get(
+    '/todos',
+    async (ctx: any) => {
+      const apiKey = ctx.headers['x-api-key'];
+      const validApiKey = process.env.SIRI_API_KEY || crypto.randomUUID();
+
+      if (!apiKey || apiKey !== validApiKey) {
+        return 'Du bist leider nicht berechtigt, diese Funktion zu nutzen.';
+      }
+      try {
+        const { userName } = ctx.query;
+
+        // Optional filter by userName
+        let userNameFilter: SQL;
+        if (userName) {
+          userNameFilter = eq(schema.users.username, userName);
+        } else {
+          userNameFilter = sql`1 = 1`;
+        }
+
+        const assignmentsQuery = db
+          .select({
+            doingName: schema.doings.name,
+            //username: schema.users.username,
+          })
+          .from(schema.assignments)
+          .innerJoin(
+            schema.doings,
+            eq(schema.assignments.doing_id, schema.doings.id),
+          )
+          .innerJoin(
+            schema.users,
+            eq(schema.assignments.user_id, schema.users.id),
+          )
+          .where(and(userNameFilter, eq(schema.assignments.status, 'pending')));
+
+        const assignments = await assignmentsQuery;
+
+        if (assignments.length === 0) {
+          if (userName) {
+            return `Hallo ${userName}, du hast alles erledigt. Gute Arbeit!`;
+          }
+          return 'Es sind keine Aufgaben mehr offen. Gute Arbeit!';
+        }
+
+        if (userName) {
+          return `Hallo ${userName}, du hast diese Woche noch folgende offene Aufgaben: ${assignments.map((assignment) => assignment.doingName).join(', ')}.`;
+        }
+        return `Diese Woche sind noch folgende Aufgaben offen: ${assignments.map((assignment) => assignment.doingName).join(', ')}.`;
+      } catch (error) {
+        return 'Leider ist ein Fehler beim Abrufen der Aufgaben aufgetreten.';
+      }
+    },
+    {
+      headers: t.Object({
+        'x-api-key': t.String(),
+      }),
+      query: t.Object({
+        userName: t.Optional(t.String()),
+      }),
+      response: t.String(),
+    },
+  ),
+);
+
 // helper function to get user from context auth0 id
 const getUserIdFromContext = async (ctx: any) => {
   const auth0UserId = (await ctx.authenticatedUserId()) as string;
