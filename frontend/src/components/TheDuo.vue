@@ -89,15 +89,16 @@
       </Column>
     </DataTable>
 
-    <div class="mt-4 flex gap-3">
-      <Button label="Trigger Reassignment" @click="confirmReassignment" />
+    <div class="mt-4 flex flex-wrap gap-3">
       <Button
         :label="
           showStatusExplanation
             ? 'Hide Status Explanation'
             : 'Show Status Explanation'
         "
+        :icon="showStatusExplanation ? 'pi pi-eye-slash' : 'pi pi-eye'"
         @click="showStatusExplanation = !showStatusExplanation"
+        class="w-full sm:w-auto"
       />
       <Button
         :label="
@@ -105,7 +106,21 @@
             ? 'Stop Autoassign Cron'
             : 'Start Autoassign Cron'
         "
+        :icon="autoassignCronInfo?.running ? 'pi pi-stop' : 'pi pi-play'"
         @click="confirmCronControl"
+        class="w-full sm:w-auto"
+      />
+      <Button
+        label="Trigger Reassignment"
+        @click="confirmReassignment"
+        icon="pi pi-refresh"
+        class="w-full sm:w-auto"
+      />
+      <Button
+        label="Download Database"
+        icon="pi pi-download"
+        @click="downloadDatabase"
+        class="w-full sm:w-auto"
       />
     </div>
 
@@ -408,6 +423,29 @@ const confirmReassignment = () => {
       await triggerReassignment();
     },
   });
+};
+
+const downloadDatabase = async () => {
+  try {
+    const response = await readAPI('/database/download');
+    const url = `data:application/octet-stream;base64,${response}`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute(
+      'download',
+      `${new Date().toISOString().slice(0, 16).replace(/[:T-]/g, '').slice(0, 12)}-toduo-database.sqlite`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not download database',
+      life: 3000,
+    });
+  }
 };
 
 // for daily and weekly todos, we don't want to show postponed status

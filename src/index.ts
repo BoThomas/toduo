@@ -963,6 +963,34 @@ app.group('/api', (apiGroup) =>
           message: t.String(),
         }),
       },
+    )
+
+    // Download the database
+    .get(
+      '/database/download',
+      async () => {
+        const dbPath = process.env.SQLITE_PATH;
+        if (!dbPath) {
+          return {
+            success: false,
+            message: 'Database path not set',
+          };
+        }
+        const dbAsArrayBuffer = await Bun.file('./' + dbPath).arrayBuffer();
+        const dbAsBase64 = Buffer.from(dbAsArrayBuffer).toString('base64');
+        return {
+          success: true,
+          message: 'Database downloaded',
+          data: dbAsBase64,
+        };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+          data: t.Optional(t.String()),
+        }),
+      },
     ),
 );
 
