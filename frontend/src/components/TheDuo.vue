@@ -122,6 +122,12 @@
         @click="downloadDatabase"
         class="w-full sm:w-auto"
       />
+      <Button
+        label="Upload Database"
+        icon="pi pi-upload"
+        @click="confirmDatabaseUpload"
+        class="w-full sm:w-auto"
+      />
     </div>
 
     <div v-if="autoassignCronInfo?.name" class="mt-10">
@@ -446,6 +452,70 @@ const downloadDatabase = async () => {
       life: 3000,
     });
   }
+};
+
+const confirmDatabaseUpload = () => {
+  confirm.require({
+    header: 'Are you sure you want to upload a new database?',
+    message: 'This will overwrite all current data.',
+    defaultFocus: 'reject',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    acceptProps: {
+      label: 'Upload',
+    },
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      await uploadDatabase();
+    },
+  });
+};
+
+const uploadDatabase = async () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.sqlite';
+  input.onchange = async (event: any) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.sqlite')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error Message',
+        detail: 'Invalid file type. Please upload a .sqlite file.',
+        life: 3000,
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e: any) => {
+      const base64 = e.target.result.split(',')[1];
+      try {
+        await updateApi('/database/upload', base64);
+        toast.add({
+          severity: 'success',
+          summary: 'Success Message',
+          detail: 'Database uploaded successfully',
+          life: 3000,
+        });
+        location.reload();
+      } catch (error) {
+        toast.add({
+          severity: 'error',
+          summary: 'Error Message',
+          detail: 'Could not upload database',
+          life: 3000,
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
 };
 
 // for daily and weekly todos, we don't want to show postponed status

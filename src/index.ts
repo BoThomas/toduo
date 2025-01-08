@@ -991,6 +991,33 @@ app.group('/api', (apiGroup) =>
           data: t.Optional(t.String()),
         }),
       },
+    )
+    // Upload the database
+    .put(
+      '/database/upload',
+      async (ctx: any) => {
+        const dbPath = process.env.SQLITE_PATH;
+        if (!dbPath) {
+          return {
+            success: false,
+            message: 'Database path not set',
+          };
+        }
+        const dbAsBase64 = ctx.body;
+        const dbAsArrayBuffer = Buffer.from(dbAsBase64, 'base64').buffer;
+        await Bun.write(`./${dbPath}`, dbAsArrayBuffer);
+        return {
+          success: true,
+          message: 'Database uploaded',
+        };
+      },
+      {
+        body: t.String(),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
     ),
 );
 
