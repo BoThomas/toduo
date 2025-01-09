@@ -16,10 +16,11 @@ export const doings = sqliteTable('doings', {
   name: text().unique().notNull(),
   description: text(),
   notice: text(),
-  repetition: text({
-    enum: ['once', 'daily', 'weekly', 'monthly', 'yearly'],
+  interval_unit: text({
+    enum: ['once', 'weekly', 'monthly'],
   }).notNull(),
-  days_per_week: integer({ mode: 'number' }),
+  interval_value: integer({ mode: 'number' }).notNull(),
+  repeats_per_week: integer({ mode: 'number' }).notNull(),
   effort_in_minutes: integer({ mode: 'number' }).notNull(),
   is_active: integer({ mode: 'boolean' }), // TODO change to boolean when drizzle-orm supports it
   deleted_at: integer({ mode: 'timestamp' }),
@@ -65,8 +66,9 @@ export const history = sqliteTable('history', {
   user_id: integer({ mode: 'number' })
     .notNull()
     .references(() => users.id),
-  repetition: text(),
-  days_per_week: integer({ mode: 'number' }),
+  interval_unit: text(),
+  interval_value: integer({ mode: 'number' }),
+  repeats_per_week: integer({ mode: 'number' }),
   //due_date: integer({ mode: 'timestamp' }),
   //due_week: integer({ mode: 'number' }),
   effort_in_minutes: integer({ mode: 'number' }),
