@@ -36,8 +36,6 @@ export const assignments = sqliteTable('assignments', {
   user_id: integer({ mode: 'number' })
     .notNull()
     .references(() => users.id),
-  due_date: integer({ mode: 'timestamp' }), // not needed for now
-  due_week: integer({ mode: 'number' }),
   status: text({
     enum: ['waiting', 'pending', 'completed', 'skipped', 'postponed', 'failed'],
   }).notNull(),
@@ -69,8 +67,6 @@ export const history = sqliteTable('history', {
   interval_unit: text(),
   interval_value: integer({ mode: 'number' }),
   repeats_per_week: integer({ mode: 'number' }),
-  //due_date: integer({ mode: 'timestamp' }),
-  //due_week: integer({ mode: 'number' }),
   effort_in_minutes: integer({ mode: 'number' }),
   status: text(),
   created_at: integer({ mode: 'timestamp' }),

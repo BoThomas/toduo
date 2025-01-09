@@ -23,7 +23,6 @@ import {
   isNull,
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
-import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 import Timer from './timer';
 import type { BunFile } from 'bun';
 
@@ -611,19 +610,6 @@ app.group('/api', (apiGroup) =>
           statusFilter = sql`1 = 1`;
         }
 
-        // Get the start and end of the current week and the current calendar week
-        // const now = new Date();
-        // const dayOfWeek = now.getDay();
-        // const startOfWeek = new Date(now);
-        // startOfWeek.setDate(
-        //   now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1),
-        // ); // Adjust to Monday
-        // startOfWeek.setHours(0, 0, 0, 0); // Set to 0 AM
-        // const endOfWeek = new Date(startOfWeek);
-        // endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Sunday
-        // endOfWeek.setHours(23, 59, 59, 999); // Set to end of the day
-        // const currentWeekNumber = getCalendarWeekFromDateOfCurrentYear(now);
-
         const assignmentsQuery = db
           .select({
             assignmentId: schema.assignments.id,
@@ -646,19 +632,7 @@ app.group('/api', (apiGroup) =>
             schema.users,
             eq(schema.assignments.user_id, schema.users.id),
           )
-          .where(
-            and(
-              userFilter,
-              // or(
-              //   eq(schema.assignments.due_week, currentWeekNumber),
-              //   and(
-              //     gt(schema.assignments.due_date, startOfWeek),
-              //     lt(schema.assignments.due_date, endOfWeek),
-              //   ),
-              // ),
-              statusFilter,
-            ),
-          );
+          .where(and(userFilter, statusFilter));
 
         const assignments = await assignmentsQuery;
 

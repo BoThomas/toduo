@@ -17,7 +17,6 @@ import {
   count,
   sum,
 } from 'drizzle-orm';
-import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 
 const ENABLE_LOGGING = true;
 
@@ -554,7 +553,6 @@ export class AssignmentService {
   ): Promise<void> {
     const assignmentsToSave = assignmentObjects.flatMap((assignment) => {
       const now = new Date();
-      const dueWeek = getCalendarWeekFromDateOfCurrentYear(now); // TODO: remove
 
       if (assignment.doing.repeats_per_week > 1) {
         return Array.from(
@@ -562,7 +560,6 @@ export class AssignmentService {
           (_, i) => ({
             doing_id: assignment.doing.id,
             user_id: assignment.user.id,
-            due_week: dueWeek, // TODO: remove
             status: i === 0 ? ('pending' as const) : ('waiting' as const),
             created_at: now,
             updated_at: now,
@@ -573,7 +570,6 @@ export class AssignmentService {
       return {
         doing_id: assignment.doing.id,
         user_id: assignment.user.id,
-        due_week: dueWeek, // TODO: remove
         status: 'pending' as const,
         created_at: now,
         updated_at: now,

@@ -1,4 +1,3 @@
-import { getCalendarWeekFromDateOfCurrentYear } from '../helper';
 import { db } from './db';
 import * as schema from './schema';
 
@@ -76,13 +75,11 @@ export async function seedDatabase() {
   }
 
   if (!(await db.query.assignments.findFirst())) {
-    const currentWeek = getCalendarWeekFromDateOfCurrentYear(new Date());
     await db.insert(schema.assignments).values([
       {
         doing_id: 1,
         user_id: 1,
         status: 'pending',
-        due_week: currentWeek,
         created_at: new Date(),
         updated_at: new Date(),
       },
@@ -90,7 +87,6 @@ export async function seedDatabase() {
         doing_id: 2,
         user_id: 2,
         status: 'completed',
-        due_week: currentWeek,
         created_at: new Date(),
         updated_at: new Date(),
       },
@@ -98,7 +94,6 @@ export async function seedDatabase() {
         doing_id: 2,
         user_id: 2,
         status: 'pending',
-        due_week: currentWeek,
         created_at: new Date(),
         updated_at: new Date(),
       },
@@ -106,7 +101,6 @@ export async function seedDatabase() {
         doing_id: 2,
         user_id: 2,
         status: 'waiting',
-        due_week: currentWeek,
         created_at: new Date(),
         updated_at: new Date(),
       },
