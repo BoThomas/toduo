@@ -285,7 +285,6 @@ export class AssignmentService {
     //   - it was never assigned before (no history entry)
     //   - interval_unit is weekly
     //   - interval_unit is monthly and the last assignment was more than 30 days ago
-    //   - interval_unit is yearly and the last assignment was more than 365 days ago
     //   - the last assignment was postponed or failed
 
     // TODO: take interval_value into account for weekly and monthly doings

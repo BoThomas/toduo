@@ -620,6 +620,7 @@ app.group('/api', (apiGroup) =>
             doingEffort: schema.doings.effort_in_minutes,
             doingIntervalUnit: schema.doings.interval_unit,
             doingIntervalValue: schema.doings.interval_value,
+            doingRepeatsPerWeek: schema.doings.repeats_per_week,
             userId: schema.users.id,
             username: schema.users.username,
           })

@@ -16,7 +16,7 @@
       <Column header="Name" sortable sortField="doingName">
         <template #body="slotProps">
           {{ slotProps.data.doingName }}
-          <span v-if="slotProps.data.doingRepetition === 'daily'">
+          <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
             ({{ slotProps.data.calcCounterCurrent }}/{{
               slotProps.data.calcCounterTotal
             }})
