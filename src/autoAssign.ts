@@ -12,10 +12,12 @@ import {
   or,
   isNull,
   gt,
+  lte,
   desc,
   inArray,
   count,
   sum,
+  sql,
 } from 'drizzle-orm';
 
 const ENABLE_LOGGING = true;
@@ -283,15 +285,9 @@ export class AssignmentService {
     // - it is not deleted (no deleted_at)
     // - either one of the following:
     //   - it was never assigned before (no history entry)
-    //   - interval_unit is weekly
-    //   - interval_unit is monthly and the last assignment was more than 30 days ago
+    //   - last assignment was more then 7 * interval_value (interval_unit = weekly)
+    //     or 30 * interval_value (interval_unit = monthly) days ago
     //   - the last assignment was postponed or failed
-
-    // TODO: take interval_value into account for weekly and monthly doings
-
-    const thirtyDaysAgo = new Date(
-      Date.now() - 30 * 24 * 60 * 60 * 1000,
-    ).toISOString();
 
     const qualifiedDoings = await this.db
       .select()
@@ -308,36 +304,31 @@ export class AssignmentService {
                 .where(eq(history.doing_id, doings.id))
                 .limit(1),
             ),
-            eq(doings.interval_unit, 'weekly'),
-            and(
-              eq(doings.interval_unit, 'monthly'),
-              gt(
-                this.db
-                  .select({ created_at: history.created_at })
-                  .from(history)
-                  .where(eq(history.doing_id, doings.id))
-                  .orderBy(desc(history.created_at))
-                  .limit(1),
-                thirtyDaysAgo,
-              ),
+            lte(
+              this.db
+                .select({ created_at: history.created_at })
+                .from(history)
+                .where(eq(history.doing_id, doings.id))
+                .orderBy(desc(history.created_at))
+                .limit(1),
+              sql`(${Date.now()} - ${doings.interval_value} *
+              (CASE
+                WHEN ${doings.interval_unit} = 'weekly' THEN 7
+                WHEN ${doings.interval_unit} = 'monthly' THEN 12
+                ELSE 1
+              END) * 24 * 60 * 60 * 1000 - (6*60*60*1000)) / 1000`,
             ),
-            eq(
+            // the last history entry was created 7/30 days ago
+            // (minus 6 hours to account for e.g. daylight saving time)
+            // (devided by 1000 to convert to seconds, as drizzle-orm does save timestamps in seconds)
+            inArray(
               this.db
                 .select({ status: history.status })
                 .from(history)
                 .where(eq(history.doing_id, doings.id))
                 .orderBy(desc(history.created_at))
                 .limit(1),
-              'postponed',
-            ),
-            eq(
-              this.db
-                .select({ status: history.status })
-                .from(history)
-                .where(eq(history.doing_id, doings.id))
-                .orderBy(desc(history.created_at))
-                .limit(1),
-              'failed',
+              ['failed', 'postponed'],
             ),
           ),
         ),
