@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e97528b9-1bc1-4dab-be6c-2322bab52277",
+  "id": "37054de0-421d-48f3-bbfe-e13f9005bbf9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "assignments": {
@@ -26,20 +26,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "due_date": {
-          "name": "due_date",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "due_week": {
-          "name": "due_week",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         },
         "status": {
@@ -128,18 +114,25 @@
           "notNull": false,
           "autoincrement": false
         },
-        "repetition": {
-          "name": "repetition",
+        "interval_unit": {
+          "name": "interval_unit",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "days_per_week": {
-          "name": "days_per_week",
+        "interval_value": {
+          "name": "interval_value",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "repeats_per_week": {
+          "name": "repeats_per_week",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
           "autoincrement": false
         },
         "effort_in_minutes": {
@@ -216,15 +209,22 @@
           "notNull": true,
           "autoincrement": false
         },
-        "repetition": {
-          "name": "repetition",
+        "interval_unit": {
+          "name": "interval_unit",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "days_per_week": {
-          "name": "days_per_week",
+        "interval_value": {
+          "name": "interval_value",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "repeats_per_week": {
+          "name": "repeats_per_week",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

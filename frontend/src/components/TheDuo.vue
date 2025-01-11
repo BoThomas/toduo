@@ -62,7 +62,7 @@
       <Column header="Todo" sortable sortField="doingName">
         <template #body="slotProps">
           {{ slotProps.data.doingName }}
-          <span v-if="slotProps.data.doingRepetition === 'daily'">
+          <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
             ({{ slotProps.data.calcCounterCurrent }}/{{
               slotProps.data.calcCounterTotal
             }})
@@ -82,7 +82,12 @@
         <template #body="slotProps">
           <Select
             v-model="slotProps.data.status"
-            :options="getStatusOptions(slotProps.data.doingRepetition)"
+            :options="
+              getStatusOptions(
+                slotProps.data.doingIntervalUnit,
+                slotProps.data.doingRepeatsPerWeek,
+              )
+            "
             @change="updateAssignment(slotProps.data)"
           />
         </template>
@@ -149,7 +154,7 @@
       <ul class="list-disc pl-5">
         <li>
           <strong>Waiting:</strong> The task is waiting to be pending. Only for
-          daily doings.
+          doings with more than one repeat per week.
         </li>
         <li><strong>Pending:</strong> The task is open for completion.</li>
         <li>
@@ -158,17 +163,17 @@
         <li>
           <strong>Skipped:</strong> The task will not be completed this
           iteration and is reassigned the next time it is due based on the
-          repetition.
+          interval unit.
         </li>
         <li>
           <strong>Postponed:</strong> The task will not be completed this
-          iteration but is reassigned the next week, regardless of the
-          repetition. Not possible for daily and weekly doings.
+          iteration but is reassigned the next week, regardless of the interval
+          unit. Not possible for weekly doings.
         </li>
         <li>
           <strong>Failed:</strong> The task has been failed and will be
-          reassigned the next week, regardless of the repetition. Can not be set
-          manually.
+          reassigned the next week, regardless of the interval unit. Can not be
+          set manually.
         </li>
       </ul>
     </div>
@@ -518,15 +523,23 @@ const uploadDatabase = async () => {
   input.click();
 };
 
-// for daily and weekly todos, we don't want to show postponed status
-// as it doesn't make sense because the todo will be reassigned the next day/week anyway
-// only for daily todos is waiting status allowed
-const getStatusOptions = (repetition: string) => {
+// helper function to get the available status options based on the interval unit and repeats per week
+const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
   let options = [...STATUS_OPTIONS];
-  if (repetition === 'daily' || repetition === 'weekly') {
+
+  // for weekly todos, we don't want to show postponed status
+  // as it doesn't make sense because the todo will be reassigned the next day/week anyway
+  if (interval_unit === 'weekly') {
     options = options.filter((option) => option !== 'postponed');
   }
-  if (repetition !== 'daily') {
+
+  // for once todos, we don't want to show skipped status
+  if (interval_unit === 'once') {
+    options = options.filter((option) => option !== 'skipped');
+  }
+
+  // only for repeated todos is waiting status allowed
+  if (repeats_per_week <= 1) {
     options = options.filter((option) => option !== 'waiting');
   }
   return options;

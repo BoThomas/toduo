@@ -23,7 +23,6 @@ import {
   isNull,
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
-import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 import Timer from './timer';
 import type { BunFile } from 'bun';
 
@@ -243,29 +242,20 @@ app.group('/api', (apiGroup) =>
           name,
           description,
           notice,
-          repetition,
-          days_per_week,
+          interval_unit,
+          interval_value,
+          repeats_per_week,
           effort_in_minutes,
           is_active,
         } = ctx.body;
-
-        // prevent setting days_per_week for non-daily repetitions
-        let dpw = null;
-        if (repetition === 'daily') {
-          dpw = days_per_week;
-        }
 
         await db.insert(schema.doings).values({
           name,
           description,
           notice,
-          repetition: repetition as
-            | 'once'
-            | 'daily'
-            | 'weekly'
-            | 'monthly'
-            | 'yearly',
-          days_per_week: dpw,
+          interval_unit: interval_unit as 'once' | 'weekly' | 'monthly',
+          interval_value: interval_value || 1,
+          repeats_per_week: repeats_per_week || 1,
           effort_in_minutes,
           is_active,
           created_at: new Date(),
@@ -280,14 +270,13 @@ app.group('/api', (apiGroup) =>
           }),
           description: t.Optional(t.String()),
           notice: t.Optional(t.String()),
-          repetition: t.Union([
+          interval_unit: t.Union([
             t.Literal('once'),
-            t.Literal('daily'),
             t.Literal('weekly'),
             t.Literal('monthly'),
-            t.Literal('yearly'),
           ]),
-          days_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
+          interval_value: t.Optional(t.Number({ minimum: 1 })),
+          repeats_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
           is_active: t.Boolean(),
         }),
@@ -337,17 +326,12 @@ app.group('/api', (apiGroup) =>
           name,
           description,
           notice,
-          repetition,
-          days_per_week,
+          interval_unit,
+          interval_value,
+          repeats_per_week,
           effort_in_minutes,
           is_active,
         } = ctx.body;
-
-        // prevent setting days_per_week for non-daily repetitions
-        let dpw = null;
-        if (repetition === 'daily') {
-          dpw = days_per_week;
-        }
 
         await db
           .update(schema.doings)
@@ -355,13 +339,9 @@ app.group('/api', (apiGroup) =>
             name,
             description,
             notice,
-            repetition: repetition as
-              | 'once'
-              | 'daily'
-              | 'weekly'
-              | 'monthly'
-              | 'yearly',
-            days_per_week: dpw,
+            interval_unit: interval_unit as 'once' | 'weekly' | 'monthly',
+            interval_value: interval_value || 1,
+            repeats_per_week: repeats_per_week || 1,
             effort_in_minutes,
             is_active,
             updated_at: new Date(),
@@ -377,16 +357,15 @@ app.group('/api', (apiGroup) =>
           name: t.String({
             minLength: 1,
           }),
-          description: t.Optional(t.Union([t.String(), t.Null()])),
-          notice: t.Optional(t.Union([t.String(), t.Null()])),
-          repetition: t.Union([
+          description: t.Optional(t.String()),
+          notice: t.Optional(t.String()),
+          interval_unit: t.Union([
             t.Literal('once'),
-            t.Literal('daily'),
             t.Literal('weekly'),
             t.Literal('monthly'),
-            t.Literal('yearly'),
           ]),
-          days_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
+          interval_value: t.Optional(t.Number({ minimum: 1 })),
+          repeats_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
           is_active: t.Boolean(),
         }),
@@ -552,8 +531,8 @@ app.group('/api', (apiGroup) =>
           return { success: false, message: 'Assignment not found' };
         }
 
-        // auto handling of daily assignments states for same doing
-        await autoHandleDailyAssignments(
+        // auto handling of repeated assignment states for same doing
+        await autoHandleRepeatedAssignments(
           currentDoingId[0].doing_id,
           updateData.status,
         );
@@ -631,19 +610,6 @@ app.group('/api', (apiGroup) =>
           statusFilter = sql`1 = 1`;
         }
 
-        // Get the start and end of the current week and the current calendar week
-        // const now = new Date();
-        // const dayOfWeek = now.getDay();
-        // const startOfWeek = new Date(now);
-        // startOfWeek.setDate(
-        //   now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1),
-        // ); // Adjust to Monday
-        // startOfWeek.setHours(0, 0, 0, 0); // Set to 0 AM
-        // const endOfWeek = new Date(startOfWeek);
-        // endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to Sunday
-        // endOfWeek.setHours(23, 59, 59, 999); // Set to end of the day
-        // const currentWeekNumber = getCalendarWeekFromDateOfCurrentYear(now);
-
         const assignmentsQuery = db
           .select({
             assignmentId: schema.assignments.id,
@@ -652,7 +618,9 @@ app.group('/api', (apiGroup) =>
             doingName: schema.doings.name,
             doingDescription: schema.doings.description,
             doingEffort: schema.doings.effort_in_minutes,
-            doingRepetition: schema.doings.repetition,
+            doingIntervalUnit: schema.doings.interval_unit,
+            doingIntervalValue: schema.doings.interval_value,
+            doingRepeatsPerWeek: schema.doings.repeats_per_week,
             userId: schema.users.id,
             username: schema.users.username,
           })
@@ -665,19 +633,7 @@ app.group('/api', (apiGroup) =>
             schema.users,
             eq(schema.assignments.user_id, schema.users.id),
           )
-          .where(
-            and(
-              userFilter,
-              // or(
-              //   eq(schema.assignments.due_week, currentWeekNumber),
-              //   and(
-              //     gt(schema.assignments.due_date, startOfWeek),
-              //     lt(schema.assignments.due_date, endOfWeek),
-              //   ),
-              // ),
-              statusFilter,
-            ),
-          );
+          .where(and(userFilter, statusFilter));
 
         const assignments = await assignmentsQuery;
 
@@ -1164,8 +1120,8 @@ const maxShittyPointsExceeded = async (
   return totalPoints + targetPoints - currentPoints > totalNumberOfDoings;
 };
 
-// helper function to auto handle status of next daily assignment
-const autoHandleDailyAssignments = async (
+// helper function to auto handle status of next repeated assignment
+const autoHandleRepeatedAssignments = async (
   parentDoingId: number,
   parentStatus: string,
 ) => {
@@ -1254,7 +1210,7 @@ const autoHandleDailyAssignments = async (
     }
   } catch (error) {
     console.log(
-      'Error during auto handling of daily assignments states for same doing. Skipping this step.',
+      'Error during auto handling of repeated assignments states for same doing. Skipping this step.',
       error,
     );
   }
@@ -1302,9 +1258,3 @@ app.listen(process.env.PORT || 3000);
 console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttp://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
-
-// test, TODO: remove
-// await assignmentService.assignTasksForWeek({
-//   dryRun: true,
-//   groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
-// });

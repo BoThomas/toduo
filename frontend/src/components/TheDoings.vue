@@ -15,7 +15,12 @@
     >
       <div class="field col-span-12">
         <label for="name">Name</label>
-        <InputText id="name" name="name" class="w-full" />
+        <InputText
+          id="name"
+          name="name"
+          placeholder="e.g. do the dishes"
+          class="w-full"
+        />
         <Message
           v-if="$form.name?.invalid"
           severity="error"
@@ -25,59 +30,76 @@
         >
       </div>
       <div class="field col-span-12">
-        <label for="description">Description</label>
-        <Textarea id="description" name="description" rows="3" class="w-full" />
-      </div>
-      <div
-        :class="[
-          'field',
-          $form.repetition && $form.repetition.value === 'daily'
-            ? 'col-span-12 sm:col-span-6'
-            : 'col-span-12',
-        ]"
-      >
-        <label for="repetition">Repetition</label>
-        <Select
-          id="repetition"
-          name="repetition"
-          :options="repetitionOptions"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select repetition"
+        <label for="description">Description (optional)</label>
+        <Textarea
+          id="description"
+          name="description"
+          rows="3"
+          placeholder="e.g. dry them afterwards"
           class="w-full"
         />
+      </div>
+      <div class="field col-span-6">
+        <label for="interval_value">Interval Value</label>
+        <InputNumber
+          id="interval_value"
+          name="interval_value"
+          placeholder="e.g. every 2"
+          :min="1"
+          class="w-full"
+          :showButtons="true"
+          prefix="every "
+        />
         <Message
-          v-if="$form.repetition?.invalid"
+          v-if="$form.interval_value?.invalid"
           severity="error"
           size="small"
           variant="simple"
-          >{{ $form.repetition.error?.message }}</Message
+          >{{ $form.interval_value.error?.message }}</Message
         >
       </div>
-      <div
-        class="field col-span-12 sm:col-span-6"
-        v-if="$form.repetition && $form.repetition.value === 'daily'"
-      >
-        <label for="days_per_week">Days per Week</label>
+      <div class="field col-span-6">
+        <label for="interval_unit">Interval Unit</label>
         <Select
-          id="days_per_week"
-          name="days_per_week"
-          :options="[2, 3, 4, 5, 6, 7]"
+          id="interval_unit"
+          name="interval_unit"
+          :options="intervalUnitOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select..."
           class="w-full"
         />
         <Message
-          v-if="$form.days_per_week?.invalid"
+          v-if="$form.interval_unit?.invalid"
           severity="error"
           size="small"
           variant="simple"
-          >{{ $form.days_per_week.error?.message }}
+          >{{ $form.interval_unit.error?.message }}</Message
+        >
+      </div>
+      <div class="field col-span-12 sm:col-span-6">
+        <label for="repeats_per_week">Repeats per Week</label>
+        <Select
+          id="repeats_per_week"
+          name="repeats_per_week"
+          :options="[1, 2, 3, 4, 5, 6, 7]"
+          class="w-full"
+        />
+        <Message
+          v-if="$form.repeats_per_week?.invalid"
+          severity="error"
+          size="small"
+          variant="simple"
+          >{{ $form.repeats_per_week.error?.message }}
         </Message>
       </div>
       <div class="field col-span-12 sm:col-span-6">
-        <label for="effort_in_minutes">Effort (minutes)</label>
+        <label for="effort_in_minutes">Effort (in minutes)</label>
         <InputNumber
           id="effort_in_minutes"
           name="effort_in_minutes"
+          placeholder="e.g. 30"
+          :min="1"
           class="w-full"
         />
         <Message
@@ -88,9 +110,14 @@
           >{{ $form.effort_in_minutes.error?.message }}</Message
         >
       </div>
-      <div class="field col-span-12 sm:col-span-6">
+      <div class="field col-span-12">
         <label for="notice">Notice (optional)</label>
-        <InputText id="notice" name="notice" class="w-full" />
+        <InputText
+          id="notice"
+          name="notice"
+          placeholder="e.g. use the blue sponge"
+          class="w-full"
+        />
       </div>
       <div class="field-checkbox col-span-12 mt-2 flex gap-1">
         <Checkbox id="is_active" name="is_active" :binary="true" />
@@ -120,7 +147,7 @@
     :globalFilterFields="[
       'name',
       'description',
-      'repetition',
+      'interval_unit',
       'effort_in_minutes',
     ]"
   >
@@ -143,11 +170,14 @@
     </div>
     <Column field="name" header="Name" sortable></Column>
     <Column field="description" header="Description" sortable></Column>
-    <Column header="Repetition" sortable sortField="repetition">
+    <Column header="Interval" sortable sortField="interval_unit">
       <template #body="slotProps">
-        {{ slotProps.data.repetition }}
-        <span v-if="slotProps.data.days_per_week">
-          ({{ slotProps.data.days_per_week }}x)
+        <span v-if="slotProps.data.interval_value > 1">
+          {{ slotProps.data.interval_value }} -
+        </span>
+        <span>{{ slotProps.data.interval_unit }}</span>
+        <span v-if="slotProps.data.repeats_per_week > 1">
+          ({{ slotProps.data.repeats_per_week }}x)
         </span>
       </template>
     </Column>
@@ -265,12 +295,10 @@ const shittyPoints = ref<any>([]);
 const availableShittyPoints = ref<any>();
 const dialogVisible = ref(false);
 const currentDoing = ref<any>({});
-const repetitionOptions = [
-  { label: 'Once', value: 'once' },
-  { label: 'Daily', value: 'daily' },
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Monthly', value: 'monthly' },
-  { label: 'Yearly', value: 'yearly' },
+const intervalUnitOptions = [
+  { label: 'once', value: 'once' },
+  { label: 'week(s)', value: 'weekly' },
+  { label: 'month(s)', value: 'monthly' },
 ];
 
 const clearFilter = () => {
@@ -284,12 +312,16 @@ const resolver = ({ values }: any) => {
     errors.name = [{ message: 'required' }];
   }
 
-  if (!values.repetition) {
-    errors.repetition = [{ message: 'required' }];
+  if (!values.interval_unit) {
+    errors.interval_unit = [{ message: 'required' }];
   }
 
-  if (values.repetition === 'daily' && !values.days_per_week) {
-    errors.days_per_week = [{ message: 'required' }];
+  if (!values.interval_value) {
+    errors.interval_value = [{ message: 'required' }];
+  }
+
+  if (!values.repeats_per_week) {
+    errors.repeats_per_week = [{ message: 'required' }];
   }
 
   if (!values.effort_in_minutes) {
@@ -359,7 +391,9 @@ const openNewTodoDialog = () => {
   currentDoing.value = {
     name: '',
     description: '',
-    repetition: '',
+    interval_unit: 'weekly',
+    interval_value: 1,
+    repeats_per_week: 1,
     effort_in_minutes: undefined,
     notice: '',
     is_active: true,
@@ -387,12 +421,9 @@ const saveDoing = async (formData: any) => {
     currentDoing.value = {
       name: formData.states.name.value,
       description: formData.states.description.value,
-      repetition: formData.states.repetition.value,
-      days_per_week:
-        formData.states.days_per_week?.value &&
-        formData.states.repetition.value === 'daily'
-          ? parseInt(formData.states.days_per_week.value)
-          : undefined,
+      interval_unit: formData.states.interval_unit.value,
+      interval_value: formData.states.interval_value.value,
+      repeats_per_week: formData.states.repeats_per_week.value,
       effort_in_minutes: formData.states.effort_in_minutes.value,
       notice: formData.states.notice.value,
       is_active: formData.states.is_active.value,

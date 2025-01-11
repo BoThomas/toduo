@@ -12,12 +12,13 @@ import {
   or,
   isNull,
   gt,
+  lte,
   desc,
   inArray,
   count,
   sum,
+  sql,
 } from 'drizzle-orm';
-import { getCalendarWeekFromDateOfCurrentYear } from './helper';
 
 const ENABLE_LOGGING = true;
 
@@ -88,13 +89,16 @@ export class AssignmentService {
 
   // PreHelper: Deactivate completed "once" doings
   private async deactivateCompletedOnceDoings() {
-    // select assignments with doings with repetition once, that are completed
+    // select assignments with doings of interval_unit once, that are completed
     const currentlyCompletedOnceDoingIds = await this.db
       .select({ id: doings.id })
       .from(assignments)
       .leftJoin(doings, eq(doings.id, assignments.doing_id))
       .where(
-        and(eq(doings.repetition, 'once'), eq(assignments.status, 'completed')),
+        and(
+          eq(doings.interval_unit, 'once'),
+          eq(assignments.status, 'completed'),
+        ),
       );
 
     // deactivate doings with ids from the above query
@@ -133,8 +137,9 @@ export class AssignmentService {
       .select({
         doing_id: assignments.doing_id,
         user_id: assignments.user_id,
-        repetition: doings.repetition,
-        days_per_week: doings.days_per_week,
+        interval_unit: doings.interval_unit,
+        interval_value: doings.interval_value,
+        repeats_per_week: doings.repeats_per_week,
         effort_in_minutes: doings.effort_in_minutes,
         status: assignments.status,
         created_at: assignments.created_at,
@@ -280,17 +285,9 @@ export class AssignmentService {
     // - it is not deleted (no deleted_at)
     // - either one of the following:
     //   - it was never assigned before (no history entry)
-    //   - its repetition is daily or weekly
-    //   - its repetition is monthly and the last assignment was more than 30 days ago
-    //   - its repetition is yearly and the last assignment was more than 365 days ago
+    //   - last assignment was more then 7 * interval_value (interval_unit = weekly)
+    //     or 30 * interval_value (interval_unit = monthly) days ago
     //   - the last assignment was postponed or failed
-
-    const thirtyDaysAgo = new Date(
-      Date.now() - 30 * 24 * 60 * 60 * 1000,
-    ).toISOString();
-    const oneYearAgo = new Date(
-      Date.now() - 365 * 24 * 60 * 60 * 1000,
-    ).toISOString();
 
     const qualifiedDoings = await this.db
       .select()
@@ -307,49 +304,31 @@ export class AssignmentService {
                 .where(eq(history.doing_id, doings.id))
                 .limit(1),
             ),
-            eq(doings.repetition, 'daily'),
-            eq(doings.repetition, 'weekly'),
-            and(
-              eq(doings.repetition, 'monthly'),
-              gt(
-                this.db
-                  .select({ created_at: history.created_at })
-                  .from(history)
-                  .where(eq(history.doing_id, doings.id))
-                  .orderBy(desc(history.created_at))
-                  .limit(1),
-                thirtyDaysAgo,
-              ),
+            lte(
+              this.db
+                .select({ created_at: history.created_at })
+                .from(history)
+                .where(eq(history.doing_id, doings.id))
+                .orderBy(desc(history.created_at))
+                .limit(1),
+              sql`(${Date.now()} - ${doings.interval_value} *
+              (CASE
+                WHEN ${doings.interval_unit} = 'weekly' THEN 7
+                WHEN ${doings.interval_unit} = 'monthly' THEN 12
+                ELSE 1
+              END) * 24 * 60 * 60 * 1000 - (6*60*60*1000)) / 1000`,
             ),
-            and(
-              eq(doings.repetition, 'yearly'),
-              gt(
-                this.db
-                  .select({ created_at: history.created_at })
-                  .from(history)
-                  .where(eq(history.doing_id, doings.id))
-                  .orderBy(desc(history.created_at))
-                  .limit(1),
-                oneYearAgo,
-              ),
-            ),
-            eq(
+            // the last history entry was created 7/30 days ago
+            // (minus 6 hours to account for e.g. daylight saving time)
+            // (devided by 1000 to convert to seconds, as drizzle-orm does save timestamps in seconds)
+            inArray(
               this.db
                 .select({ status: history.status })
                 .from(history)
                 .where(eq(history.doing_id, doings.id))
                 .orderBy(desc(history.created_at))
                 .limit(1),
-              'postponed',
-            ),
-            eq(
-              this.db
-                .select({ status: history.status })
-                .from(history)
-                .where(eq(history.doing_id, doings.id))
-                .orderBy(desc(history.created_at))
-                .limit(1),
-              'failed',
+              ['failed', 'postponed'],
             ),
           ),
         ),
@@ -385,7 +364,7 @@ export class AssignmentService {
   private groupDoingsByRepetition(doings: any[]): Record<string, any[]> {
     return doings.reduce(
       (groups, doing) => {
-        const group = doing.repetition;
+        const group = doing.interval_unit;
         if (!groups[group]) groups[group] = [];
         groups[group].push(doing);
         return groups;
@@ -517,7 +496,7 @@ export class AssignmentService {
       const usersAssignments = assignments.filter((a) => a.user.id === user.id);
       const usersTotalEffort = usersAssignments.reduce(
         (sum, a) =>
-          sum + a.doing.effort_in_minutes * (a.doing.days_per_week ?? 1),
+          sum + a.doing.effort_in_minutes * (a.doing.repeats_per_week ?? 1),
         0,
       );
 
@@ -553,7 +532,7 @@ export class AssignmentService {
     }
 
     return Math.round(
-      (5 - (daysAgo / 60) * 4) / (historyEntry.days_per_week ?? 1),
+      (5 - (daysAgo / 60) * 4) / (historyEntry.repeats_per_week ?? 1),
     ); // Linearly decay penalty from 5 to 1 over 60 days
   }
 
@@ -564,15 +543,13 @@ export class AssignmentService {
   ): Promise<void> {
     const assignmentsToSave = assignmentObjects.flatMap((assignment) => {
       const now = new Date();
-      const dueWeek = getCalendarWeekFromDateOfCurrentYear(now);
 
-      if (assignment.doing.repetition === 'daily') {
+      if (assignment.doing.repeats_per_week > 1) {
         return Array.from(
-          { length: assignment.doing.days_per_week },
+          { length: assignment.doing.repeats_per_week },
           (_, i) => ({
             doing_id: assignment.doing.id,
             user_id: assignment.user.id,
-            due_week: dueWeek,
             status: i === 0 ? ('pending' as const) : ('waiting' as const),
             created_at: now,
             updated_at: now,
@@ -583,7 +560,6 @@ export class AssignmentService {
       return {
         doing_id: assignment.doing.id,
         user_id: assignment.user.id,
-        due_week: dueWeek,
         status: 'pending' as const,
         created_at: now,
         updated_at: now,
@@ -608,7 +584,7 @@ export class AssignmentService {
   private getTotalEffort(assignments: any[]): number {
     return assignments.reduce(
       (sum, a) =>
-        sum + a.doing.effort_in_minutes * (a.doing.days_per_week ?? 1),
+        sum + a.doing.effort_in_minutes * (a.doing.repeats_per_week ?? 1),
       0,
     );
   }
