@@ -6,6 +6,7 @@
     </div>
     <DataTable
       :value="filteredTodos"
+      dataKey="assignmentId"
       responsiveLayout="scroll"
       size="small"
       :rowClass="

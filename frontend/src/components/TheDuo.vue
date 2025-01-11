@@ -33,6 +33,7 @@
     <h3 class="mt-8 mb-3">This Week's Assignments</h3>
     <DataTable
       :value="weeklyTodos"
+      dataKey="assignmentId"
       responsiveLayout="scroll"
       removableSort
       size="small"

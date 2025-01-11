@@ -137,6 +137,7 @@
 
   <DataTable
     :value="doings"
+    dataKey="id"
     responsiveLayout="scroll"
     removableSort
     size="small"
@@ -227,6 +228,7 @@
   </div>
   <DataTable
     :value="shittyPoints"
+    dataKey="id"
     responsiveLayout="scroll"
     removableSort
     paginator
