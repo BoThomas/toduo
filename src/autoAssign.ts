@@ -390,13 +390,17 @@ export class AssignmentService {
       todoHistory,
     );
 
+    if (ENABLE_LOGGING) {
+      console.log('\n--- Check Scores and Assign ---\n');
+    }
+
     // Optimize assignment using a simple greedy approach
     doings.forEach((doing) => {
       const bestUser = this.selectBestUser(doing, scores, assignments, users);
       if (bestUser) {
         assignments.push({ doing, user: bestUser });
         if (ENABLE_LOGGING) {
-          console.log(`Assigned doing ${doing.id} to user ${bestUser.id}`);
+          console.log(`-> Assigned doing ${doing.id} to user ${bestUser.id}\n`);
         }
       }
     });
@@ -415,12 +419,12 @@ export class AssignmentService {
 
     doings.forEach((doing) => {
       if (ENABLE_LOGGING) {
-        console.log(`Doing ${doing.id}`);
+        console.log(`\n# Doing ${doing.id}`);
       }
 
       users.forEach((user) => {
         if (ENABLE_LOGGING) {
-          console.log(`User ${user.id}`);
+          console.log(`## User ${user.id}`);
         }
 
         let score = 0;
@@ -432,9 +436,7 @@ export class AssignmentService {
         if (shittyPoint) {
           score -= shittyPoint.points;
           if (ENABLE_LOGGING) {
-            console.log(
-              `Penalized ${shittyPoint.points} points due to shitty points`,
-            );
+            console.log(`-${shittyPoint.points} points due to shitty points`);
           }
         }
 
@@ -449,9 +451,7 @@ export class AssignmentService {
           const recencyPenalty = this.calculateRecencyPenalty(historyEntry);
           score -= recencyPenalty;
           if (ENABLE_LOGGING) {
-            console.log(
-              `Penalized ${recencyPenalty} points due to recent completion`,
-            );
+            console.log(`-${recencyPenalty} points due to recent completion`);
           }
         });
 
@@ -466,7 +466,7 @@ export class AssignmentService {
           score += 50;
           if (ENABLE_LOGGING) {
             console.log(
-              `Added 50 points due to last status being ${lastHistoryEntry.status}`,
+              `+50 points due to last status being ${lastHistoryEntry.status}`,
             );
           }
         }
@@ -474,7 +474,7 @@ export class AssignmentService {
         // Add score to the map
         scores.set(`${doing.id}-${user.id}`, score);
         if (ENABLE_LOGGING) {
-          console.log(`Score ${score}`);
+          console.log(`= Score ${score}`);
         }
       });
     });
@@ -492,28 +492,33 @@ export class AssignmentService {
     const eligibleUsers = users.filter((user) => {
       // Apply fairness constraints (e.g., workload balance)
 
+      // Ensure that users with 0% participation are excluded
+      if (user.participation_percent === 0) {
+        return false;
+      }
+
       // get total effort of assignments assigned to this user in the current run
       const usersAssignments = assignments.filter((a) => a.user.id === user.id);
-      const usersTotalEffort = usersAssignments.reduce(
+      const usersCurrentEffort = usersAssignments.reduce(
         (sum, a) =>
           sum + a.doing.effort_in_minutes * (a.doing.repeats_per_week ?? 1),
         0,
       );
 
-      return (
-        user.participation_percent > 0 && // User participates
-        (usersTotalEffort <
-          (user.participation_percent / 100) *
-            this.getTotalEffort(assignments) ||
-          usersTotalEffort === 0) // Make sure to include users with no assignments, otherwise the algorithm will get stuck
-      );
+      // Calculate the maximum effort that the user can take
+      const userMaxEffort =
+        (user.participation_percent / 100) * this.getTotalEffort(assignments);
+
+      // Allow assignment if the user has no assignments yet
+      // or if their total effort is within their maximum effort
+      return usersCurrentEffort === 0 || usersCurrentEffort <= userMaxEffort;
     });
 
     // Find the user with the highest score for this doing
     return eligibleUsers.reduce((bestUser, user) => {
       const score = scores.get(`${doing.id}-${user.id}`) || 0;
       if (ENABLE_LOGGING) {
-        console.log(`Doing ${doing.id} User ${user.id} Score ${score}`);
+        console.log(`# Doing ${doing.id} User ${user.id} Score ${score}`);
       }
       return !bestUser ||
         score > (scores.get(`${doing.id}-${bestUser.id}`) || 0)
@@ -567,13 +572,15 @@ export class AssignmentService {
     });
 
     if (dryRun) {
-      console.log('Dry run, assignments will not be saved to the database:');
+      console.log(
+        '\n--> Dry run, assignments will not be saved to the database:',
+      );
       console.log(assignmentsToSave);
       return;
     }
 
     if (assignmentsToSave.length === 0) {
-      console.log('No assignments to save');
+      console.log('\n--> No assignments to save');
       return;
     }
 
