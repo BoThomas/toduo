@@ -1,9 +1,11 @@
 <template>
   <div class="dashboard">
-    <h2>Welcome, {{ username }}</h2>
-    <h3 class="mb-2">This Week's Todos</h3>
+    <div class="flex justify-between items-center mb-2">
+      <h3>This Week's Todos</h3>
+      <SelectButton v-model="currentFilter" :options="filterOptions" />
+    </div>
     <DataTable
-      :value="todos"
+      :value="filteredTodos"
       responsiveLayout="scroll"
       size="small"
       :rowClass="
@@ -44,19 +46,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Checkbox from 'primevue/checkbox';
+import SelectButton from 'primevue/selectbutton';
 import { useToast } from 'primevue/usetoast';
 import { readAPI, updateApi } from '@/services/apiService';
 
+type Todo = {
+  assignmentId: number;
+  doingName: string;
+  doingDescription: string;
+  doingEffort: number;
+  doingRepeatsPerWeek: number;
+  calcCounterCurrent: number;
+  calcCounterTotal: number;
+  completed: boolean;
+};
+
 const toast = useToast();
-const username = ref('');
-const todos = ref([]);
+const todos = ref<Todo[]>([]);
+const currentFilter = ref('pending');
+const filterOptions = ['pending', 'completed', 'all'];
+
+const filteredTodos = computed(() => {
+  if (currentFilter.value === 'all') {
+    return todos.value;
+  }
+  return todos.value.filter((todo) =>
+    currentFilter.value === 'pending' ? !todo.completed : todo.completed,
+  );
+});
 
 onMounted(async () => {
-  username.value = localStorage.getItem('username') || '';
   await fetchTodos();
 });
 
