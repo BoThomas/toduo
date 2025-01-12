@@ -99,27 +99,24 @@ const items = ref([
     icon: 'pi pi-home',
     command: () => {
       router.push('/');
-      setActiveItem('/');
     },
     class: computed(() => (activeItem.value === '/' ? 'active-menu-item' : '')),
   },
   {
-    label: 'The Doings',
+    label: 'Doings',
     icon: 'pi pi-list',
     command: () => {
       router.push('/doings');
-      setActiveItem('/doings');
     },
     class: computed(() =>
       activeItem.value === '/doings' ? 'active-menu-item' : '',
     ),
   },
   {
-    label: 'The Duo',
+    label: 'Duo',
     icon: 'pi pi-users',
     command: () => {
       router.push('/duo');
-      setActiveItem('/duo');
     },
     class: computed(() =>
       activeItem.value === '/duo' ? 'active-menu-item' : '',
@@ -130,10 +127,20 @@ const items = ref([
     icon: 'pi pi-chart-bar',
     command: () => {
       router.push('/report');
-      setActiveItem('/report');
     },
     class: computed(() =>
       activeItem.value === '/report' ? 'active-menu-item' : '',
+    ),
+  },
+  {
+    label: 'Settings',
+    icon: 'pi pi-cog',
+    command: () => {
+      router.push('/settings');
+      setActiveItem('/settings');
+    },
+    class: computed(() =>
+      activeItem.value === '/settings' ? 'active-menu-item' : '',
     ),
   },
 ]);
@@ -181,6 +188,7 @@ const checkShittyPointsMinus = async () => {
 
 // Before each route navigation
 router.beforeEach((to, from, next) => {
+  setActiveItem(to.path); // Set active menu item
   if (isAuthenticated.value) {
     checkShittyPointsMinus();
   }

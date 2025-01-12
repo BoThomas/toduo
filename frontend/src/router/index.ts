@@ -4,6 +4,7 @@ import TheDoings from '@/components/TheDoings.vue';
 import TheDuo from '@/components/TheDuo.vue';
 import Reports from '@/components/Reports.vue';
 import Join from '@/components/Join.vue';
+import Settings from '@/components/Settings.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,12 +16,12 @@ const router = createRouter({
     },
     {
       path: '/doings',
-      name: 'TheDoings',
+      name: 'Doings',
       component: TheDoings,
     },
     {
       path: '/duo',
-      name: 'TheDuo',
+      name: 'Duo',
       component: TheDuo,
     },
     {
@@ -32,6 +33,11 @@ const router = createRouter({
       path: '/join',
       name: 'Join',
       component: Join,
+    },
+    {
+      path: '/settings',
+      name: 'Settings',
+      component: Settings,
     },
   ],
 });

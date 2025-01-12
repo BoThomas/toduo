@@ -1,183 +1,137 @@
 <template>
-  <div class="the-duo">
-    <h2 class="mb-2">The Duo</h2>
-    <h3 class="mb-4">User Participation</h3>
-    <div
-      v-for="user in users"
-      :key="user.id"
-      class="field"
-      style="user-select: none"
-    >
-      <label :for="user.id" class="m-0">{{ user.username }}</label>
-      <div class="flex items-center">
-        <Slider
-          v-model="user.participation_percent"
-          :disabled="
-            user.locked ||
-            (users.filter((u: any) => !u.locked).length === 1 && !user.locked)
+  <h2 class="mb-2">The Duo</h2>
+  <h3 class="mb-4">User Participation</h3>
+  <div
+    v-for="user in users"
+    :key="user.id"
+    class="field"
+    style="user-select: none"
+  >
+    <label :for="user.id" class="m-0">{{ user.username }}</label>
+    <div class="flex items-center">
+      <Slider
+        v-model="user.participation_percent"
+        :disabled="
+          user.locked ||
+          (users.filter((u: any) => !u.locked).length === 1 && !user.locked)
+        "
+        @change="updateParticipationLive(user.id)"
+        @slideend="updateParticipation"
+        style="flex: 1; margin-right: 10px"
+      />
+      <Button
+        :icon="`pi ${user.locked ? 'pi-lock' : 'pi-unlock'}`"
+        @click="toggleLock(user.id)"
+        :class="{ 'p-button-secondary': user.locked }"
+        class="p-button-rounded p-button-text"
+      />
+      <span class="w-12">{{ user.participation_percent }}%</span>
+    </div>
+  </div>
+
+  <h3 class="mt-8 mb-3">This Week's Assignments</h3>
+  <DataTable
+    :value="weeklyTodos"
+    dataKey="assignmentId"
+    responsiveLayout="scroll"
+    removableSort
+    size="small"
+    paginator
+    :rows="10"
+    :rowsPerPageOptions="[5, 10, 20, 50]"
+    v-model:filters="weeklyTodosFilters"
+    :globalFilterFields="['doingName', 'username', 'status']"
+  >
+    <div class="flex justify-end gap-2 mb-2">
+      <Button
+        type="button"
+        icon="pi pi-filter-slash"
+        outlined
+        @click="clearFilter()"
+      />
+      <IconField>
+        <InputIcon>
+          <i class="pi pi-search" />
+        </InputIcon>
+        <InputText
+          v-model="weeklyTodosFilters['global'].value"
+          placeholder="Keyword Search"
+        />
+      </IconField>
+    </div>
+    <Column header="Todo" sortable sortField="doingName">
+      <template #body="slotProps">
+        {{ slotProps.data.doingName }}
+        <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
+          ({{ slotProps.data.calcCounterCurrent }}/{{
+            slotProps.data.calcCounterTotal
+          }})
+        </span>
+      </template>
+    </Column>
+    <Column header="Assigned To" sortable sortField="username">
+      <template #body="slotProps">
+        <Select
+          v-model="slotProps.data.username"
+          :options="users.map((user: any) => user.username)"
+          @change="updateAssignment(slotProps.data)"
+        />
+      </template>
+    </Column>
+    <Column header="Status" sortable sortField="status">
+      <template #body="slotProps">
+        <Select
+          v-model="slotProps.data.status"
+          :options="
+            getStatusOptions(
+              slotProps.data.doingIntervalUnit,
+              slotProps.data.doingRepeatsPerWeek,
+            )
           "
-          @change="updateParticipationLive(user.id)"
-          @slideend="updateParticipation"
-          style="flex: 1; margin-right: 10px"
+          @change="updateAssignment(slotProps.data)"
         />
-        <Button
-          :icon="`pi ${user.locked ? 'pi-lock' : 'pi-unlock'}`"
-          @click="toggleLock(user.id)"
-          :class="{ 'p-button-secondary': user.locked }"
-          class="p-button-rounded p-button-text"
-        />
-        <span class="w-12">{{ user.participation_percent }}%</span>
-      </div>
-    </div>
+      </template>
+    </Column>
+  </DataTable>
 
-    <h3 class="mt-8 mb-3">This Week's Assignments</h3>
-    <DataTable
-      :value="weeklyTodos"
-      dataKey="assignmentId"
-      responsiveLayout="scroll"
-      removableSort
-      size="small"
-      paginator
-      :rows="10"
-      :rowsPerPageOptions="[5, 10, 20, 50]"
-      v-model:filters="weeklyTodosFilters"
-      :globalFilterFields="['doingName', 'username', 'status']"
-    >
-      <div class="flex justify-end gap-2 mb-2">
-        <Button
-          type="button"
-          icon="pi pi-filter-slash"
-          outlined
-          @click="clearFilter()"
-        />
-        <IconField>
-          <InputIcon>
-            <i class="pi pi-search" />
-          </InputIcon>
-          <InputText
-            v-model="weeklyTodosFilters['global'].value"
-            placeholder="Keyword Search"
-          />
-        </IconField>
-      </div>
-      <Column header="Todo" sortable sortField="doingName">
-        <template #body="slotProps">
-          {{ slotProps.data.doingName }}
-          <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
-            ({{ slotProps.data.calcCounterCurrent }}/{{
-              slotProps.data.calcCounterTotal
-            }})
-          </span>
-        </template>
-      </Column>
-      <Column header="Assigned To" sortable sortField="username">
-        <template #body="slotProps">
-          <Select
-            v-model="slotProps.data.username"
-            :options="users.map((user: any) => user.username)"
-            @change="updateAssignment(slotProps.data)"
-          />
-        </template>
-      </Column>
-      <Column header="Status" sortable sortField="status">
-        <template #body="slotProps">
-          <Select
-            v-model="slotProps.data.status"
-            :options="
-              getStatusOptions(
-                slotProps.data.doingIntervalUnit,
-                slotProps.data.doingRepeatsPerWeek,
-              )
-            "
-            @change="updateAssignment(slotProps.data)"
-          />
-        </template>
-      </Column>
-    </DataTable>
+  <div class="mt-4 flex flex-wrap gap-3">
+    <Button
+      :label="
+        showStatusExplanation
+          ? 'Hide Status Explanation'
+          : 'Show Status Explanation'
+      "
+      :icon="showStatusExplanation ? 'pi pi-eye-slash' : 'pi pi-eye'"
+      @click="showStatusExplanation = !showStatusExplanation"
+      class="w-full sm:w-auto"
+    />
+  </div>
 
-    <div class="mt-4 flex flex-wrap gap-3">
-      <Button
-        :label="
-          showStatusExplanation
-            ? 'Hide Status Explanation'
-            : 'Show Status Explanation'
-        "
-        :icon="showStatusExplanation ? 'pi pi-eye-slash' : 'pi pi-eye'"
-        @click="showStatusExplanation = !showStatusExplanation"
-        class="w-full sm:w-auto"
-      />
-      <Button
-        :label="
-          autoassignCronInfo?.running
-            ? 'Stop Autoassign Cron'
-            : 'Start Autoassign Cron'
-        "
-        :icon="autoassignCronInfo?.running ? 'pi pi-stop' : 'pi pi-play'"
-        @click="confirmCronControl"
-        class="w-full sm:w-auto"
-      />
-      <Button
-        label="Trigger Reassignment"
-        @click="confirmReassignment"
-        icon="pi pi-refresh"
-        class="w-full sm:w-auto"
-      />
-      <Button
-        label="Download Database"
-        icon="pi pi-download"
-        @click="downloadDatabase"
-        class="w-full sm:w-auto"
-      />
-      <Button
-        label="Upload Database"
-        icon="pi pi-upload"
-        @click="confirmDatabaseUpload"
-        class="w-full sm:w-auto"
-      />
-    </div>
-
-    <div v-if="autoassignCronInfo?.name" class="mt-10">
-      <p>The autoassign cron is currently running.</p>
-      <p><strong>Cron Time:</strong> {{ autoassignCronInfo.cronTime }}</p>
-      <p><strong>Next Dates:</strong></p>
-      <ul class="list-disc pl-5">
-        <li v-for="date in autoassignCronInfo.nextDates" :key="date">
-          {{ new Date(date).toLocaleString() }}
-        </li>
-      </ul>
-    </div>
-    <div v-else class="mt-10">
-      <p>The autoassign cron is currently stopped.</p>
-    </div>
-
-    <div v-if="showStatusExplanation" class="mt-10">
-      <h3 class="mb-2">Status Explanation</h3>
-      <ul class="list-disc pl-5">
-        <li>
-          <strong>Waiting:</strong> The task is waiting to be pending. Only for
-          doings with more than one repeat per week.
-        </li>
-        <li><strong>Pending:</strong> The task is open for completion.</li>
-        <li>
-          <strong>Completed:</strong> The task has been finished successfully.
-        </li>
-        <li>
-          <strong>Skipped:</strong> The task will not be completed this
-          iteration and is reassigned the next time it is due based on the
-          interval unit.
-        </li>
-        <li>
-          <strong>Postponed:</strong> The task will not be completed this
-          iteration but is reassigned the next week, regardless of the interval
-          unit. Not possible for weekly doings.
-        </li>
-        <li>
-          <strong>Failed:</strong> The task has been failed and will be
-          reassigned the next week, regardless of the interval unit. Can not be
-          set manually.
-        </li>
-      </ul>
-    </div>
+  <div v-if="showStatusExplanation" class="mt-10">
+    <h3 class="mb-2">Status Explanation</h3>
+    <ul class="list-disc pl-5">
+      <li>
+        <strong>Waiting:</strong> The task is waiting to be pending. Only for
+        doings with more than one repeat per week.
+      </li>
+      <li><strong>Pending:</strong> The task is open for completion.</li>
+      <li>
+        <strong>Completed:</strong> The task has been finished successfully.
+      </li>
+      <li>
+        <strong>Skipped:</strong> The task will not be completed this iteration
+        and is reassigned the next time it is due based on the interval unit.
+      </li>
+      <li>
+        <strong>Postponed:</strong> The task will not be completed this
+        iteration but is reassigned the next week, regardless of the interval
+        unit. Not possible for weekly doings.
+      </li>
+      <li>
+        <strong>Failed:</strong> The task has been failed and will be reassigned
+        the next week, regardless of the interval unit. Can not be set manually.
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -216,24 +170,10 @@ const STATUS_OPTIONS = [
 onMounted(async () => {
   await fetchUsers();
   await fetchThisWeeksTodos();
-  await fetchAutoassignCronInfo();
 });
 
 const clearFilter = () => {
   weeklyTodosFilters.value.global.value = null;
-};
-
-const fetchAutoassignCronInfo = async () => {
-  try {
-    autoassignCronInfo.value = await readAPI('/doings/autoassign/cron');
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error Message',
-      detail: 'Could not load autoassign cron info',
-      life: 3000,
-    });
-  }
 };
 
 const fetchUsers = async () => {
@@ -337,50 +277,6 @@ const updateParticipation = async () => {
   }
 };
 
-const confirmCronControl = async () => {
-  confirm.require({
-    header: `Are you sure you want to ${
-      autoassignCronInfo.value.running ? 'stop' : 'start'
-    } the autoassign cron?`,
-    message: 'This only affects new future assignments.',
-    defaultFocus: 'reject',
-    rejectProps: {
-      label: 'Cancel',
-      severity: 'secondary',
-      outlined: true,
-    },
-    acceptProps: {
-      label: autoassignCronInfo.value.running ? 'Stop' : 'Start',
-    },
-    icon: 'pi pi-exclamation-triangle',
-    accept: async () => {
-      await controlAutoassignCron();
-    },
-  });
-};
-
-const controlAutoassignCron = async () => {
-  try {
-    if (autoassignCronInfo.value.running) {
-      await updateApi('/doings/autoassign/cron', {
-        enable: false,
-      });
-    } else {
-      await updateApi('/doings/autoassign/cron', {
-        enable: true,
-      });
-    }
-    await fetchAutoassignCronInfo();
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error Message',
-      detail: 'Could not control autoassign cron',
-      life: 3000,
-    });
-  }
-};
-
 // for updating the user and status of the assignment
 const updateAssignment = async (assignment: any) => {
   // as the select component returns the username, we need to find the user id
@@ -399,129 +295,6 @@ const updateAssignment = async (assignment: any) => {
       life: 3000,
     });
   }
-};
-
-const triggerReassignment = async () => {
-  try {
-    await createAPI('/doings/autoassign', {
-      reassign: true,
-    });
-    await fetchThisWeeksTodos();
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error Message',
-      detail: 'Error during reassignment',
-      life: 3000,
-    });
-  }
-};
-
-const confirmReassignment = () => {
-  confirm.require({
-    header: 'Are you sure you want to reassign?',
-    message: 'All current assignments will be lost and progress will be reset.',
-    defaultFocus: 'reject',
-    rejectProps: {
-      label: 'Cancel',
-      severity: 'secondary',
-      outlined: true,
-    },
-    acceptProps: {
-      label: 'Reassign',
-    },
-    icon: 'pi pi-exclamation-triangle',
-    accept: async () => {
-      await triggerReassignment();
-    },
-  });
-};
-
-const downloadDatabase = async () => {
-  try {
-    const response = await readAPI('/database/download');
-    const url = `data:application/octet-stream;base64,${response}`;
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute(
-      'download',
-      `${new Date().toISOString().slice(0, 16).replace(/[:T-]/g, '').slice(0, 12)}-toduo-database.sqlite`,
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error Message',
-      detail: 'Could not download database',
-      life: 3000,
-    });
-  }
-};
-
-const confirmDatabaseUpload = () => {
-  confirm.require({
-    header: 'Are you sure you want to upload a new database?',
-    message: 'This will overwrite all current data.',
-    defaultFocus: 'reject',
-    rejectProps: {
-      label: 'Cancel',
-      severity: 'secondary',
-      outlined: true,
-    },
-    acceptProps: {
-      label: 'Upload',
-    },
-    icon: 'pi pi-exclamation-triangle',
-    accept: async () => {
-      await uploadDatabase();
-    },
-  });
-};
-
-const uploadDatabase = async () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.sqlite';
-  input.onchange = async (event: any) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.sqlite')) {
-      toast.add({
-        severity: 'error',
-        summary: 'Error Message',
-        detail: 'Invalid file type. Please upload a .sqlite file.',
-        life: 3000,
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e: any) => {
-      const base64 = e.target.result.split(',')[1];
-      try {
-        await updateApi('/database/upload', base64);
-        toast.add({
-          severity: 'success',
-          summary: 'Success Message',
-          detail: 'Database uploaded successfully',
-          life: 3000,
-        });
-        location.reload();
-      } catch (error) {
-        toast.add({
-          severity: 'error',
-          summary: 'Error Message',
-          detail: 'Could not upload database',
-          life: 3000,
-        });
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-  input.click();
 };
 
 // helper function to get the available status options based on the interval unit and repeats per week

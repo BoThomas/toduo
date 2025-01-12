@@ -1,49 +1,47 @@
 <template>
-  <div class="dashboard">
-    <div class="flex justify-between items-center mb-2">
-      <h3>This Week's Todos</h3>
-      <SelectButton v-model="currentFilter" :options="filterOptions" />
-    </div>
-    <DataTable
-      :value="filteredTodos"
-      dataKey="assignmentId"
-      responsiveLayout="scroll"
-      size="small"
-      :rowClass="
-        (data) => {
-          return data.completed ? 'line-through  text-gray-400' : '';
-        }
-      "
-      removableSort
-    >
-      <Column header="Name" sortable sortField="doingName">
-        <template #body="slotProps">
-          {{ slotProps.data.doingName }}
-          <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
-            ({{ slotProps.data.calcCounterCurrent }}/{{
-              slotProps.data.calcCounterTotal
-            }})
-          </span>
-        </template>
-      </Column>
-      <Column
-        field="doingDescription"
-        header="Description"
-        sortable
-        :class="{ 'hidden sm:table-cell': true }"
-      ></Column>
-      <Column field="doingEffort" header="Effort (min)" sortable></Column>
-      <Column header="Done" sortable sortField="completed">
-        <template #body="slotProps">
-          <Checkbox
-            v-model="slotProps.data.completed"
-            @change="updateTodoStatus(slotProps.data)"
-            :binary="true"
-          />
-        </template>
-      </Column>
-    </DataTable>
+  <h2>This Week's Todos</h2>
+  <div class="flex justify-end mb-2">
+    <SelectButton v-model="currentFilter" :options="filterOptions" />
   </div>
+  <DataTable
+    :value="filteredTodos"
+    dataKey="assignmentId"
+    responsiveLayout="scroll"
+    size="small"
+    :rowClass="
+      (data) => {
+        return data.completed ? 'line-through  text-gray-400' : '';
+      }
+    "
+    removableSort
+  >
+    <Column header="Name" sortable sortField="doingName">
+      <template #body="slotProps">
+        {{ slotProps.data.doingName }}
+        <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
+          ({{ slotProps.data.calcCounterCurrent }}/{{
+            slotProps.data.calcCounterTotal
+          }})
+        </span>
+      </template>
+    </Column>
+    <Column
+      field="doingDescription"
+      header="Description"
+      sortable
+      :class="{ 'hidden sm:table-cell': true }"
+    ></Column>
+    <Column field="doingEffort" header="Effort (min)" sortable></Column>
+    <Column header="Done" sortable sortField="completed">
+      <template #body="slotProps">
+        <Checkbox
+          v-model="slotProps.data.completed"
+          @change="updateTodoStatus(slotProps.data)"
+          :binary="true"
+        />
+      </template>
+    </Column>
+  </DataTable>
 </template>
 
 <script setup lang="ts">
