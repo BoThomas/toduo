@@ -199,15 +199,17 @@
     </Column>
     <Column>
       <template #body="slotProps">
-        <div class="flex gap-2">
+        <div class="flex">
           <Button
             icon="pi pi-pencil"
             @click="editDoing(slotProps.data)"
+            variant="text"
             class="p-button-rounded p-button-success"
           />
           <Button
             icon="pi pi-trash"
             @click="deleteDoing(slotProps.data.id)"
+            variant="text"
             class="p-button-rounded p-button-danger"
           />
         </div>
