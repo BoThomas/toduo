@@ -39,7 +39,7 @@
           class="w-full"
         />
       </div>
-      <div class="field col-span-6">
+      <div class="field col-span-12 sm:col-span-6">
         <label for="interval_value">Interval Value</label>
         <InputNumber
           id="interval_value"
@@ -58,7 +58,7 @@
           >{{ $form.interval_value.error?.message }}</Message
         >
       </div>
-      <div class="field col-span-6">
+      <div class="field col-span-12 sm:col-span-6">
         <label for="interval_unit">Interval Unit</label>
         <Select
           id="interval_unit"
