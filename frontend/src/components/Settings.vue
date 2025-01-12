@@ -14,8 +14,14 @@
     />
     <Button
       label="Trigger Reassignment"
-      @click="confirmReassignment"
+      @click="confirmReassignment(true)"
       icon="pi pi-refresh"
+      class="w-full sm:w-auto"
+    />
+    <Button
+      label="Trigger Assignment"
+      @click="confirmReassignment(false)"
+      icon="pi pi-reply"
       class="w-full sm:w-auto"
     />
     <Button
@@ -119,13 +125,19 @@ const controlAutoassignCron = async () => {
   }
 };
 
-const triggerReassignment = async () => {
+const triggerReassignment = async (reassign: boolean) => {
   try {
     await createAPI('/doings/autoassign', {
-      reassign: true,
+      reassign,
     });
-    await fetchThisWeeksTodos();
+    toast.add({
+      severity: 'success',
+      summary: 'Success Message',
+      detail: `${reassign ? 'Reassignment' : 'Evaluation and assignment'} successfull.`,
+      life: 3000,
+    });
   } catch (error) {
+    console.error(error);
     toast.add({
       severity: 'error',
       summary: 'Error Message',
@@ -135,10 +147,23 @@ const triggerReassignment = async () => {
   }
 };
 
-const confirmReassignment = () => {
+const confirmReassignment = (reassign: boolean) => {
+  let header = '';
+  let message = '';
+
+  if (reassign) {
+    header = 'Are you sure you want to reassign?';
+    message =
+      'All current assignments will be lost and progress will be reset.';
+  } else {
+    header = 'Are you sure you want to evaluate and assign?';
+    message =
+      'The current assignments will be evaluated and new ones will be assigned.';
+  }
+
   confirm.require({
-    header: 'Are you sure you want to reassign?',
-    message: 'All current assignments will be lost and progress will be reset.',
+    header,
+    message,
     defaultFocus: 'reject',
     rejectProps: {
       label: 'Cancel',
@@ -146,11 +171,11 @@ const confirmReassignment = () => {
       outlined: true,
     },
     acceptProps: {
-      label: 'Reassign',
+      label: reassign ? 'Reassign' : 'Evaluate and Assign',
     },
     icon: 'pi pi-exclamation-triangle',
     accept: async () => {
-      await triggerReassignment();
+      await triggerReassignment(reassign);
     },
   });
 };
@@ -227,7 +252,6 @@ const uploadDatabase = async () => {
           detail: 'Database uploaded successfully',
           life: 3000,
         });
-        location.reload();
       } catch (error) {
         toast.add({
           severity: 'error',
