@@ -60,6 +60,7 @@ import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Menubar from 'primevue/menubar';
 import { readAPI } from '@/services/apiService';
+import PullToRefresh from 'pulltorefreshjs';
 
 const router = useRouter();
 const auth0 = useAuth0();
@@ -80,6 +81,13 @@ const logout = () => {
 const isDarkMode = ref(localStorage.getItem('darkMode') === 'true');
 onMounted(() => {
   document.documentElement.classList.toggle('dark-mode', isDarkMode.value);
+
+  PullToRefresh.init({
+    mainElement: 'body',
+    onRefresh() {
+      window.location.reload();
+    },
+  });
 });
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value;
