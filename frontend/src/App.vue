@@ -205,6 +205,10 @@ router.beforeEach((to, from, next) => {
 </script>
 
 <style>
+.ptr--ptr {
+  background-color: var(--p-primary-100);
+}
+
 .active-menu-item div {
   background-color: var(--p-primary-100) !important;
 }
