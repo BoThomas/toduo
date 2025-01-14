@@ -1,7 +1,11 @@
 <template>
   <h2>This Week's Todos</h2>
   <div class="flex justify-end mb-2">
-    <SelectButton v-model="currentFilter" :options="filterOptions" />
+    <SelectButton
+      v-model="currentFilter"
+      :options="filterOptions"
+      :allowEmpty="false"
+    />
   </div>
   <DataTable
     :value="filteredTodos"
