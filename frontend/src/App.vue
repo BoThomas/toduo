@@ -37,7 +37,9 @@
           </div>
         </div>
       </div>
-      <div v-if="isLoading">Loading...</div>
+      <div v-if="isLoading" class="flex h-80 justify-center items-center">
+        <ProgressSpinner strokeWidth="3" />
+      </div>
       <div
         v-else-if="isAuthenticated"
         class="sm:flex sm:flex-col sm:items-center sm:my-2 mt-6 mb-2"
@@ -52,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import ProgressSpinner from 'primevue/progressspinner';
 import { ref, watch, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth0 } from '@auth0/auth0-vue';
@@ -207,6 +210,7 @@ router.beforeEach((to, from, next) => {
 </script>
 
 <style>
+/* Pull to refresh */
 .ptr--ptr {
   background-color: var(--p-primary-100);
 }
@@ -216,6 +220,12 @@ router.beforeEach((to, from, next) => {
   color: var(--p-primary-500) !important;
 }
 
+/* Progress Spinner */
+.p-progressspinner-circle {
+  stroke: var(--p-primary-500) !important;
+}
+
+/* Menubar */
 .active-menu-item div {
   background-color: var(--p-primary-100) !important;
 }
