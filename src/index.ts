@@ -10,17 +10,13 @@ import { seedDatabase } from './database/seed';
 import {
   sql,
   and,
-  or,
   eq,
-  gt,
-  lt,
   asc,
   inArray,
   sum,
   count,
-  type SQL,
-  is,
   isNull,
+  type SQL,
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
 import Timer from './timer';
@@ -1258,3 +1254,10 @@ app.listen(process.env.PORT || 3000);
 console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttp://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
+
+// For testing purposes
+// await new AssignmentService().assignTasksForWeek({
+//   dryRun: true,
+//   clearAndReassign: false,
+//   groupByRepetition: false,
+// });
