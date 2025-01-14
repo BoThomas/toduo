@@ -46,7 +46,7 @@
       </div>
     </header>
     <main v-if="!isLoading && isAuthenticated" class="py-2 sm:px-8 px-4 mb-10">
-      <router-view></router-view>
+      <router-view :key="changeThisIdToRerenderRouter"></router-view>
     </main>
   </div>
 </template>
@@ -69,6 +69,7 @@ const toast = useToast();
 const isLoading = computed(() => auth0.isLoading.value);
 const isAuthenticated = computed(() => auth0.isAuthenticated.value);
 const user = computed(() => auth0.user.value?.nickname);
+const changeThisIdToRerenderRouter = ref(0);
 
 const logout = () => {
   auth0.logout({
@@ -82,10 +83,11 @@ const isDarkMode = ref(localStorage.getItem('darkMode') === 'true');
 onMounted(() => {
   document.documentElement.classList.toggle('dark-mode', isDarkMode.value);
 
+  // add pull to refresh to every page
   PullToRefresh.init({
     mainElement: 'body',
     onRefresh() {
-      window.location.reload();
+      changeThisIdToRerenderRouter.value++;
     },
   });
 });
