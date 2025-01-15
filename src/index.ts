@@ -16,6 +16,7 @@ import {
   sum,
   count,
   isNull,
+  gte,
   type SQL,
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
@@ -917,6 +918,113 @@ app.group('/api', (apiGroup) =>
       },
     )
 
+    // Get count of completed doings per user and calendar week for the last 6 weeks
+    .get(
+      '/statistics/completed',
+      async () => {
+        // TODO: Refactor and add comments
+
+        try {
+          const sixWeeksAgo = new Date();
+          sixWeeksAgo.setDate(sixWeeksAgo.getDate() - 42); // 6 weeks * 7 days
+
+          const completedAssignments = await db
+            .select({
+              username: schema.users.username,
+              week: sql`strftime('%W', datetime(${schema.assignments.created_at}, 'unixepoch'))`.as(
+                'week',
+              ),
+              count: sql`count(${schema.assignments.id})`.as('count'),
+            })
+            .from(schema.assignments)
+            .innerJoin(
+              schema.users,
+              eq(schema.assignments.user_id, schema.users.id),
+            )
+            .where(eq(schema.assignments.status, 'completed'))
+            .groupBy(
+              schema.users.username,
+              sql`strftime('%W', datetime(${schema.assignments.created_at}, 'unixepoch'))`,
+            )
+            .union(
+              db
+                .select({
+                  username: schema.users.username,
+                  week: sql`strftime('%W', datetime(${schema.history.created_at}, 'unixepoch'))`.as(
+                    'week',
+                  ),
+                  count: sql`count(${schema.history.id})`.as('count'),
+                })
+                .from(schema.history)
+                .innerJoin(
+                  schema.users,
+                  eq(schema.history.user_id, schema.users.id),
+                )
+                .where(
+                  and(
+                    eq(schema.history.status, 'completed'),
+                    gte(schema.history.created_at, sixWeeksAgo),
+                  ),
+                )
+                .groupBy(
+                  schema.users.username,
+                  sql`strftime('%W', datetime(${schema.history.created_at}, 'unixepoch'))`,
+                ),
+            )
+            .orderBy(schema.users.username);
+
+          // Transform the result
+          const reducedResult = completedAssignments.reduce<
+            Record<string, { label: string; data: number[] }>
+          >((acc, { username, week, count }) => {
+            if (!acc[username]) {
+              acc[username] = { label: username, data: Array(6).fill(0) };
+            }
+            const weekIndex = parseInt(week as string) % 6; // Ensure week index is within the last 6 weeks
+            acc[username].data[weekIndex] = count as number;
+            return acc;
+          }, {});
+
+          const formattedResult = {
+            labels: completedAssignments.reduce<string[]>((acc, { week }) => {
+              const weekIndex = parseInt(week as string) % 6;
+              acc[weekIndex] = `KW ${week}`;
+              return acc;
+            }, Array(6).fill('')),
+            datasets: Object.values(reducedResult),
+          };
+
+          return {
+            success: true,
+            message:
+              'Completed doings per user and calendar week for the last 6 weeks',
+            data: formattedResult,
+          };
+        } catch (error) {
+          console.error(error);
+          return {
+            success: false,
+            message: `Failed to get statistics, ${error}`,
+            data: {},
+          };
+        }
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+          data: t.Object({
+            labels: t.Array(t.String()),
+            datasets: t.Array(
+              t.Object({
+                label: t.String(),
+                data: t.Array(t.Number()),
+              }),
+            ),
+          }),
+        }),
+      },
+    )
     // Download the database
     .get(
       '/database/download',

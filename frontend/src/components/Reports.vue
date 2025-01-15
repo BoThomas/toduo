@@ -69,6 +69,7 @@ import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
+import { readAPI } from '@/services/apiService';
 
 const completedTodosData = ref<any>(null);
 const missedTodosData = ref<any>(null);
@@ -94,7 +95,32 @@ onMounted(async () => {
 
 const fetchCompletedTodos = async () => {
   try {
-    // TODO: implement
+    const data = await readAPI('/statistics/completed');
+    const colors = [
+      'rgba(75, 192, 192, 0.2)',
+      'rgba(153, 102, 255, 0.2)',
+      'rgba(255, 159, 64, 0.2)',
+      'rgba(255, 99, 132, 0.2)',
+      'rgba(54, 162, 235, 0.2)',
+      'rgba(255, 206, 86, 0.2)',
+    ];
+    const borderColors = [
+      'rgba(75, 192, 192, 1)',
+      'rgba(153, 102, 255, 1)',
+      'rgba(255, 159, 64, 1)',
+      'rgba(255, 99, 132, 1)',
+      'rgba(54, 162, 235, 1)',
+      'rgba(255, 206, 86, 1)',
+    ];
+    completedTodosData.value = {
+      labels: data.labels,
+      datasets: data.datasets.map((dataset, index) => ({
+        ...dataset,
+        backgroundColor: colors[index % colors.length],
+        borderColor: borderColors[index % borderColors.length],
+        borderWidth: 1,
+      })),
+    };
   } catch (error) {
     console.error('Error fetching completed todos:', error);
   }
