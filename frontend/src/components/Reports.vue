@@ -16,32 +16,46 @@
     <div class="grid grid-cols-12 gap-4 sm:mt-6">
       <div class="col-span-12 md:col-span-6 md:mt-6">
         <h3 class="mb-2">Work Done (in hours)</h3>
-        <TabView>
-          <TabPanel header="This Week" :value="0">
-            <h4>Total Hours: {{ workDone.week }}</h4>
-          </TabPanel>
-          <TabPanel header="This Month" :value="1">
-            <h4>Total Hours: {{ workDone.month }}</h4>
-          </TabPanel>
-          <TabPanel header="This Year" :value="2">
-            <h4>Total Hours: {{ workDone.year }}</h4>
-          </TabPanel>
-        </TabView>
+        <Tabs value="0">
+          <TabList>
+            <Tab value="0">This Week</Tab>
+            <Tab value="1">This Month</Tab>
+            <Tab value="2">This Year</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel value="0">
+              <h4>Total Hours: {{ workDone.week }}</h4>
+            </TabPanel>
+            <TabPanel value="1">
+              <h4>Total Hours: {{ workDone.month }}</h4>
+            </TabPanel>
+            <TabPanel value="2">
+              <h4>Total Hours: {{ workDone.year }}</h4>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </div>
 
       <div class="col-span-12 md:col-span-6 md:mt-6">
         <h3 class="mb-2">Upcoming Work (in hours)</h3>
-        <TabView>
-          <TabPanel header="This Week" :value="0">
-            <h4>Total Hours: {{ upcomingWork.week }}</h4>
-          </TabPanel>
-          <TabPanel header="This Month" :value="1">
-            <h4>Total Hours: {{ upcomingWork.month }}</h4>
-          </TabPanel>
-          <TabPanel header="This Year" :value="2">
-            <h4>Total Hours: {{ upcomingWork.year }}</h4>
-          </TabPanel>
-        </TabView>
+        <Tabs value="0">
+          <TabList>
+            <Tab value="0">This Week</Tab>
+            <Tab value="1">This Month</Tab>
+            <Tab value="2">This Year</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel value="0">
+              <h4>Total Hours: {{ upcomingWork.week }}</h4>
+            </TabPanel>
+            <TabPanel value="1">
+              <h4>Total Hours: {{ upcomingWork.month }}</h4>
+            </TabPanel>
+            <TabPanel value="2">
+              <h4>Total Hours: {{ upcomingWork.year }}</h4>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
       </div>
     </div>
   </div>
@@ -50,7 +64,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import Chart from 'primevue/chart';
-import TabView from 'primevue/tabview';
+import Tabs from 'primevue/tabs';
+import TabList from 'primevue/tablist';
+import Tab from 'primevue/tab';
+import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 
 const completedTodosData = ref<any>(null);
