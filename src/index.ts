@@ -921,39 +921,64 @@ app.group('/api', (apiGroup) =>
     // Get count of completed doings per user and calendar week for the last 6 weeks
     .get(
       '/statistics/completed',
-      async () => {
-        // TODO: Refactor and add comments
+      async (ctx: any) => {
+        // TODO: add parameter to select weeks and y-axis
+
+        const WEEKS_TO_SHOW = 6;
+        const Y_AXIS_DATA: 'effort_in_minutes' | 'assignments' = 'assignments';
 
         try {
-          const sixWeeksAgo = new Date();
-          sixWeeksAgo.setDate(sixWeeksAgo.getDate() - 42); // 6 weeks * 7 days
+          const xWeeksAgo = new Date();
+          xWeeksAgo.setDate(xWeeksAgo.getDate() - WEEKS_TO_SHOW * 7); // x weeks * 7 days
+
+          // Helper functions to get the correct data for the y-axis of the current assignments
+          const getYAxisAssignments = (
+            yAxisData: 'effort_in_minutes' | 'assignments',
+          ) => {
+            return yAxisData === 'effort_in_minutes'
+              ? sql`sum(${schema.doings.effort_in_minutes})`.as('data')
+              : sql`count(${schema.assignments.id})`.as('data');
+          };
+
+          // Helper functions to get the correct data for the y-axis of the history assignments
+          const getYAxisHistory = (
+            yAxisData: 'effort_in_minutes' | 'assignments',
+          ) => {
+            return yAxisData === 'effort_in_minutes'
+              ? sql`sum(${schema.history.effort_in_minutes})`.as('data')
+              : sql`count(${schema.history.id})`.as('data');
+          };
 
           const completedAssignments = await db
             .select({
               username: schema.users.username,
-              week: sql`strftime('%W', datetime(${schema.assignments.created_at}, 'unixepoch'))`.as(
+              week: sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`.as(
                 'week',
               ),
-              count: sql`count(${schema.assignments.id})`.as('count'),
+              data: getYAxisAssignments(Y_AXIS_DATA),
             })
             .from(schema.assignments)
             .innerJoin(
               schema.users,
               eq(schema.assignments.user_id, schema.users.id),
             )
+            .leftJoin(
+              schema.doings,
+              eq(schema.assignments.doing_id, schema.doings.id),
+            )
             .where(eq(schema.assignments.status, 'completed'))
             .groupBy(
               schema.users.username,
-              sql`strftime('%W', datetime(${schema.assignments.created_at}, 'unixepoch'))`,
+              sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`,
             )
             .union(
               db
                 .select({
                   username: schema.users.username,
-                  week: sql`strftime('%W', datetime(${schema.history.created_at}, 'unixepoch'))`.as(
+                  week: sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`.as(
                     'week',
                   ),
-                  count: sql`count(${schema.history.id})`.as('count'),
+                  data: getYAxisHistory(Y_AXIS_DATA),
                 })
                 .from(schema.history)
                 .innerJoin(
@@ -963,42 +988,58 @@ app.group('/api', (apiGroup) =>
                 .where(
                   and(
                     eq(schema.history.status, 'completed'),
-                    gte(schema.history.created_at, sixWeeksAgo),
+                    gte(schema.history.created_at, xWeeksAgo),
                   ),
                 )
                 .groupBy(
                   schema.users.username,
-                  sql`strftime('%W', datetime(${schema.history.created_at}, 'unixepoch'))`,
+                  sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`,
                 ),
             )
             .orderBy(schema.users.username);
 
-          // Transform the result
-          const reducedResult = completedAssignments.reduce<
-            Record<string, { label: string; data: number[] }>
-          >((acc, { username, week, count }) => {
-            if (!acc[username]) {
-              acc[username] = { label: username, data: Array(6).fill(0) };
-            }
-            const weekIndex = parseInt(week as string) % 6; // Ensure week index is within the last 6 weeks
-            acc[username].data[weekIndex] = count as number;
-            return acc;
-          }, {});
+          /**
+           * Aggregate the data points for the chart
+           * @param assignments - array of assignment data from the database
+           * @returns - array of data points with label and data per user
+           */
+          function aggregateDataset(assignments: any[]) {
+            const dataPointsObject = assignments.reduce<
+              Record<string, { label: string; data: number[] }>
+            >((acc, { username, week, data }) => {
+              if (!acc[username]) {
+                acc[username] = {
+                  label: username,
+                  data: Array(WEEKS_TO_SHOW).fill(0),
+                };
+              }
+              const weekIndex = parseInt(week as string) % WEEKS_TO_SHOW; // spread over WEEKS_TO_SHOW data points
+              acc[username].data[weekIndex] = data as number;
+              return acc;
+            }, {});
+            return Object.values(dataPointsObject);
+          }
 
-          const formattedResult = {
-            labels: completedAssignments.reduce<string[]>((acc, { week }) => {
-              const weekIndex = parseInt(week as string) % 6;
+          /**
+           * Aggregate the labels for the charts x-axis
+           * @param assignments - array of assignment data from the database
+           * @returns - array of labels for the charts x-axis
+           */
+          function aggregateLables(assignments: any[]) {
+            return assignments.reduce<string[]>((acc, { week }) => {
+              const weekIndex = parseInt(week as string) % WEEKS_TO_SHOW; // spread over WEEKS_TO_SHOW data points
               acc[weekIndex] = `KW ${week}`;
               return acc;
-            }, Array(6).fill('')),
-            datasets: Object.values(reducedResult),
-          };
+            }, Array(WEEKS_TO_SHOW).fill('')); // fill with empty strings to ensure WEEKS_TO_SHOW labels even if some weeks are missing
+          }
 
           return {
             success: true,
-            message:
-              'Completed doings per user and calendar week for the last 6 weeks',
-            data: formattedResult,
+            message: `Completed doings per user and calendar week for the last ${WEEKS_TO_SHOW} weeks`,
+            data: {
+              labels: aggregateLables(completedAssignments),
+              datasets: aggregateDataset(completedAssignments),
+            },
           };
         } catch (error) {
           console.error(error);
