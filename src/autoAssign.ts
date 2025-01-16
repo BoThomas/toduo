@@ -455,13 +455,13 @@ export class AssignmentService {
           }
         });
 
-        // Add points if the user skipped, postponed, or failed the last time
+        // Add points if the user postponed, or failed the last time
         const lastHistoryEntry = todoHistory.find(
           (h) => h.doing_id === doing.id && h.user_id === user.id,
         );
         if (
           lastHistoryEntry &&
-          ['skipped', 'postponed', 'failed'].includes(lastHistoryEntry.status)
+          ['postponed', 'failed'].includes(lastHistoryEntry.status)
         ) {
           score += 50;
           if (ENABLE_LOGGING) {
