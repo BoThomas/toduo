@@ -41,8 +41,14 @@ const apiRequest = async (
   }
 };
 
-const readAPI = (endpoint: string, options = {}) =>
-  apiRequest(endpoint, 'GET', undefined, options);
+const readAPI = (endpoint: string, params?: object) => {
+  // add params to the URL
+  if (params && Object.keys(params).length > 0) {
+    const p = new URLSearchParams(params as Record<string, string>).toString();
+    endpoint = `${endpoint}?${p}`;
+  }
+  return apiRequest(endpoint, 'GET');
+};
 
 const createAPI = (endpoint: string, data: any, options = {}) =>
   apiRequest(endpoint, 'POST', data, options);

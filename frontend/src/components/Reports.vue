@@ -8,8 +8,12 @@
         <Chart type="line" :data="completedTodosData" :options="chartOptions" />
       </div>
       <div class="col-span-12 md:col-span-6">
-        <h3 class="mb-2">Missed Todos per Person</h3>
-        <Chart type="line" :data="missedTodosData" :options="chartOptions" />
+        <h3 class="mb-2">Completed Minutes per Person</h3>
+        <Chart
+          type="line"
+          :data="completedTodoMinutesData"
+          :options="chartOptions"
+        />
       </div>
     </div>
 
@@ -72,6 +76,7 @@ import TabPanel from 'primevue/tabpanel';
 import { readAPI } from '@/services/apiService';
 
 const completedTodosData = ref<any>(null);
+const completedTodoMinutesData = ref<any>(null);
 const missedTodosData = ref<any>(null);
 const workDone = ref({ week: 0, month: 0, year: 0 });
 const upcomingWork = ref({ week: 0, month: 0, year: 0 });
@@ -86,17 +91,15 @@ const chartOptions = {
   },
 };
 
-onMounted(async () => {
-  await fetchCompletedTodos();
-  await fetchMissedTodos();
-  await fetchWorkDone();
-  await fetchUpcomingWork();
-});
+type Dataset = {
+  label: string;
+  data: number[];
+  backgroundColor: string;
+  borderColor: string;
+  borderWidth: number;
+};
 
-const fetchCompletedTodos = async () => {
-  try {
-    const data = await readAPI('/statistics/completed');
-    const colors = [
+const colors: string[] = [
       'rgba(75, 192, 192, 0.2)',
       'rgba(153, 102, 255, 0.2)',
       'rgba(255, 159, 64, 0.2)',
@@ -104,7 +107,7 @@ const fetchCompletedTodos = async () => {
       'rgba(54, 162, 235, 0.2)',
       'rgba(255, 206, 86, 0.2)',
     ];
-    const borderColors = [
+const borderColors: string[] = [
       'rgba(75, 192, 192, 1)',
       'rgba(153, 102, 255, 1)',
       'rgba(255, 159, 64, 1)',
@@ -112,9 +115,24 @@ const fetchCompletedTodos = async () => {
       'rgba(54, 162, 235, 1)',
       'rgba(255, 206, 86, 1)',
     ];
+
+onMounted(async () => {
+  await fetchCompletedTodos();
+  await fetchCompletedTodoMinutes();
+  await fetchMissedTodos();
+  await fetchWorkDone();
+  await fetchUpcomingWork();
+});
+
+const fetchCompletedTodos = async () => {
+  try {
+    const data = await readAPI('/statistics/completed', {
+      weeksToShow: 10,
+      dataColumn: 'assignments',
+    });
     completedTodosData.value = {
       labels: data.labels,
-      datasets: data.datasets.map((dataset, index) => ({
+      datasets: data.datasets.map((dataset: Dataset, index: number) => ({
         ...dataset,
         backgroundColor: colors[index % colors.length],
         borderColor: borderColors[index % borderColors.length],
@@ -123,6 +141,26 @@ const fetchCompletedTodos = async () => {
     };
   } catch (error) {
     console.error('Error fetching completed todos:', error);
+  }
+};
+
+const fetchCompletedTodoMinutes = async () => {
+  try {
+    const data = await readAPI('/statistics/completed', {
+      weeksToShow: 10,
+      dataColumn: 'effort_in_minutes',
+    });
+    completedTodoMinutesData.value = {
+      labels: data.labels,
+      datasets: data.datasets.map((dataset: Dataset, index: number) => ({
+        ...dataset,
+        backgroundColor: colors[index % colors.length],
+        borderColor: borderColors[index % borderColors.length],
+        borderWidth: 1,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching completed todo minutes:', error);
   }
 };
 

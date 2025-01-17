@@ -922,29 +922,26 @@ app.group('/api', (apiGroup) =>
     .get(
       '/statistics/completed',
       async (ctx: any) => {
-        // TODO: add parameter to select weeks and y-axis
-
-        const WEEKS_TO_SHOW = 6;
-        const Y_AXIS_DATA: 'effort_in_minutes' | 'assignments' = 'assignments';
+        const { weeksToShow = 6, dataColumn = 'assignments' } = ctx.query;
 
         try {
           const xWeeksAgo = new Date();
-          xWeeksAgo.setDate(xWeeksAgo.getDate() - WEEKS_TO_SHOW * 7); // x weeks * 7 days
+          xWeeksAgo.setDate(xWeeksAgo.getDate() - weeksToShow * 7); // x weeks * 7 days
 
           // Helper functions to get the correct data for the y-axis of the current assignments
           const getYAxisAssignments = (
-            yAxisData: 'effort_in_minutes' | 'assignments',
+            dataColumn: 'effort_in_minutes' | 'assignments',
           ) => {
-            return yAxisData === 'effort_in_minutes'
+            return dataColumn === 'effort_in_minutes'
               ? sql`sum(${schema.doings.effort_in_minutes})`.as('data')
               : sql`count(${schema.assignments.id})`.as('data');
           };
 
           // Helper functions to get the correct data for the y-axis of the history assignments
           const getYAxisHistory = (
-            yAxisData: 'effort_in_minutes' | 'assignments',
+            dataColumn: 'effort_in_minutes' | 'assignments',
           ) => {
-            return yAxisData === 'effort_in_minutes'
+            return dataColumn === 'effort_in_minutes'
               ? sql`sum(${schema.history.effort_in_minutes})`.as('data')
               : sql`count(${schema.history.id})`.as('data');
           };
@@ -955,7 +952,7 @@ app.group('/api', (apiGroup) =>
               week: sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`.as(
                 'week',
               ),
-              data: getYAxisAssignments(Y_AXIS_DATA),
+              data: getYAxisAssignments(dataColumn),
             })
             .from(schema.assignments)
             .innerJoin(
@@ -978,7 +975,7 @@ app.group('/api', (apiGroup) =>
                   week: sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`.as(
                     'week',
                   ),
-                  data: getYAxisHistory(Y_AXIS_DATA),
+                  data: getYAxisHistory(dataColumn),
                 })
                 .from(schema.history)
                 .innerJoin(
@@ -1010,10 +1007,10 @@ app.group('/api', (apiGroup) =>
               if (!acc[username]) {
                 acc[username] = {
                   label: username,
-                  data: Array(WEEKS_TO_SHOW).fill(0),
+                  data: Array(weeksToShow).fill(0),
                 };
               }
-              const weekIndex = parseInt(week as string) % WEEKS_TO_SHOW; // spread over WEEKS_TO_SHOW data points
+              const weekIndex = parseInt(week as string) % weeksToShow; // spread over weeksToShow data points
               acc[username].data[weekIndex] = data as number;
               return acc;
             }, {});
@@ -1027,15 +1024,15 @@ app.group('/api', (apiGroup) =>
            */
           function aggregateLables(assignments: any[]) {
             return assignments.reduce<string[]>((acc, { week }) => {
-              const weekIndex = parseInt(week as string) % WEEKS_TO_SHOW; // spread over WEEKS_TO_SHOW data points
+              const weekIndex = parseInt(week as string) % weeksToShow; // spread over weeksToShow data points
               acc[weekIndex] = `KW ${week}`;
               return acc;
-            }, Array(WEEKS_TO_SHOW).fill('')); // fill with empty strings to ensure WEEKS_TO_SHOW labels even if some weeks are missing
+            }, Array(weeksToShow).fill('')); // fill with empty strings to ensure weeksToShow labels even if some weeks are missing
           }
 
           return {
             success: true,
-            message: `Completed doings per user and calendar week for the last ${WEEKS_TO_SHOW} weeks`,
+            message: `Completed doings per user and calendar week for the last ${weeksToShow} weeks`,
             data: {
               labels: aggregateLables(completedAssignments),
               datasets: aggregateDataset(completedAssignments),
@@ -1051,6 +1048,12 @@ app.group('/api', (apiGroup) =>
         }
       },
       {
+        query: t.Object({
+          weeksToShow: t.Optional(t.Number({ minimum: 1, maximum: 52 })),
+          dataColumn: t.Optional(
+            t.Union([t.Literal('effort_in_minutes'), t.Literal('assignments')]),
+          ),
+        }),
         response: t.Object({
           success: t.Boolean(),
           message: t.String(),
