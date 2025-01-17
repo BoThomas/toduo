@@ -518,6 +518,31 @@ app.group('/api', (apiGroup) =>
           updateData.user_id = assignedUserId;
         }
 
+        // enforce status restrictions for certain interval_units
+        const intervalInfo = await db
+          .select({
+            interval_unit: schema.doings.interval_unit,
+            repeats_per_week: schema.doings.repeats_per_week,
+          })
+          .from(schema.doings)
+          .innerJoin(
+            schema.assignments,
+            eq(schema.doings.id, schema.assignments.doing_id),
+          )
+          .where(eq(schema.assignments.id, Number(id)))
+          .then((res) => res[0]);
+
+        const availableStatusOptions = getStatusOptions(
+          intervalInfo.interval_unit,
+          intervalInfo.repeats_per_week,
+        );
+        if (!availableStatusOptions.includes(updateData.status)) {
+          return {
+            success: false,
+            message:
+              'Invalid status for the given interval unit and repeats per week',
+          };
+        }
         const currentDoingId = await db
           .update(schema.assignments)
           .set(updateData)
@@ -1406,6 +1431,36 @@ app.listen(process.env.PORT || 3000);
 console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttp://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
+
+// helper function to get the available status options based on the interval unit and repeats per week
+// TODO: this is also used in client, move to shared module
+const STATUS_OPTIONS = [
+  'waiting',
+  'pending',
+  'completed',
+  'skipped',
+  'postponed',
+]; //TODO: move to type model
+const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
+  let options = [...STATUS_OPTIONS];
+
+  // for weekly todos, we don't want to show postponed status
+  // as it doesn't make sense because the todo will be reassigned the next day/week anyway
+  if (interval_unit === 'weekly') {
+    options = options.filter((option) => option !== 'postponed');
+  }
+
+  // for once todos, we don't want to show skipped status
+  if (interval_unit === 'once') {
+    options = options.filter((option) => option !== 'skipped');
+  }
+
+  // only for repeated todos is waiting status allowed
+  if (repeats_per_week <= 1) {
+    options = options.filter((option) => option !== 'waiting');
+  }
+  return options;
+};
 
 // For testing purposes
 // await new AssignmentService().assignTasksForWeek({

@@ -298,8 +298,6 @@ const updateAssignment = async (assignment: any) => {
 const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
   let options = [...STATUS_OPTIONS];
 
-  // TODO: enforce this in the backend
-
   // for weekly todos, we don't want to show postponed status
   // as it doesn't make sense because the todo will be reassigned the next day/week anyway
   if (interval_unit === 'weekly') {
