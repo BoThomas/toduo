@@ -21,8 +21,7 @@
     contextMenu
     v-model:contextMenuSelection="selectedTodo"
     @contextmenu.prevent="openDetailsModal"
-    @touchstart="startLongPress"
-    @touchend="cancelLongPress"
+    class="select-none"
   >
     <Column header="Name" sortable sortField="doingName">
       <template #body="slotProps">
@@ -139,7 +138,6 @@ const filterOptions = ['pending', 'completed', 'all'];
 // details modal
 const detailsModalVisible = ref(false);
 const selectedTodo = ref<Todo | null>(null);
-let longPressTimeout: number | null = null;
 
 const filteredTodos = computed(() => {
   if (currentFilter.value === 'all') {
@@ -189,20 +187,5 @@ const updateTodoStatus = async (todo: any) => {
 
 const openDetailsModal = () => {
   detailsModalVisible.value = true;
-};
-
-const startLongPress = () => {
-  longPressTimeout = window.setTimeout(() => {
-    if (!detailsModalVisible.value) {
-      openDetailsModal();
-    }
-  }, 500);
-};
-
-const cancelLongPress = () => {
-  if (longPressTimeout) {
-    clearTimeout(longPressTimeout);
-    longPressTimeout = null;
-  }
 };
 </script>
