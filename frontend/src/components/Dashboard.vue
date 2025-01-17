@@ -115,18 +115,63 @@
         }}</span>
       </p>
     </div>
+    <div class="mt-4 flex flex-col gap-3 max-w-64 mx-auto">
+      <div class="flex gap-2 mt-4">
+        <InputGroup>
+          <Select
+            v-model="selectedUserId"
+            :options="users"
+            optionLabel="username"
+            optionValue="id"
+            placeholder="Select user"
+          />
+          <Button label="Assign" @click="confirmReassign" />
+        </InputGroup>
+      </div>
+      <div class="text-center">
+        <Button
+          label="don't need to do this"
+          icon="pi pi-trash"
+          class="w-full"
+          :disabled="selectedTodo?.doingIntervalUnit === 'once'"
+          @click="confirmStatusChange('skipped')"
+        />
+        <small
+          v-if="selectedTodo?.doingIntervalUnit === 'once'"
+          class="text-gray-500"
+          >One-time doings cannot be skipped</small
+        >
+      </div>
+      <div class="text-center">
+        <Button
+          :disabled="selectedTodo?.doingIntervalUnit === 'weekly'"
+          label="will do this next week"
+          icon="pi pi-calendar-clock"
+          class="w-full"
+          @click="confirmStatusChange('postponed')"
+        />
+        <small
+          v-if="selectedTodo?.doingIntervalUnit === 'weekly'"
+          class="text-gray-500"
+          >Weekly doings cannot be postponed</small
+        >
+      </div>
+    </div>
   </Dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
 import SelectButton from 'primevue/selectbutton';
+import InputGroup from 'primevue/inputgroup';
 import Dialog from 'primevue/dialog';
+import Select from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
 import { readAPI, updateApi } from '@/services/apiService';
 
 type Todo = {
@@ -154,6 +199,15 @@ const filterOptions = ['pending', 'completed', 'all'];
 // details modal
 const detailsModalVisible = ref(false);
 const selectedTodo = ref<Todo | null>(null);
+const confirm = useConfirm();
+const users = ref([]);
+const selectedUserId = ref();
+
+watch(selectedTodo, (todo) => {
+  if (todo) {
+    selectedUserId.value = todo.userId;
+  }
+});
 
 const filteredTodos = computed(() => {
   if (currentFilter.value === 'all') {
@@ -165,7 +219,7 @@ const filteredTodos = computed(() => {
 });
 
 onMounted(async () => {
-  await fetchTodos();
+  await Promise.all([fetchTodos(), fetchUsers()]);
 });
 
 const fetchTodos = async () => {
@@ -185,17 +239,96 @@ const fetchTodos = async () => {
   }
 };
 
-const updateTodoStatus = async (todo: any) => {
+const fetchUsers = async () => {
   try {
-    await updateApi(`/assignments/${todo.assignmentId}`, {
-      status: todo.completed ? 'completed' : 'pending',
+    users.value = await readAPI('/users');
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load users',
+      life: 3000,
     });
+  }
+};
+
+const confirmStatusChange = (status: string) => {
+  if (!selectedTodo.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Data of selected todo could not be found',
+      life: 3000,
+    });
+    return;
+  }
+  confirm.require({
+    header: 'Confirm Status Change',
+    message: `Are you sure you want to mark this todo as ${status}?`,
+    defaultFocus: 'reject',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    accept: async () => {
+      if (selectedTodo.value) {
+        await updateTodoStatus({ ...selectedTodo.value }, status);
+      }
+    },
+  });
+};
+
+const updateTodoStatus = async (todo: Todo, status?: string) => {
+  try {
+    console.log(status);
+    await updateApi(`/assignments/${todo.assignmentId}`, {
+      status: status || (todo.completed ? 'completed' : 'pending'),
+    });
+    detailsModalVisible.value = false;
     await fetchTodos();
   } catch (error) {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
       detail: 'Could not update todo status',
+      life: 3000,
+    });
+  }
+};
+
+const confirmReassign = () => {
+  confirm.require({
+    header: 'Confirm Reassignment',
+    message: 'Are you sure you want to reassign this todo?',
+    defaultFocus: 'reject',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    accept: async () => {
+      await reassignTodo();
+    },
+  });
+};
+
+const reassignTodo = async () => {
+  if (selectedTodo.value === null || selectedUserId.value === null) {
+    return;
+  }
+  try {
+    await updateApi(`/assignments/${selectedTodo.value.assignmentId}`, {
+      assignedUserId: selectedUserId.value,
+      status: selectedTodo.value.status,
+    });
+    detailsModalVisible.value = false;
+    await fetchTodos();
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not update assignment',
       life: 3000,
     });
   }

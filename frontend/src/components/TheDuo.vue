@@ -121,6 +121,7 @@
       <li>
         <strong>Skipped:</strong> The task will not be completed this iteration
         and is reassigned the next time it is due based on the interval unit.
+        Not possible for one-time doings.
       </li>
       <li>
         <strong>Postponed:</strong> The task will not be completed this
@@ -146,13 +147,10 @@ import InputText from 'primevue/inputtext';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import { useToast } from 'primevue/usetoast';
-import { useConfirm } from 'primevue/useconfirm';
 import { FilterMatchMode } from '@primevue/core/api';
-import { readAPI, createAPI, updateApi } from '@/services/apiService';
+import { readAPI, updateApi } from '@/services/apiService';
 
 const toast = useToast();
-const confirm = useConfirm();
-const autoassignCronInfo = ref<any>({});
 const users = ref<any>([]);
 const weeklyTodos = ref<any>([]);
 const weeklyTodosFilters = ref<any>({
@@ -168,8 +166,7 @@ const STATUS_OPTIONS = [
 ]; //TODO: move to type model
 
 onMounted(async () => {
-  await fetchUsers();
-  await fetchThisWeeksTodos();
+  await Promise.all([fetchUsers(), fetchThisWeeksTodos()]);
 });
 
 const clearFilter = () => {
@@ -300,6 +297,8 @@ const updateAssignment = async (assignment: any) => {
 // helper function to get the available status options based on the interval unit and repeats per week
 const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
   let options = [...STATUS_OPTIONS];
+
+  // TODO: enforce this in the backend
 
   // for weekly todos, we don't want to show postponed status
   // as it doesn't make sense because the todo will be reassigned the next day/week anyway

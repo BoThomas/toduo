@@ -1274,7 +1274,7 @@ const autoHandleRepeatedAssignments = async (
   parentStatus: string,
 ) => {
   try {
-    if (parentStatus === 'completed') {
+    if (['completed', 'skipped', 'postponed'].includes(parentStatus)) {
       // check if there is a pending assignment for the current doing
       const pendingAssignment = await db
         .select({
