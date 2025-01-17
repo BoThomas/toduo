@@ -23,6 +23,19 @@
     @contextmenu.prevent="openDetailsModal"
     class="select-none"
   >
+    <Column>
+      <template #body="slotProps">
+        <Button
+          icon="pi pi-bars"
+          @click="
+            selectedTodo = slotProps.data;
+            openDetailsModal();
+          "
+          variant="text"
+          class="p-button-rounded p-button-primary p-button-sm"
+        />
+      </template>
+    </Column>
     <Column header="Name" sortable sortField="doingName">
       <template #body="slotProps">
         {{ slotProps.data.doingName }}
@@ -59,21 +72,23 @@
   >
     <div class="grid grid-cols-1 gap-2">
       <p>
-        <strong class="w-28 inline-block text-right mr-3">Name</strong>
+        <strong class="w-20 inline-block text-right mr-3">Name</strong>
         <span class="text-primary">{{ selectedTodo?.doingName }}</span>
       </p>
       <p>
-        <strong class="w-28 inline-block text-right mr-3">Description</strong>
-        <span class="text-primary">{{ selectedTodo?.doingDescription }}</span>
+        <strong class="w-20 inline-block text-right mr-3">Description</strong>
+        <span class="text-primary">{{
+          selectedTodo?.doingDescription || '-'
+        }}</span>
       </p>
       <p>
-        <strong class="w-28 inline-block text-right mr-3">Effort</strong>
+        <strong class="w-20 inline-block text-right mr-3">Effort</strong>
         <span class="text-primary"
           >{{ selectedTodo?.doingEffort }} minutes</span
         >
       </p>
       <p>
-        <strong class="w-28 inline-block text-right mr-3">Interval</strong>
+        <strong class="w-20 inline-block text-right mr-3">Interval</strong>
         <span class="text-primary"
           >{{ selectedTodo?.doingIntervalValue }} -
           {{ selectedTodo?.doingIntervalUnit }} ({{
@@ -82,11 +97,11 @@
         >
       </p>
       <p>
-        <strong class="w-28 inline-block text-right mr-3">User</strong>
+        <strong class="w-20 inline-block text-right mr-3">User</strong>
         <span class="text-primary">{{ selectedTodo?.username }}</span>
       </p>
       <p>
-        <strong class="w-28 inline-block text-right mr-3">Repetition</strong>
+        <strong class="w-20 inline-block text-right mr-3">Repetition</strong>
         <span class="text-primary"
           >{{ selectedTodo?.calcCounterCurrent }}/{{
             selectedTodo?.calcCounterTotal
@@ -94,7 +109,7 @@
         >
       </p>
       <p>
-        <strong class="w-28 inline-block text-right mr-3">Status</strong>
+        <strong class="w-20 inline-block text-right mr-3">Status</strong>
         <span class="text-primary">{{
           selectedTodo?.completed ? 'Completed' : 'Pending'
         }}</span>
@@ -108,6 +123,7 @@ import { ref, computed, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Checkbox from 'primevue/checkbox';
+import Button from 'primevue/button';
 import SelectButton from 'primevue/selectbutton';
 import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
