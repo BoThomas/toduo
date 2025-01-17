@@ -13,11 +13,16 @@
     responsiveLayout="scroll"
     size="small"
     :rowClass="
-      (data) => {
+      (data: any) => {
         return data.completed ? 'line-through  text-gray-400' : '';
       }
     "
     removableSort
+    contextMenu
+    v-model:contextMenuSelection="selectedTodo"
+    @contextmenu.prevent="openDetailsModal"
+    @touchstart="startLongPress"
+    @touchend="cancelLongPress"
   >
     <Column header="Name" sortable sortField="doingName">
       <template #body="slotProps">
@@ -46,6 +51,57 @@
       </template>
     </Column>
   </DataTable>
+
+  <Dialog
+    v-model:visible="detailsModalVisible"
+    @hide="selectedTodo = null"
+    header="Todo Details"
+    class="mx-4"
+  >
+    <div class="grid grid-cols-1 gap-2">
+      <p>
+        <strong class="w-28 inline-block text-right mr-3">Name</strong>
+        <span class="text-primary">{{ selectedTodo?.doingName }}</span>
+      </p>
+      <p>
+        <strong class="w-28 inline-block text-right mr-3">Description</strong>
+        <span class="text-primary">{{ selectedTodo?.doingDescription }}</span>
+      </p>
+      <p>
+        <strong class="w-28 inline-block text-right mr-3">Effort</strong>
+        <span class="text-primary"
+          >{{ selectedTodo?.doingEffort }} minutes</span
+        >
+      </p>
+      <p>
+        <strong class="w-28 inline-block text-right mr-3">Interval</strong>
+        <span class="text-primary"
+          >{{ selectedTodo?.doingIntervalValue }} -
+          {{ selectedTodo?.doingIntervalUnit }} ({{
+            selectedTodo?.doingRepeatsPerWeek
+          }}x)</span
+        >
+      </p>
+      <p>
+        <strong class="w-28 inline-block text-right mr-3">User</strong>
+        <span class="text-primary">{{ selectedTodo?.username }}</span>
+      </p>
+      <p>
+        <strong class="w-28 inline-block text-right mr-3">Repetition</strong>
+        <span class="text-primary"
+          >{{ selectedTodo?.calcCounterCurrent }}/{{
+            selectedTodo?.calcCounterTotal
+          }}</span
+        >
+      </p>
+      <p>
+        <strong class="w-28 inline-block text-right mr-3">Status</strong>
+        <span class="text-primary">{{
+          selectedTodo?.completed ? 'Completed' : 'Pending'
+        }}</span>
+      </p>
+    </div>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -54,15 +110,22 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Checkbox from 'primevue/checkbox';
 import SelectButton from 'primevue/selectbutton';
+import Dialog from 'primevue/dialog';
 import { useToast } from 'primevue/usetoast';
 import { readAPI, updateApi } from '@/services/apiService';
 
 type Todo = {
   assignmentId: number;
+  status: string;
+  doingId: number;
   doingName: string;
   doingDescription: string;
   doingEffort: number;
+  doingIntervalUnit: string;
+  doingIntervalValue: number;
   doingRepeatsPerWeek: number;
+  userId: number;
+  username: string;
   calcCounterCurrent: number;
   calcCounterTotal: number;
   completed: boolean;
@@ -72,6 +135,11 @@ const toast = useToast();
 const todos = ref<Todo[]>([]);
 const currentFilter = ref('pending');
 const filterOptions = ['pending', 'completed', 'all'];
+
+// details modal
+const detailsModalVisible = ref(false);
+const selectedTodo = ref<Todo | null>(null);
+let longPressTimeout: number | null = null;
 
 const filteredTodos = computed(() => {
   if (currentFilter.value === 'all') {
@@ -116,6 +184,25 @@ const updateTodoStatus = async (todo: any) => {
       detail: 'Could not update todo status',
       life: 3000,
     });
+  }
+};
+
+const openDetailsModal = () => {
+  detailsModalVisible.value = true;
+};
+
+const startLongPress = () => {
+  longPressTimeout = window.setTimeout(() => {
+    if (!detailsModalVisible.value) {
+      openDetailsModal();
+    }
+  }, 500);
+};
+
+const cancelLongPress = () => {
+  if (longPressTimeout) {
+    clearTimeout(longPressTimeout);
+    longPressTimeout = null;
   }
 };
 </script>
