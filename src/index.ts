@@ -46,18 +46,18 @@ if (process.env.AUTH0_DISABLED === 'true') {
 }
 // create elysia auth service to use in the elysia app
 // use derive to add a scoped function to the Context for usage in route handlers
-type AuthInfo = { id: string; group: string };
+type AuthInfo = { id: string; group: string; name: string };
 const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
   { as: 'scoped' },
   async ({ headers }) => ({
     authenticatedUserInfo: async (): Promise<AuthInfo> => {
       if (process.env.AUTH0_DISABLED === 'true') {
-        return { id: 'auth0|123456789', group: 'default' };
+        return { id: 'auth0|123456789', group: 'default', name: 'Testuser' };
       }
 
       const authHeader = headers?.['authorization'];
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return { id: '', group: '' };
+        return { id: '', group: '', name: '' };
       }
       const token = authHeader.split(' ')[1];
       const { payload } = await jwtVerify(token, JWKS, {
@@ -68,13 +68,17 @@ const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
       // extract user id
       const id = payload.sub ?? '';
 
+      // extract user name
+      const name = headers?.['x-user-name'] || '';
+
       // extract group permission
       const group = Array.isArray(payload.permissions)
         ? payload.permissions
             .find((p: string) => p.startsWith('group:'))
             ?.split(':')[1] || ''
         : '';
-      return { id, group };
+
+      return { id, group, name };
     },
   }),
 );
@@ -98,8 +102,6 @@ const app = new Elysia({
   .use(Logestic.preset('common')) // Log all requests
   .use(AuthService); // Add the auth service
 
-const INVITATION_CODE = process.env.USER_INVITATION_CODE || crypto.randomUUID();
-
 app.group('/api', (apiGroup) =>
   apiGroup
     .guard({
@@ -112,64 +114,14 @@ app.group('/api', (apiGroup) =>
         error: (status: number) => void;
       }) => {
         const userInfo = await authenticatedUserInfo();
-        if (!userInfo.id || !userInfo.group) return error(401);
+        if (!userInfo.id || !userInfo.group || !userInfo.name)
+          return error(401);
+
+        // check if user needs to be added to the db
+        addUserToDbIfNotExists(userInfo);
       },
     })
-    // User joins via invitation
-    .post(
-      '/users/join',
-      async (ctx: any) => {
-        const { username, invitation_code } = ctx.body;
-        const { id: auth0UserId, group: auth0Group } =
-          (await ctx.authenticatedUserInfo()) as AuthInfo;
-        const db = getDbConnection(auth0Group);
 
-        // validate invitation code
-        if (invitation_code !== INVITATION_CODE) {
-          return { success: false, message: 'Invalid invitation code' };
-        }
-
-        // check sum of all participation_percent
-        const users = await db.query.users.findMany({
-          columns: { participation_percent: true },
-        });
-        const sum = users.reduce(
-          (acc, user) => acc + user.participation_percent,
-          0,
-        );
-        const newParticipationPercent = 100 - sum;
-
-        try {
-          await db.insert(schema.users).values({
-            username: username,
-            auth0_id: auth0UserId,
-            participation_percent: newParticipationPercent,
-            created_at: new Date(),
-            updated_at: new Date(),
-          });
-        } catch (error) {
-          console.log(error);
-          return {
-            success: false,
-            message: `Failed to create user, ${error}`,
-          };
-        }
-        return {
-          success: true,
-          message: 'User joined successfully',
-        };
-      },
-      {
-        body: t.Object({
-          username: t.String({ minLength: 3, maxLength: 15 }),
-          invitation_code: t.String(),
-        }),
-        response: t.Object({
-          success: t.Boolean(),
-          message: t.String(),
-        }),
-      },
-    )
     // get all users
     .get(
       '/users',
@@ -1228,17 +1180,11 @@ app.group('/siri', (siriGroup) =>
     '/todos',
     async (ctx: any) => {
       const apiKey = ctx.headers['x-api-key'];
-      const validApiKey = process.env.SIRI_API_KEY || crypto.randomUUID();
 
-      if (!apiKey || apiKey !== validApiKey) {
-        return 'Du bist leider nicht berechtigt, diese Funktion zu nutzen.';
-      }
       try {
         const { userName } = ctx.query;
 
-        const { id: auth0UserId, group: auth0Group } =
-          (await ctx.authenticatedUserInfo()) as AuthInfo;
-        const db = getDbConnection(auth0Group);
+        const db = getDbConnection(getDbGroupFromApiKey(apiKey));
 
         // Optional filter by userName
         let userNameFilter: SQL;
@@ -1510,6 +1456,57 @@ app.listen(process.env.PORT || 3000);
 console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttp://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
+
+// helper function to add the user to the db if not already present
+const addUserToDbIfNotExists = async (userInfo: AuthInfo) => {
+  // get db connection
+  const db = getDbConnection(userInfo.group);
+
+  // check if user already exists
+  const userExists = await db.query.users.findFirst({
+    where: eq(schema.users.auth0_id, userInfo.id),
+  });
+  if (userExists) {
+    return;
+  }
+
+  // check sum of all participation_percent
+  const users = await db.query.users.findMany({
+    columns: { participation_percent: true },
+  });
+  const sum = users.reduce(
+    (acc: any, user: any) => acc + user.participation_percent,
+    0,
+  );
+  const newParticipationPercent = 100 - sum;
+
+  try {
+    await db.insert(schema.users).values({
+      username: userInfo.name,
+      auth0_id: userInfo.id,
+      participation_percent: newParticipationPercent,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+  } catch (error) {
+    console.log(error);
+    return {
+      success: false,
+      message: `Failed to create user, ${error}`,
+    };
+  }
+};
+
+// helper function to get the db group from the api key
+// TODO: implement logic to get db group from api key
+const getDbGroupFromApiKey = (apiKey: string) => {
+  const validApiKey = process.env.SIRI_API_KEY || crypto.randomUUID();
+
+  if (!apiKey || apiKey !== validApiKey) {
+    return 'Du bist leider nicht berechtigt, diese Funktion zu nutzen.';
+  }
+  return 'beto';
+};
 
 // helper function to get the available status options based on the interval unit and repeats per week
 // TODO: this is also used in client, move to shared module
