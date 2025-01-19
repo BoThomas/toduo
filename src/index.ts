@@ -4,7 +4,7 @@ import { swagger } from '@elysiajs/swagger';
 import { cors } from '@elysiajs/cors';
 import { Logestic } from 'logestic';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
-import { db } from './database/db';
+import { getDbConnection } from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import {
@@ -46,24 +46,35 @@ if (process.env.AUTH0_DISABLED === 'true') {
 }
 // create elysia auth service to use in the elysia app
 // use derive to add a scoped function to the Context for usage in route handlers
+type AuthInfo = { id: string; group: string };
 const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
   { as: 'scoped' },
   async ({ headers }) => ({
-    authenticatedUserId: async () => {
+    authenticatedUserInfo: async (): Promise<AuthInfo> => {
       if (process.env.AUTH0_DISABLED === 'true') {
-        return 'auth0|123456789';
+        return { id: 'auth0|123456789', group: 'default' };
       }
 
       const authHeader = headers?.['authorization'];
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return '';
+        return { id: '', group: '' };
       }
       const token = authHeader.split(' ')[1];
       const { payload } = await jwtVerify(token, JWKS, {
         issuer: process.env.AUTH0_ISSUER,
         audience: process.env.AUTH0_AUDIENCE,
       });
-      return payload.sub;
+
+      // extract user id
+      const id = payload.sub ?? '';
+
+      // extract group permission
+      const group = Array.isArray(payload.permissions)
+        ? payload.permissions
+            .find((p: string) => p.startsWith('group:'))
+            ?.split(':')[1] || ''
+        : '';
+      return { id, group };
     },
   }),
 );
@@ -94,14 +105,14 @@ app.group('/api', (apiGroup) =>
     .guard({
       // use auth service to guard the route
       beforeHandle: async ({
-        authenticatedUserId,
+        authenticatedUserInfo,
         error,
       }: {
-        authenticatedUserId: () => Promise<string>;
+        authenticatedUserInfo: () => Promise<AuthInfo>;
         error: (status: number) => void;
       }) => {
-        const userId = await authenticatedUserId();
-        if (!userId) return error(401);
+        const userInfo = await authenticatedUserInfo();
+        if (!userInfo.id || !userInfo.group) return error(401);
       },
     })
     // User joins via invitation
@@ -109,7 +120,9 @@ app.group('/api', (apiGroup) =>
       '/users/join',
       async (ctx: any) => {
         const { username, invitation_code } = ctx.body;
-        const auth0UserId = (await ctx.authenticatedUserId()) as string;
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         // validate invitation code
         if (invitation_code !== INVITATION_CODE) {
@@ -160,7 +173,10 @@ app.group('/api', (apiGroup) =>
     // get all users
     .get(
       '/users',
-      async () => {
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
         const users = await db.query.users.findMany({
           columns: {
             id: true,
@@ -189,6 +205,10 @@ app.group('/api', (apiGroup) =>
       '/users/participation/',
       async (ctx: any) => {
         const userArray = ctx.body;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         // check userArray for valid participation_percent
         const sum = userArray.reduce(
@@ -246,6 +266,10 @@ app.group('/api', (apiGroup) =>
           is_active,
         } = ctx.body;
 
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         await db.insert(schema.doings).values({
           name,
           description,
@@ -288,6 +312,11 @@ app.group('/api', (apiGroup) =>
       '/doings/:id?',
       async (ctx: any) => {
         const { id } = ctx.params;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         if (id) {
           // Logic to get a doing by id
           const doing = await db.query.doings.findFirst({
@@ -329,6 +358,10 @@ app.group('/api', (apiGroup) =>
           effort_in_minutes,
           is_active,
         } = ctx.body;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         await db
           .update(schema.doings)
@@ -378,6 +411,10 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { id } = ctx.params;
 
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         // remove all assignments for this doing
         await db
           .delete(schema.assignments)
@@ -424,8 +461,10 @@ app.group('/api', (apiGroup) =>
       '/doings/autoassign',
       async (ctx: any) => {
         const { reassign } = ctx.body;
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
         try {
-          await new AssignmentService().assignTasksForWeek({
+          await new AssignmentService(auth0Group).assignTasksForWeek({
             dryRun: false,
             clearAndReassign: reassign,
             groupByRepetition:
@@ -451,46 +490,47 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
-    // get autoassign cron info
-    .get(
-      '/doings/autoassign/cron',
-      async () => {
-        return {
-          success: true,
-          message: 'Autoassign cron info',
-          data: timer.getJobInfo(AUTO_ASSIGN_CRON_NAME),
-        };
-      },
-      {
-        response: t.Object({
-          success: t.Boolean(),
-          message: t.String(),
-          data: t.Any(),
-        }),
-      },
-    )
-    // enable or disable autoassign cron job
-    .put(
-      '/doings/autoassign/cron',
-      async (ctx: any) => {
-        const { enable, cronTime } = ctx.body;
-        controlAssignmentCronJob(enable, cronTime);
-        return {
-          success: true,
-          message: `Autoassign cron job ${enable ? 'enabled' : 'disabled'}`,
-        };
-      },
-      {
-        body: t.Object({
-          enable: t.Boolean(),
-          cronTime: t.Optional(t.String()),
-        }),
-        response: t.Object({
-          success: t.Boolean(),
-          message: t.String(),
-        }),
-      },
-    )
+    // TODO: Implement autoassign cron job for grouped dbs
+    // // get autoassign cron info
+    // .get(
+    //   '/doings/autoassign/cron',
+    //   async () => {
+    //     return {
+    //       success: true,
+    //       message: 'Autoassign cron info',
+    //       data: timer.getJobInfo(AUTO_ASSIGN_CRON_NAME),
+    //     };
+    //   },
+    //   {
+    //     response: t.Object({
+    //       success: t.Boolean(),
+    //       message: t.String(),
+    //       data: t.Any(),
+    //     }),
+    //   },
+    // )
+    // // enable or disable autoassign cron job
+    // .put(
+    //   '/doings/autoassign/cron',
+    //   async (ctx: any) => {
+    //     const { enable, cronTime } = ctx.body;
+    //     controlAssignmentCronJob(enable, cronTime);
+    //     return {
+    //       success: true,
+    //       message: `Autoassign cron job ${enable ? 'enabled' : 'disabled'}`,
+    //     };
+    //   },
+    //   {
+    //     body: t.Object({
+    //       enable: t.Boolean(),
+    //       cronTime: t.Optional(t.String()),
+    //     }),
+    //     response: t.Object({
+    //       success: t.Boolean(),
+    //       message: t.String(),
+    //     }),
+    //   },
+    // )
 
     // Update assignment status or user
     .put(
@@ -498,6 +538,10 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { id } = ctx.params;
         const { assignedUserId, status } = ctx.body;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         const updateData: {
           status:
@@ -555,6 +599,7 @@ app.group('/api', (apiGroup) =>
 
         // auto handling of repeated assignment states for same doing
         await autoHandleRepeatedAssignments(
+          db,
           currentDoingId[0].doing_id,
           updateData.status,
         );
@@ -589,12 +634,15 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { allUsers, status } = ctx.query;
 
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         // Optional filter by user
         let userFilter: SQL;
         if (allUsers === 'true') {
           userFilter = sql`1 = 1`;
         } else {
-          const auth0UserId = (await ctx.authenticatedUserId()) as string;
           userFilter = eq(schema.users.auth0_id, auth0UserId);
         }
 
@@ -715,7 +763,11 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { doing_id, points } = ctx.body;
 
-        const user_id = await getUserIdFromContext(ctx);
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -735,7 +787,7 @@ app.group('/api', (apiGroup) =>
           };
         }
 
-        if (await maxShittyPointsExceeded(0, points, user_id)) {
+        if (await maxShittyPointsExceeded(db, 0, points, user_id)) {
           return { success: false, message: 'Max shitty points reached' };
         }
 
@@ -781,7 +833,11 @@ app.group('/api', (apiGroup) =>
     .get(
       '/shittypoints',
       async (ctx: any) => {
-        const user_id = await getUserIdFromContext(ctx);
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -838,7 +894,11 @@ app.group('/api', (apiGroup) =>
     .get(
       '/shittypoints/available',
       async (ctx: any) => {
-        const user_id = await getUserIdFromContext(ctx);
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -884,7 +944,11 @@ app.group('/api', (apiGroup) =>
         const { id } = ctx.params;
         const { points } = ctx.body;
 
-        const user_id = await getUserIdFromContext(ctx);
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -902,7 +966,12 @@ app.group('/api', (apiGroup) =>
         }
 
         if (
-          await maxShittyPointsExceeded(currentPoints.points, points, user_id)
+          await maxShittyPointsExceeded(
+            db,
+            currentPoints.points,
+            points,
+            user_id,
+          )
         ) {
           return { success: false, message: 'Max shitty points reached' };
         }
@@ -948,6 +1017,10 @@ app.group('/api', (apiGroup) =>
       '/statistics/completed',
       async (ctx: any) => {
         const { weeksToShow = 6, dataColumn = 'assignments' } = ctx.query;
+
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         try {
           const xWeeksAgo = new Date();
@@ -1163,6 +1236,10 @@ app.group('/siri', (siriGroup) =>
       try {
         const { userName } = ctx.query;
 
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         // Optional filter by userName
         let userNameFilter: SQL;
         if (userName) {
@@ -1253,8 +1330,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // helper function to get user from context auth0 id
-const getUserIdFromContext = async (ctx: any) => {
-  const auth0UserId = (await ctx.authenticatedUserId()) as string;
+const getUserIdFromAuth0UserId = async (auth0UserId: string, db: any) => {
   const user = await db.query.users.findFirst({
     where: eq(schema.users.auth0_id, auth0UserId),
     columns: { id: true },
@@ -1265,6 +1341,7 @@ const getUserIdFromContext = async (ctx: any) => {
 // helper function to check if max shitty points is reached
 const maxShittyPoints = Number(process.env.MAX_SHITTY_POINTS_PER_DOING || 3);
 const maxShittyPointsExceeded = async (
+  db: any,
   currentPoints: number,
   targetPoints: number,
   user_id: number,
@@ -1295,6 +1372,7 @@ const maxShittyPointsExceeded = async (
 
 // helper function to auto handle status of next repeated assignment
 const autoHandleRepeatedAssignments = async (
+  db: any,
   parentDoingId: number,
   parentStatus: string,
 ) => {
@@ -1377,7 +1455,7 @@ const autoHandleRepeatedAssignments = async (
         .where(
           inArray(
             schema.assignments.id,
-            pendingAssignments.slice(1).map((a) => a.id), // Skip the first pending assignment
+            pendingAssignments.slice(1).map((a: any) => a.id), // Skip the first pending assignment
           ),
         );
     }
@@ -1389,42 +1467,43 @@ const autoHandleRepeatedAssignments = async (
   }
 };
 
+// TODO: Implement cron job for grouped dbs
 // helper function to enable or disable assignemnt cron job
-const assignmentService = new AssignmentService();
-const timer = new Timer();
-let assignmentCronTime: string = '';
-/**
- * Enable or disable the cron job for auto assigning tasks
- * @param enable true to enable, false to disable the cron job
- * @param cronTime cron time string, default is '0 23 * * 0' (every sunday at 23:00)
- */
-const controlAssignmentCronJob = async (
-  enable: boolean,
-  cronTime: string = '0 23 * * 0',
-) => {
-  if (enable) {
-    assignmentCronTime = cronTime;
-    timer.addJob(
-      AUTO_ASSIGN_CRON_NAME,
-      cronTime,
-      async () => {
-        await assignmentService.assignTasksForWeek({
-          dryRun: false,
-          groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
-        });
-      },
-      { autoStart: true },
-    );
-    console.log('Cron job for auto assigning tasks enabled');
-  } else {
-    timer.cancelJob(AUTO_ASSIGN_CRON_NAME);
-    console.log('Cron job for auto assigning tasks disabled');
-  }
-};
+// const assignmentService = new AssignmentService();
+// const timer = new Timer();
+// let assignmentCronTime: string = '';
+// /**
+//  * Enable or disable the cron job for auto assigning tasks
+//  * @param enable true to enable, false to disable the cron job
+//  * @param cronTime cron time string, default is '0 23 * * 0' (every sunday at 23:00)
+//  */
+// const controlAssignmentCronJob = async (
+//   enable: boolean,
+//   cronTime: string = '0 23 * * 0',
+// ) => {
+//   if (enable) {
+//     assignmentCronTime = cronTime;
+//     timer.addJob(
+//       AUTO_ASSIGN_CRON_NAME,
+//       cronTime,
+//       async () => {
+//         await assignmentService.assignTasksForWeek({
+//           dryRun: false,
+//           groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
+//         });
+//       },
+//       { autoStart: true },
+//     );
+//     console.log('Cron job for auto assigning tasks enabled');
+//   } else {
+//     timer.cancelJob(AUTO_ASSIGN_CRON_NAME);
+//     console.log('Cron job for auto assigning tasks disabled');
+//   }
+// };
 
-if (process.env.CRON_ENABLED === 'true') {
-  controlAssignmentCronJob(true);
-}
+// if (process.env.CRON_ENABLED === 'true') {
+//   controlAssignmentCronJob(true);
+// }
 
 // Start the server
 app.listen(process.env.PORT || 3000);
@@ -1461,10 +1540,3 @@ const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
   }
   return options;
 };
-
-// For testing purposes
-// await new AssignmentService().assignTasksForWeek({
-//   dryRun: true,
-//   clearAndReassign: false,
-//   groupByRepetition: false,
-// });

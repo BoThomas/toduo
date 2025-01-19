@@ -1,4 +1,4 @@
-import { db } from './db';
+import { getDbConnection } from './db';
 import * as schema from './schema';
 
 const ENABLE_SEEDING = process.env.SEED_DATABASE === 'true';
@@ -8,6 +8,10 @@ export async function seedDatabase() {
     console.log('Database Seeding is disabled.');
     return;
   }
+
+  console.log('Database Seeding started for "default" database.');
+
+  const db = getDbConnection('default');
 
   if (!(await db.query.users.findFirst())) {
     await db.insert(schema.users).values([
