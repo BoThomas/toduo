@@ -77,7 +77,6 @@ import { readAPI } from '@/services/apiService';
 
 const completedTodosData = ref<any>(null);
 const completedTodoMinutesData = ref<any>(null);
-const missedTodosData = ref<any>(null);
 const workDone = ref({ week: 0, month: 0, year: 0 });
 const upcomingWork = ref({ week: 0, month: 0, year: 0 });
 
@@ -120,7 +119,6 @@ onMounted(async () => {
   await Promise.all([
     fetchCompletedTodos(),
     fetchCompletedTodoMinutes(),
-    fetchMissedTodos(),
     fetchWorkDone(),
     fetchUpcomingWork(),
   ]);
@@ -166,17 +164,14 @@ const fetchCompletedTodoMinutes = async () => {
   }
 };
 
-const fetchMissedTodos = async () => {
-  try {
-    // TODO: implement
-  } catch (error) {
-    console.error('Error fetching missed todos:', error);
-  }
-};
-
 const fetchWorkDone = async () => {
   try {
-    // TODO: implement
+    //TODO: implement
+    workDone.value = {
+      week: -1,
+      month: -1,
+      year: -1,
+    };
   } catch (error) {
     console.error('Error fetching work done:', error);
   }
@@ -184,7 +179,12 @@ const fetchWorkDone = async () => {
 
 const fetchUpcomingWork = async () => {
   try {
-    // TODO: implement
+    //TODO: implement
+    upcomingWork.value = {
+      week: -1,
+      month: -1,
+      year: -1,
+    };
   } catch (error) {
     console.error('Error fetching upcoming work:', error);
   }
