@@ -144,7 +144,7 @@
     paginator
     :rows="10"
     :rowsPerPageOptions="[5, 10, 20, 50]"
-    v-model:filters="doingsFilters"
+    v-model:filters="doingFilters"
     :globalFilterFields="[
       'name',
       'description',
@@ -157,14 +157,14 @@
         type="button"
         icon="pi pi-filter-slash"
         outlined
-        @click="clearFilter()"
+        @click="clearDoingsFilter()"
       />
       <IconField>
         <InputIcon>
           <i class="pi pi-search" />
         </InputIcon>
         <InputText
-          v-model="doingsFilters['global'].value"
+          v-model="doingFilters['global'].value"
           placeholder="Keyword Search"
         />
       </IconField>
@@ -223,6 +223,112 @@
     @click="openNewTodoDialog"
     class="mt-4"
   />
+
+  <h3 class="mt-16 mb-3">This Week's Assignments</h3>
+  <DataTable
+    :value="assignments"
+    dataKey="assignmentId"
+    responsiveLayout="scroll"
+    removableSort
+    size="small"
+    paginator
+    :rows="10"
+    :rowsPerPageOptions="[5, 10, 20, 50]"
+    v-model:filters="assignmentFilters"
+    :globalFilterFields="['doingName', 'username', 'status']"
+  >
+    <div class="flex justify-end gap-2 mb-2">
+      <Button
+        type="button"
+        icon="pi pi-filter-slash"
+        outlined
+        @click="clearAssignmentFilter()"
+      />
+      <IconField>
+        <InputIcon>
+          <i class="pi pi-search" />
+        </InputIcon>
+        <InputText
+          v-model="assignmentFilters['global'].value"
+          placeholder="Keyword Search"
+        />
+      </IconField>
+    </div>
+    <Column header="Todo" sortable sortField="doingName">
+      <template #body="slotProps">
+        {{ slotProps.data.doingName }}
+        <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
+          ({{ slotProps.data.calcCounterCurrent }}/{{
+            slotProps.data.calcCounterTotal
+          }})
+        </span>
+      </template>
+    </Column>
+    <Column header="Assigned To" sortable sortField="username">
+      <template #body="slotProps">
+        <Select
+          v-model="slotProps.data.username"
+          :options="users.map((user: any) => user.username)"
+          @change="updateAssignment(slotProps.data)"
+        />
+      </template>
+    </Column>
+    <Column header="Status" sortable sortField="status">
+      <template #body="slotProps">
+        <Select
+          v-model="slotProps.data.status"
+          :options="
+            getStatusOptions(
+              slotProps.data.doingIntervalUnit,
+              slotProps.data.doingRepeatsPerWeek,
+            )
+          "
+          @change="updateAssignment(slotProps.data)"
+        />
+      </template>
+    </Column>
+  </DataTable>
+
+  <div class="mt-4 flex flex-wrap gap-3">
+    <Button
+      :label="
+        showStatusExplanation
+          ? 'Hide Status Explanation'
+          : 'Show Status Explanation'
+      "
+      :icon="showStatusExplanation ? 'pi pi-eye-slash' : 'pi pi-eye'"
+      @click="showStatusExplanation = !showStatusExplanation"
+      class="w-full sm:w-auto"
+    />
+  </div>
+
+  <div v-if="showStatusExplanation" class="mt-10">
+    <h3 class="mb-2">Status Explanation</h3>
+    <ul class="list-disc pl-5">
+      <li>
+        <strong>Waiting:</strong> The task is waiting to be pending. Only for
+        doings with more than one repeat per week.
+      </li>
+      <li><strong>Pending:</strong> The task is open for completion.</li>
+      <li>
+        <strong>Completed:</strong> The task has been finished successfully.
+      </li>
+      <li>
+        <strong>Skipped:</strong> The task will not be completed this iteration
+        and is reassigned the next time it is due based on the interval unit.
+        Not possible for one-time doings.
+      </li>
+      <li>
+        <strong>Postponed:</strong> The task will not be completed this
+        iteration but is reassigned the next week, regardless of the interval
+        unit. Not possible for weekly doings.
+      </li>
+      <li>
+        <strong>Failed:</strong> The task has been failed and will be reassigned
+        the next week, regardless of the interval unit. Can not be set manually.
+      </li>
+    </ul>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -253,9 +359,8 @@ import {
 const toast = useToast();
 const confirm = useConfirm();
 const doings = ref<any>([]);
-const doingsFilters = ref<any>({
-  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-});
+const assignments = ref<any>([]);
+const users = ref<any>([]);
 const dialogVisible = ref(false);
 const currentDoing = ref<any>({});
 const intervalUnitOptions = [
@@ -264,8 +369,28 @@ const intervalUnitOptions = [
   { label: 'month(s)', value: 'monthly' },
 ];
 
-const clearFilter = () => {
-  doingsFilters.value.global.value = null;
+const doingFilters = ref<any>({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
+const assignmentFilters = ref<any>({
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+});
+
+const showStatusExplanation = ref(false);
+const STATUS_OPTIONS = [
+  'waiting',
+  'pending',
+  'completed',
+  'skipped',
+  'postponed',
+]; //TODO: move to type model
+
+const clearDoingsFilter = () => {
+  doingFilters.value.global.value = null;
+};
+
+const clearAssignmentFilter = () => {
+  assignmentFilters.value.global.value = null;
 };
 
 const resolver = ({ values }: any) => {
@@ -297,7 +422,7 @@ const resolver = ({ values }: any) => {
 };
 
 onMounted(async () => {
-  fetchDoings();
+  await Promise.all([fetchDoings(), fetchAssignments(), fetchUsers()]);
 });
 
 const fetchDoings = async () => {
@@ -309,6 +434,32 @@ const fetchDoings = async () => {
       severity: 'error',
       summary: 'Error Message',
       detail: 'Could not load doings',
+      life: 3000,
+    });
+  }
+};
+
+const fetchAssignments = async () => {
+  try {
+    assignments.value = await readAPI('/todos?allUsers=true');
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load assignments',
+      life: 3000,
+    });
+  }
+};
+
+const fetchUsers = async () => {
+  try {
+    users.value = await readAPI('/users');
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load users',
       life: 3000,
     });
   }
@@ -406,6 +557,48 @@ const deleteDoing = async (id: number) => {
       }
     },
   });
+};
+
+// for updating the user and status of the assignment
+const updateAssignment = async (assignment: any) => {
+  // as the select component returns the username, we need to find the user id
+  const user = users.value.find((u: any) => u.username === assignment.username);
+  try {
+    await updateApi(`/assignments/${assignment.assignmentId}`, {
+      assignedUserId: user.id,
+      status: assignment.status,
+    });
+    await fetchAssignments();
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not update assignment',
+      life: 3000,
+    });
+  }
+};
+
+// helper function to get the available status options based on the interval unit and repeats per week
+const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
+  let options = [...STATUS_OPTIONS];
+
+  // for weekly todos, we don't want to show postponed status
+  // as it doesn't make sense because the todo will be reassigned the next day/week anyway
+  if (interval_unit === 'weekly') {
+    options = options.filter((option) => option !== 'postponed');
+  }
+
+  // for once todos, we don't want to show skipped status
+  if (interval_unit === 'once') {
+    options = options.filter((option) => option !== 'skipped');
+  }
+
+  // only for repeated todos is waiting status allowed
+  if (repeats_per_week <= 1) {
+    options = options.filter((option) => option !== 'waiting');
+  }
+  return options;
 };
 </script>
 
