@@ -134,6 +134,45 @@
       </li>
     </ul>
   </div>
+
+  <h3 class="mt-10 mb-2">Assign Shitty Points</h3>
+  <div class="mb-1" :class="{ 'text-red-500': availableShittyPoints < 0 }">
+    Available: {{ availableShittyPoints }}
+  </div>
+  <DataTable
+    :value="shittyPoints"
+    dataKey="id"
+    responsiveLayout="scroll"
+    removableSort
+    paginator
+    :rows="10"
+    :rowsPerPageOptions="[5, 10, 20, 50]"
+    size="small"
+  >
+    <Column field="name" header="Name" sortable></Column>
+    <Column
+      header="Shitty Points"
+      sortable
+      sortField="points"
+      headerStyle="display: flex; justify-content: center;"
+    >
+      <template #body="slotProps">
+        <div class="shitty-points-container">
+          <Button
+            icon="pi pi-minus"
+            @click="updateShittyPoints(slotProps.data, -1)"
+            class="p-button-rounded p-button-text"
+          />
+          <span>{{ slotProps.data.points }}</span>
+          <Button
+            icon="pi pi-plus"
+            @click="updateShittyPoints(slotProps.data, 1)"
+            class="p-button-rounded p-button-text"
+          />
+        </div>
+      </template>
+    </Column>
+  </DataTable>
 </template>
 
 <script setup lang="ts">
@@ -148,7 +187,7 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import { useToast } from 'primevue/usetoast';
 import { FilterMatchMode } from '@primevue/core/api';
-import { readAPI, updateApi } from '@/services/apiService';
+import { createAPI, readAPI, updateApi } from '@/services/apiService';
 
 const toast = useToast();
 const users = ref<any>([]);
@@ -156,6 +195,10 @@ const weeklyTodos = ref<any>([]);
 const weeklyTodosFilters = ref<any>({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
+
+const shittyPoints = ref<any>([]);
+const availableShittyPoints = ref<any>();
+
 const showStatusExplanation = ref(false);
 const STATUS_OPTIONS = [
   'waiting',
@@ -166,7 +209,12 @@ const STATUS_OPTIONS = [
 ]; //TODO: move to type model
 
 onMounted(async () => {
-  await Promise.all([fetchUsers(), fetchThisWeeksTodos()]);
+  await Promise.all([
+    fetchUsers(),
+    fetchThisWeeksTodos(),
+    fetchShittyPoints(),
+    fetchAvailableShittyPoints(),
+  ]);
 });
 
 const clearFilter = () => {
@@ -195,6 +243,34 @@ const fetchThisWeeksTodos = async () => {
       severity: 'error',
       summary: 'Error Message',
       detail: 'Could not load weekly assignments',
+      life: 3000,
+    });
+  }
+};
+
+const fetchAvailableShittyPoints = async () => {
+  try {
+    const availableShittyPointsData = await readAPI('/shittypoints/available');
+    availableShittyPoints.value = availableShittyPointsData;
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load available shitty points',
+      life: 3000,
+    });
+  }
+};
+
+const fetchShittyPoints = async () => {
+  try {
+    const shittyPointsData = await readAPI('/shittypoints');
+    shittyPoints.value = shittyPointsData;
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not load shitty points',
       life: 3000,
     });
   }
@@ -269,6 +345,31 @@ const updateParticipation = async () => {
       severity: 'error',
       summary: 'Error Message',
       detail: 'Could not update participation',
+      life: 3000,
+    });
+  }
+};
+
+const updateShittyPoints = async (shittypoints: any, amount: number) => {
+  try {
+    let result;
+    if (shittypoints.id) {
+      result = await updateApi(`/shittypoints/${shittypoints.id}`, {
+        points: shittypoints.points + amount,
+      });
+    } else {
+      const newId = await createAPI('/shittypoints', {
+        doing_id: shittypoints.doing_id,
+        points: shittypoints.points + amount,
+      });
+      shittypoints.id = newId;
+    }
+    Promise.all([fetchShittyPoints(), fetchAvailableShittyPoints()]);
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Shitty points could not be updated',
       life: 3000,
     });
   }
