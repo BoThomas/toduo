@@ -4,7 +4,11 @@ import { swagger } from '@elysiajs/swagger';
 import { cors } from '@elysiajs/cors';
 import { Logestic } from 'logestic';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
-import { getDbConnection } from './database/db';
+import {
+  getDbConnection,
+  getDbPath,
+  removeDbConnectionFromCache,
+} from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import {
@@ -970,7 +974,7 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { weeksToShow = 6, dataColumn = 'assignments' } = ctx.query;
 
-        const { id: auth0UserId, group: auth0Group } =
+        const { group: auth0Group } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
@@ -1122,8 +1126,11 @@ app.group('/api', (apiGroup) =>
     // Download the database
     .get(
       '/database/download',
-      async () => {
-        const dbPath = process.env.SQLITE_PATH;
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        const dbPath = getDbPath(auth0Group);
         if (!dbPath) {
           return {
             success: false,
@@ -1150,7 +1157,10 @@ app.group('/api', (apiGroup) =>
     .put(
       '/database/upload',
       async (ctx: any) => {
-        const dbPath = process.env.SQLITE_PATH;
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        const dbPath = getDbPath(auth0Group);
         if (!dbPath) {
           return {
             success: false,
@@ -1159,7 +1169,8 @@ app.group('/api', (apiGroup) =>
         }
         const dbAsBase64 = ctx.body;
         const dbAsArrayBuffer = Buffer.from(dbAsBase64, 'base64').buffer;
-        await Bun.write(`./${dbPath}`, dbAsArrayBuffer);
+        await Bun.write(dbPath, dbAsArrayBuffer);
+        removeDbConnectionFromCache(auth0Group);
         return {
           success: true,
           message: 'Database uploaded',

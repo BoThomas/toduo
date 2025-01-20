@@ -56,7 +56,7 @@ const getDbConnection = (
     dbConnectionCache.delete(group);
   }
 
-  const dbPath = `${SQLITE_PATH}/database-${group}.sqlite`;
+  const dbPath = getDbPath(group);
   if (LOG_ENABLED) console.log(`Connecting to database: ${dbPath}`);
 
   const sqlite = new Database(dbPath);
@@ -90,4 +90,16 @@ const getDbConnection = (
   return db;
 };
 
-export { getDbConnection };
+const getDbPath = (group: string): string => {
+  return `${SQLITE_PATH}/database-${group}.sqlite`;
+};
+
+const removeDbConnectionFromCache = (group: string): void => {
+  const cachedDb = dbConnectionCache.get(group);
+  if (cachedDb) {
+    cachedDb.db.$client.close();
+    dbConnectionCache.delete(group);
+  }
+};
+
+export { getDbConnection, getDbPath, removeDbConnectionFromCache };
