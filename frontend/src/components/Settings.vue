@@ -36,6 +36,12 @@
       @click="confirmDatabaseUpload"
       class="w-full sm:w-auto"
     />
+    <Button
+      label="Create or Roll API Key"
+      icon="pi pi-key"
+      @click="confirmCreateOrRollApiKey"
+      class="w-full sm:w-auto"
+    />
   </div>
 
   <div v-if="autoassignCronInfo?.name" class="mt-10">
@@ -264,5 +270,44 @@ const uploadDatabase = async () => {
     reader.readAsDataURL(file);
   };
   input.click();
+};
+
+const confirmCreateOrRollApiKey = () => {
+  confirm.require({
+    header: 'Are you sure you want to create or roll the API key?',
+    message: 'This will invalidate the current API key.',
+    defaultFocus: 'reject',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    acceptProps: {
+      label: 'Create or Roll',
+    },
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      await createOrRollApiKey();
+    },
+  });
+};
+
+const createOrRollApiKey = async () => {
+  try {
+    const key = await readAPI('/apikey');
+    toast.add({
+      severity: 'success',
+      summary: 'Success Message',
+      detail: `API key created or rolled successfully. Copy it here, as it will not be shown again: ${key}`,
+      life: 20000,
+    });
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Could not create or roll API key',
+      life: 3000,
+    });
+  }
 };
 </script>

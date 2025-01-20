@@ -1183,6 +1183,32 @@ app.group('/api', (apiGroup) =>
           message: t.String(),
         }),
       },
+    )
+
+    // create or roll API key
+    .get(
+      '/apikey',
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const apiKey = `${auth0Group}__${crypto.randomUUID()}`;
+        // delete old api keys
+        await db.delete(schema.apikeys);
+        await db.insert(schema.apikeys).values({
+          key: apiKey,
+          created_at: new Date(),
+        });
+        return { success: true, message: 'API key created', data: apiKey };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+          data: t.String(),
+        }),
+      },
     ),
 );
 
