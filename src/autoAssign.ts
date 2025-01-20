@@ -148,6 +148,10 @@ export class AssignmentService {
       .from(assignments)
       .leftJoin(doings, eq(doings.id, assignments.doing_id));
 
+    if (currentAssignments.length === 0) {
+      return;
+    }
+
     await this.db.insert(history).values(currentAssignments);
     await this.db.delete(assignments);
   }
@@ -316,10 +320,10 @@ export class AssignmentService {
                 WHEN ${doings.interval_unit} = 'weekly' THEN 7
                 WHEN ${doings.interval_unit} = 'monthly' THEN 12
                 ELSE 1
-              END) * 24 * 60 * 60 * 1000 - (6*60*60*1000)) / 1000`,
+              END) * 24 * 60 * 60 * 1000 + (6*60*60*1000)) / 1000`,
             ),
             // the last history entry was created 7/30 days ago
-            // (minus 6 hours to account for e.g. daylight saving time)
+            // (plus 6 hours to account for e.g. daylight saving time)
             // (devided by 1000 to convert to seconds, as drizzle-orm does save timestamps in seconds)
             inArray(
               this.db
