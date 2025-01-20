@@ -31,10 +31,12 @@ const dbConnectionCache: Map<string, CachedDb> = new Map();
  * If the connection is not cached, create a new connection and cache it.
  * If the cache exceeds the max size, remove the least recently used item.
  * @param group - The group name of the user to get the database connection
+ * @param createIfNotExists - Whether to create the database file if it doesn't exist. Must be set to false when group source is not trusted.
  * @returns - The database connection
  */
 const getDbConnection = (
   group: string,
+  createIfNotExists = true,
 ): BunSQLiteDatabase<typeof schema> & { $client: Database } => {
   // check if group is given and valid
   if (!group || typeof group !== 'string' || group.length === 0) {
@@ -59,7 +61,10 @@ const getDbConnection = (
   const dbPath = getDbPath(group);
   if (LOG_ENABLED) console.log(`Connecting to database: ${dbPath}`);
 
-  const sqlite = new Database(dbPath);
+  const sqlite = new Database(dbPath, {
+    create: createIfNotExists,
+    readwrite: true,
+  });
   const db = drizzle(sqlite, { schema });
   migrate(db, {
     migrationsFolder: 'src/database/migrations',

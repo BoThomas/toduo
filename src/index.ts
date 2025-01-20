@@ -1221,7 +1221,9 @@ app.group('/siri', (siriGroup) =>
       try {
         const { userName } = ctx.query;
 
-        const db = getDbConnection(getDbGroupFromApiKey(apiKey));
+        const db = getDbConnection(
+          await getAndValidateDbGroupFromApiKey(apiKey),
+        );
 
         // Optional filter by userName
         let userNameFilter: SQL;
@@ -1261,6 +1263,7 @@ app.group('/siri', (siriGroup) =>
         }
         return `Diese Woche sind noch ${assignments.length} Aufgaben offen. ${assignments.map((assignment) => assignment.doingName).join(', ')}.`;
       } catch (error) {
+        console.error(error);
         return 'Leider ist ein Fehler beim Abrufen der Aufgaben aufgetreten.';
       }
     },
@@ -1535,14 +1538,29 @@ const addUserToDbIfNotExists = async (userInfo: AuthInfo) => {
 };
 
 // helper function to get the db group from the api key
-// TODO: implement logic to get db group from api key
-const getDbGroupFromApiKey = (apiKey: string) => {
-  const validApiKey = process.env.SIRI_API_KEY || crypto.randomUUID();
-
-  if (!apiKey || apiKey !== validApiKey) {
-    return 'Du bist leider nicht berechtigt, diese Funktion zu nutzen.';
+const getAndValidateDbGroupFromApiKey = async (apiKey: string) => {
+  if (!apiKey) {
+    throw new Error('Invalid API key');
   }
-  return 'beto';
+
+  // parse group from api key (e.g. 'group__api_key')
+  const group = apiKey.split('__')[0];
+
+  if (!group) {
+    throw new Error('Invalid API key');
+  }
+
+  const db = getDbConnection(group, false);
+  const apiKeyExists = await db
+    .select({ key: schema.apikeys.key })
+    .from(schema.apikeys)
+    .where(eq(schema.apikeys.key, apiKey));
+
+  if (apiKeyExists.length === 0) {
+    throw new Error('Invalid API key');
+  }
+
+  return group;
 };
 
 // helper function to get the available status options based on the interval unit and repeats per week
