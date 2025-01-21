@@ -25,6 +25,7 @@ import {
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
 import Timer from './timer';
+import { readdir } from 'node:fs/promises';
 import type { BunFile } from 'bun';
 
 // initialize the cron timer handler
@@ -1531,45 +1532,50 @@ const autoHandleRepeatedAssignments = async (
   }
 };
 
-// TODO: Implement cron job for grouped dbs
-// helper function to enable or disable assignemnt cron job
-// const assignmentService = new AssignmentService();
-// const timer = new Timer();
-// let assignmentCronTime: string = '';
-// /**
-//  * Enable or disable the cron job for auto assigning tasks
-//  * @param enable true to enable, false to disable the cron job
-//  * @param cronTime cron time string, default is '0 23 * * 0' (every sunday at 23:00)
-//  */
-// const controlAssignmentCronJob = async (
-//   enable: boolean,
-//   cronTime: string = '0 23 * * 0',
-// ) => {
-//   if (enable) {
-//     assignmentCronTime = cronTime;
-//     timer.addJob(
-//       AUTO_ASSIGN_CRON_NAME,
-//       cronTime,
-//       async () => {
-//         await assignmentService.assignTasksForWeek({
-//           dryRun: false,
-//           groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
-//         });
-//       },
-//       { autoStart: true },
-//     );
-//     console.log('Cron job for auto assigning tasks enabled');
-//   } else {
-//     timer.cancelJob(AUTO_ASSIGN_CRON_NAME);
-//     console.log('Cron job for auto assigning tasks disabled');
-//   }
-// };
+// start active cron jobs on server start
+const startActiveCronJobs = async () => {
+  // get all db groups from parsing the db file names in the db folder
+  const dbFiles = await readdir(process.env.SQLITE_PATH ?? './databases');
+  console.log('Found db files:', dbFiles);
+
+  // parse group from db file name
+  // e.g. "database-default.sqlite", "database-beto.sqlite"
+  const dbGroups = dbFiles.map((file) => file.split('-')[1].split('.')[0]);
+  console.log('Found db groups:', dbGroups);
+
+  // get all active cron jobs from the db groups
+  for (const group of dbGroups) {
+    const db = getDbConnection(group);
+    const activeCronJobs = await db.query.cronjobs.findFirst({
+      where: and(eq(schema.cronjobs.active, true)),
+    });
+
+    if (activeCronJobs) {
+      // add job to timer
+      timer.addJob(
+        `autoassign_${group}`,
+        activeCronJobs.cron_time,
+        async () => {
+          await new AssignmentService(group).assignTasksForWeek({
+            dryRun: false,
+            groupByRepetition:
+              process.env.ENABLE_REPETITION_GROUPING === 'true',
+          });
+        },
+        { autoStart: true },
+      );
+      console.log(`Autoassign cron job enabled for group ${group}`);
+    }
+  }
+};
 
 // Start the server
 app.listen(process.env.PORT || 3000);
 console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttp://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
+
+await startActiveCronJobs();
 
 // helper function to add the user to the db if not already present
 const addUserToDbIfNotExists = async (userInfo: AuthInfo) => {
