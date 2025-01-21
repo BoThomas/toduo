@@ -1,5 +1,16 @@
 # TuDuo
 
+## Auth
+
+Authentication and authorization is handled by Auth0.
+Each user needs to have a permission with a group set to whom they belong. The group is used to determine the sqlite database file that the user has access to.
+
+e.g. `group:beto` will have access to the `databases/database-beto.sqlite` file.
+
+## Databases
+
+The sqlite databases are stored in the `databases` directory. Each database file is named after the group that has access to it. The database files are created automatically when a user logs in for the first time.
+
 ## Development
 
 Localhost tls certificate generation (needed for Auth0).
