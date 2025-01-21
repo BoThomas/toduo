@@ -27,7 +27,8 @@ import { AssignmentService } from './autoAssign';
 import Timer from './timer';
 import type { BunFile } from 'bun';
 
-const AUTO_ASSIGN_CRON_NAME = 'autoAssignCron';
+// initialize the cron timer handler
+const timer = new Timer();
 
 // seed the database
 await seedDatabase();
@@ -446,47 +447,83 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
-    // TODO: Implement autoassign cron job for grouped dbs
-    // // get autoassign cron info
-    // .get(
-    //   '/doings/autoassign/cron',
-    //   async () => {
-    //     return {
-    //       success: true,
-    //       message: 'Autoassign cron info',
-    //       data: timer.getJobInfo(AUTO_ASSIGN_CRON_NAME),
-    //     };
-    //   },
-    //   {
-    //     response: t.Object({
-    //       success: t.Boolean(),
-    //       message: t.String(),
-    //       data: t.Any(),
-    //     }),
-    //   },
-    // )
-    // // enable or disable autoassign cron job
-    // .put(
-    //   '/doings/autoassign/cron',
-    //   async (ctx: any) => {
-    //     const { enable, cronTime } = ctx.body;
-    //     controlAssignmentCronJob(enable, cronTime);
-    //     return {
-    //       success: true,
-    //       message: `Autoassign cron job ${enable ? 'enabled' : 'disabled'}`,
-    //     };
-    //   },
-    //   {
-    //     body: t.Object({
-    //       enable: t.Boolean(),
-    //       cronTime: t.Optional(t.String()),
-    //     }),
-    //     response: t.Object({
-    //       success: t.Boolean(),
-    //       message: t.String(),
-    //     }),
-    //   },
-    // )
+    // get autoassign cron info
+    .get(
+      '/doings/autoassign/cron',
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const activeAutoAssignCron = await db.query.cronjobs.findFirst({
+          where: and(
+            eq(schema.cronjobs.name, 'autoassign'),
+            eq(schema.cronjobs.active, true),
+          ),
+        });
+
+        if (!activeAutoAssignCron) {
+          return {
+            success: true,
+            message: 'No autoassign cron job found',
+            data: {},
+          };
+        }
+
+        return {
+          success: true,
+          message: 'Autoassign cron info',
+          data: timer.getJobInfo(`autoassign_${auth0Group}`),
+        };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+          data: t.Any(),
+        }),
+      },
+    )
+    // enable or disable autoassign cron job
+    .put(
+      '/doings/autoassign/cron',
+      async (ctx: any) => {
+        const { enable, cronTime } = ctx.body;
+
+        //     assignmentCronTime = cronTime;
+        //     timer.addJob(
+        //       AUTO_ASSIGN_CRON_NAME,
+        //       cronTime,
+        //       async () => {
+        //         await assignmentService.assignTasksForWeek({
+        //           dryRun: false,
+        //           groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
+        //         });
+        //       },
+        //       { autoStart: true },
+        //     );
+        //     console.log('Cron job for auto assigning tasks enabled');
+        //   } else {
+        //     timer.cancelJob(AUTO_ASSIGN_CRON_NAME);
+        //     console.log('Cron job for auto assigning tasks disabled');
+        //   }
+
+        return {
+          success: true,
+          message: `Autoassign cron job ${enable ? 'enabled' : 'disabled'}`,
+        };
+      },
+      {
+        body: t.Object({
+          enable: t.Boolean(),
+          cronTime: t.Optional(t.String()),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
 
     // Update assignment status or user
     .put(
@@ -1486,10 +1523,6 @@ const autoHandleRepeatedAssignments = async (
 //     console.log('Cron job for auto assigning tasks disabled');
 //   }
 // };
-
-// if (process.env.CRON_ENABLED === 'true') {
-//   controlAssignmentCronJob(true);
-// }
 
 // Start the server
 app.listen(process.env.PORT || 3000);
