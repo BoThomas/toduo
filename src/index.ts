@@ -488,25 +488,66 @@ app.group('/api', (apiGroup) =>
     .put(
       '/doings/autoassign/cron',
       async (ctx: any) => {
-        const { enable, cronTime } = ctx.body;
+        const { enable, cronTime = '0 23 * * 0' } = ctx.body;
 
-        //     assignmentCronTime = cronTime;
-        //     timer.addJob(
-        //       AUTO_ASSIGN_CRON_NAME,
-        //       cronTime,
-        //       async () => {
-        //         await assignmentService.assignTasksForWeek({
-        //           dryRun: false,
-        //           groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
-        //         });
-        //       },
-        //       { autoStart: true },
-        //     );
-        //     console.log('Cron job for auto assigning tasks enabled');
-        //   } else {
-        //     timer.cancelJob(AUTO_ASSIGN_CRON_NAME);
-        //     console.log('Cron job for auto assigning tasks disabled');
-        //   }
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        if (enable) {
+          // check if job already exists in db
+          const jobExistsInDb = await db.query.cronjobs.findFirst({
+            where: and(eq(schema.cronjobs.name, 'autoassign')),
+          });
+
+          if (jobExistsInDb) {
+            // update existing job
+            await db
+              .update(schema.cronjobs)
+              .set({
+                cron_time: cronTime,
+                active: true,
+                updated_at: new Date(),
+              })
+              .where(eq(schema.cronjobs.name, 'autoassign'));
+          } else {
+            // insert new job
+            await db.insert(schema.cronjobs).values({
+              name: 'autoassign',
+              cron_time: cronTime,
+              action: 'autoassign',
+              active: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+            });
+          }
+
+          // add job to timer (or replace existing job)
+          timer.addJob(
+            `autoassign_${auth0Group}`,
+            cronTime,
+            async () => {
+              await new AssignmentService(auth0Group).assignTasksForWeek({
+                dryRun: false,
+                groupByRepetition:
+                  process.env.ENABLE_REPETITION_GROUPING === 'true',
+              });
+            },
+            { autoStart: true },
+          );
+        } else {
+          // deactivate job in db
+          await db
+            .update(schema.cronjobs)
+            .set({
+              active: false,
+              updated_at: new Date(),
+            })
+            .where(eq(schema.cronjobs.name, 'autoassign'));
+
+          // pause job in timer
+          timer.pauseJob(`autoassign_${auth0Group}`);
+        }
 
         return {
           success: true,
