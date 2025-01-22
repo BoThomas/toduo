@@ -4,7 +4,11 @@ import { swagger } from '@elysiajs/swagger';
 import { cors } from '@elysiajs/cors';
 import { Logestic } from 'logestic';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
-import { db } from './database/db';
+import {
+  getDbConnection,
+  getDbPath,
+  removeDbConnectionFromCache,
+} from './database/db';
 import * as schema from './database/schema';
 import { seedDatabase } from './database/seed';
 import {
@@ -21,9 +25,11 @@ import {
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
 import Timer from './timer';
+import { readdir } from 'node:fs/promises';
 import type { BunFile } from 'bun';
 
-const AUTO_ASSIGN_CRON_NAME = 'autoAssignCron';
+// initialize the cron timer handler
+const timer = new Timer();
 
 // seed the database
 await seedDatabase();
@@ -46,24 +52,39 @@ if (process.env.AUTH0_DISABLED === 'true') {
 }
 // create elysia auth service to use in the elysia app
 // use derive to add a scoped function to the Context for usage in route handlers
+type AuthInfo = { id: string; group: string; name: string };
 const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
   { as: 'scoped' },
   async ({ headers }) => ({
-    authenticatedUserId: async () => {
+    authenticatedUserInfo: async (): Promise<AuthInfo> => {
       if (process.env.AUTH0_DISABLED === 'true') {
-        return 'auth0|123456789';
+        return { id: 'auth0|123456789', group: 'default', name: 'Testuser' };
       }
 
       const authHeader = headers?.['authorization'];
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return '';
+        return { id: '', group: '', name: '' };
       }
       const token = authHeader.split(' ')[1];
       const { payload } = await jwtVerify(token, JWKS, {
         issuer: process.env.AUTH0_ISSUER,
         audience: process.env.AUTH0_AUDIENCE,
       });
-      return payload.sub;
+
+      // extract user id
+      const id = payload.sub ?? '';
+
+      // extract user name
+      const name = headers?.['x-user-name'] || '';
+
+      // extract group permission
+      const group = Array.isArray(payload.permissions)
+        ? payload.permissions
+            .find((p: string) => p.startsWith('group:'))
+            ?.split(':')[1] || ''
+        : '';
+
+      return { id, group, name };
     },
   }),
 );
@@ -87,80 +108,33 @@ const app = new Elysia({
   .use(Logestic.preset('common')) // Log all requests
   .use(AuthService); // Add the auth service
 
-const INVITATION_CODE = process.env.USER_INVITATION_CODE || crypto.randomUUID();
-
 app.group('/api', (apiGroup) =>
   apiGroup
     .guard({
       // use auth service to guard the route
       beforeHandle: async ({
-        authenticatedUserId,
+        authenticatedUserInfo,
         error,
       }: {
-        authenticatedUserId: () => Promise<string>;
+        authenticatedUserInfo: () => Promise<AuthInfo>;
         error: (status: number) => void;
       }) => {
-        const userId = await authenticatedUserId();
-        if (!userId) return error(401);
+        const userInfo = await authenticatedUserInfo();
+        if (!userInfo.id || !userInfo.group || !userInfo.name)
+          return error(401);
+
+        // check if user needs to be added to the db
+        addUserToDbIfNotExists(userInfo);
       },
     })
-    // User joins via invitation
-    .post(
-      '/users/join',
-      async (ctx: any) => {
-        const { username, invitation_code } = ctx.body;
-        const auth0UserId = (await ctx.authenticatedUserId()) as string;
 
-        // validate invitation code
-        if (invitation_code !== INVITATION_CODE) {
-          return { success: false, message: 'Invalid invitation code' };
-        }
-
-        // check sum of all participation_percent
-        const users = await db.query.users.findMany({
-          columns: { participation_percent: true },
-        });
-        const sum = users.reduce(
-          (acc, user) => acc + user.participation_percent,
-          0,
-        );
-        const newParticipationPercent = 100 - sum;
-
-        try {
-          await db.insert(schema.users).values({
-            username: username,
-            auth0_id: auth0UserId,
-            participation_percent: newParticipationPercent,
-            created_at: new Date(),
-            updated_at: new Date(),
-          });
-        } catch (error) {
-          console.log(error);
-          return {
-            success: false,
-            message: `Failed to create user, ${error}`,
-          };
-        }
-        return {
-          success: true,
-          message: 'User joined successfully',
-        };
-      },
-      {
-        body: t.Object({
-          username: t.String({ minLength: 3, maxLength: 15 }),
-          invitation_code: t.String(),
-        }),
-        response: t.Object({
-          success: t.Boolean(),
-          message: t.String(),
-        }),
-      },
-    )
     // get all users
     .get(
       '/users',
-      async () => {
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
         const users = await db.query.users.findMany({
           columns: {
             id: true,
@@ -189,6 +163,10 @@ app.group('/api', (apiGroup) =>
       '/users/participation/',
       async (ctx: any) => {
         const userArray = ctx.body;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         // check userArray for valid participation_percent
         const sum = userArray.reduce(
@@ -246,6 +224,10 @@ app.group('/api', (apiGroup) =>
           is_active,
         } = ctx.body;
 
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         await db.insert(schema.doings).values({
           name,
           description,
@@ -288,6 +270,11 @@ app.group('/api', (apiGroup) =>
       '/doings/:id?',
       async (ctx: any) => {
         const { id } = ctx.params;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         if (id) {
           // Logic to get a doing by id
           const doing = await db.query.doings.findFirst({
@@ -329,6 +316,10 @@ app.group('/api', (apiGroup) =>
           effort_in_minutes,
           is_active,
         } = ctx.body;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         await db
           .update(schema.doings)
@@ -378,6 +369,10 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { id } = ctx.params;
 
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         // remove all assignments for this doing
         await db
           .delete(schema.assignments)
@@ -424,8 +419,10 @@ app.group('/api', (apiGroup) =>
       '/doings/autoassign',
       async (ctx: any) => {
         const { reassign } = ctx.body;
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
         try {
-          await new AssignmentService().assignTasksForWeek({
+          await new AssignmentService(auth0Group).assignTasksForWeek({
             dryRun: false,
             clearAndReassign: reassign,
             groupByRepetition:
@@ -454,11 +451,30 @@ app.group('/api', (apiGroup) =>
     // get autoassign cron info
     .get(
       '/doings/autoassign/cron',
-      async () => {
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const activeAutoAssignCron = await db.query.cronjobs.findFirst({
+          where: and(
+            eq(schema.cronjobs.name, 'autoassign'),
+            eq(schema.cronjobs.active, true),
+          ),
+        });
+
+        if (!activeAutoAssignCron) {
+          return {
+            success: true,
+            message: 'No autoassign cron job found',
+            data: {},
+          };
+        }
+
         return {
           success: true,
           message: 'Autoassign cron info',
-          data: timer.getJobInfo(AUTO_ASSIGN_CRON_NAME),
+          data: timer.getJobInfo(`autoassign_${auth0Group}`),
         };
       },
       {
@@ -473,8 +489,67 @@ app.group('/api', (apiGroup) =>
     .put(
       '/doings/autoassign/cron',
       async (ctx: any) => {
-        const { enable, cronTime } = ctx.body;
-        controlAssignmentCronJob(enable, cronTime);
+        const { enable, cronTime = '0 23 * * 0' } = ctx.body;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        if (enable) {
+          // check if job already exists in db
+          const jobExistsInDb = await db.query.cronjobs.findFirst({
+            where: and(eq(schema.cronjobs.name, 'autoassign')),
+          });
+
+          if (jobExistsInDb) {
+            // update existing job
+            await db
+              .update(schema.cronjobs)
+              .set({
+                cron_time: cronTime,
+                active: true,
+                updated_at: new Date(),
+              })
+              .where(eq(schema.cronjobs.name, 'autoassign'));
+          } else {
+            // insert new job
+            await db.insert(schema.cronjobs).values({
+              name: 'autoassign',
+              cron_time: cronTime,
+              action: 'autoassign',
+              active: true,
+              created_at: new Date(),
+              updated_at: new Date(),
+            });
+          }
+
+          // add job to timer (or replace existing job)
+          timer.addJob(
+            `autoassign_${auth0Group}`,
+            cronTime,
+            async () => {
+              await new AssignmentService(auth0Group).assignTasksForWeek({
+                dryRun: false,
+                groupByRepetition:
+                  process.env.ENABLE_REPETITION_GROUPING === 'true',
+              });
+            },
+            { autoStart: true },
+          );
+        } else {
+          // deactivate job in db
+          await db
+            .update(schema.cronjobs)
+            .set({
+              active: false,
+              updated_at: new Date(),
+            })
+            .where(eq(schema.cronjobs.name, 'autoassign'));
+
+          // pause job in timer
+          timer.pauseJob(`autoassign_${auth0Group}`);
+        }
+
         return {
           success: true,
           message: `Autoassign cron job ${enable ? 'enabled' : 'disabled'}`,
@@ -498,6 +573,10 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { id } = ctx.params;
         const { assignedUserId, status } = ctx.body;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         const updateData: {
           status:
@@ -555,6 +634,7 @@ app.group('/api', (apiGroup) =>
 
         // auto handling of repeated assignment states for same doing
         await autoHandleRepeatedAssignments(
+          db,
           currentDoingId[0].doing_id,
           updateData.status,
         );
@@ -589,12 +669,15 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { allUsers, status } = ctx.query;
 
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
         // Optional filter by user
         let userFilter: SQL;
         if (allUsers === 'true') {
           userFilter = sql`1 = 1`;
         } else {
-          const auth0UserId = (await ctx.authenticatedUserId()) as string;
           userFilter = eq(schema.users.auth0_id, auth0UserId);
         }
 
@@ -715,7 +798,11 @@ app.group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { doing_id, points } = ctx.body;
 
-        const user_id = await getUserIdFromContext(ctx);
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -735,7 +822,7 @@ app.group('/api', (apiGroup) =>
           };
         }
 
-        if (await maxShittyPointsExceeded(0, points, user_id)) {
+        if (await maxShittyPointsExceeded(db, 0, points, user_id)) {
           return { success: false, message: 'Max shitty points reached' };
         }
 
@@ -781,7 +868,11 @@ app.group('/api', (apiGroup) =>
     .get(
       '/shittypoints',
       async (ctx: any) => {
-        const user_id = await getUserIdFromContext(ctx);
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -838,7 +929,11 @@ app.group('/api', (apiGroup) =>
     .get(
       '/shittypoints/available',
       async (ctx: any) => {
-        const user_id = await getUserIdFromContext(ctx);
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -884,7 +979,11 @@ app.group('/api', (apiGroup) =>
         const { id } = ctx.params;
         const { points } = ctx.body;
 
-        const user_id = await getUserIdFromContext(ctx);
+        const { id: auth0UserId, group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -902,7 +1001,12 @@ app.group('/api', (apiGroup) =>
         }
 
         if (
-          await maxShittyPointsExceeded(currentPoints.points, points, user_id)
+          await maxShittyPointsExceeded(
+            db,
+            currentPoints.points,
+            points,
+            user_id,
+          )
         ) {
           return { success: false, message: 'Max shitty points reached' };
         }
@@ -948,6 +1052,10 @@ app.group('/api', (apiGroup) =>
       '/statistics/completed',
       async (ctx: any) => {
         const { weeksToShow = 6, dataColumn = 'assignments' } = ctx.query;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
 
         try {
           const xWeeksAgo = new Date();
@@ -1097,8 +1205,11 @@ app.group('/api', (apiGroup) =>
     // Download the database
     .get(
       '/database/download',
-      async () => {
-        const dbPath = process.env.SQLITE_PATH;
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        const dbPath = getDbPath(auth0Group);
         if (!dbPath) {
           return {
             success: false,
@@ -1125,7 +1236,10 @@ app.group('/api', (apiGroup) =>
     .put(
       '/database/upload',
       async (ctx: any) => {
-        const dbPath = process.env.SQLITE_PATH;
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        const dbPath = getDbPath(auth0Group);
         if (!dbPath) {
           return {
             success: false,
@@ -1134,7 +1248,8 @@ app.group('/api', (apiGroup) =>
         }
         const dbAsBase64 = ctx.body;
         const dbAsArrayBuffer = Buffer.from(dbAsBase64, 'base64').buffer;
-        await Bun.write(`./${dbPath}`, dbAsArrayBuffer);
+        await Bun.write(dbPath, dbAsArrayBuffer);
+        removeDbConnectionFromCache(auth0Group);
         return {
           success: true,
           message: 'Database uploaded',
@@ -1147,6 +1262,32 @@ app.group('/api', (apiGroup) =>
           message: t.String(),
         }),
       },
+    )
+
+    // create or roll API key
+    .get(
+      '/apikey',
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const apiKey = `${auth0Group}__${crypto.randomUUID()}`;
+        // delete old api keys
+        await db.delete(schema.apikeys);
+        await db.insert(schema.apikeys).values({
+          key: apiKey,
+          created_at: new Date(),
+        });
+        return { success: true, message: 'API key created', data: apiKey };
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+          data: t.String(),
+        }),
+      },
     ),
 );
 
@@ -1155,13 +1296,13 @@ app.group('/siri', (siriGroup) =>
     '/todos',
     async (ctx: any) => {
       const apiKey = ctx.headers['x-api-key'];
-      const validApiKey = process.env.SIRI_API_KEY || crypto.randomUUID();
 
-      if (!apiKey || apiKey !== validApiKey) {
-        return 'Du bist leider nicht berechtigt, diese Funktion zu nutzen.';
-      }
       try {
         const { userName } = ctx.query;
+
+        const db = getDbConnection(
+          await getAndValidateDbGroupFromApiKey(apiKey),
+        );
 
         // Optional filter by userName
         let userNameFilter: SQL;
@@ -1201,6 +1342,7 @@ app.group('/siri', (siriGroup) =>
         }
         return `Diese Woche sind noch ${assignments.length} Aufgaben offen. ${assignments.map((assignment) => assignment.doingName).join(', ')}.`;
       } catch (error) {
+        console.error(error);
         return 'Leider ist ein Fehler beim Abrufen der Aufgaben aufgetreten.';
       }
     },
@@ -1253,8 +1395,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // helper function to get user from context auth0 id
-const getUserIdFromContext = async (ctx: any) => {
-  const auth0UserId = (await ctx.authenticatedUserId()) as string;
+const getUserIdFromAuth0UserId = async (auth0UserId: string, db: any) => {
   const user = await db.query.users.findFirst({
     where: eq(schema.users.auth0_id, auth0UserId),
     columns: { id: true },
@@ -1265,6 +1406,7 @@ const getUserIdFromContext = async (ctx: any) => {
 // helper function to check if max shitty points is reached
 const maxShittyPoints = Number(process.env.MAX_SHITTY_POINTS_PER_DOING || 3);
 const maxShittyPointsExceeded = async (
+  db: any,
   currentPoints: number,
   targetPoints: number,
   user_id: number,
@@ -1295,6 +1437,7 @@ const maxShittyPointsExceeded = async (
 
 // helper function to auto handle status of next repeated assignment
 const autoHandleRepeatedAssignments = async (
+  db: any,
   parentDoingId: number,
   parentStatus: string,
 ) => {
@@ -1377,7 +1520,7 @@ const autoHandleRepeatedAssignments = async (
         .where(
           inArray(
             schema.assignments.id,
-            pendingAssignments.slice(1).map((a) => a.id), // Skip the first pending assignment
+            pendingAssignments.slice(1).map((a: any) => a.id), // Skip the first pending assignment
           ),
         );
     }
@@ -1389,48 +1532,116 @@ const autoHandleRepeatedAssignments = async (
   }
 };
 
-// helper function to enable or disable assignemnt cron job
-const assignmentService = new AssignmentService();
-const timer = new Timer();
-let assignmentCronTime: string = '';
-/**
- * Enable or disable the cron job for auto assigning tasks
- * @param enable true to enable, false to disable the cron job
- * @param cronTime cron time string, default is '0 23 * * 0' (every sunday at 23:00)
- */
-const controlAssignmentCronJob = async (
-  enable: boolean,
-  cronTime: string = '0 23 * * 0',
-) => {
-  if (enable) {
-    assignmentCronTime = cronTime;
-    timer.addJob(
-      AUTO_ASSIGN_CRON_NAME,
-      cronTime,
-      async () => {
-        await assignmentService.assignTasksForWeek({
-          dryRun: false,
-          groupByRepetition: process.env.ENABLE_REPETITION_GROUPING === 'true',
-        });
-      },
-      { autoStart: true },
-    );
-    console.log('Cron job for auto assigning tasks enabled');
-  } else {
-    timer.cancelJob(AUTO_ASSIGN_CRON_NAME);
-    console.log('Cron job for auto assigning tasks disabled');
+// start active cron jobs on server start
+const startActiveCronJobs = async () => {
+  // get all db groups from parsing the db file names in the db folder
+  const dbFiles = await readdir(process.env.SQLITE_PATH ?? './databases');
+  console.log('Found db files:', dbFiles);
+
+  // parse group from db file name
+  // e.g. "database-default.sqlite", "database-beto.sqlite"
+  const dbGroups = dbFiles.map((file) => file.split('-')[1].split('.')[0]);
+  console.log('Found db groups:', dbGroups);
+
+  // get all active cron jobs from the db groups
+  for (const group of dbGroups) {
+    const db = getDbConnection(group);
+    const activeCronJobs = await db.query.cronjobs.findFirst({
+      where: and(eq(schema.cronjobs.active, true)),
+    });
+
+    if (activeCronJobs) {
+      // add job to timer
+      timer.addJob(
+        `autoassign_${group}`,
+        activeCronJobs.cron_time,
+        async () => {
+          await new AssignmentService(group).assignTasksForWeek({
+            dryRun: false,
+            groupByRepetition:
+              process.env.ENABLE_REPETITION_GROUPING === 'true',
+          });
+        },
+        { autoStart: true },
+      );
+      console.log(`Autoassign cron job enabled for group ${group}`);
+    }
   }
 };
-
-if (process.env.CRON_ENABLED === 'true') {
-  controlAssignmentCronJob(true);
-}
 
 // Start the server
 app.listen(process.env.PORT || 3000);
 console.log(
   `\x1b[32m➜ \x1b[36mToDuo Backend running at \x1b[1mhttp://${app.server?.hostname}:${app.server?.port}\x1b[0m`,
 );
+
+await startActiveCronJobs();
+
+// helper function to add the user to the db if not already present
+const addUserToDbIfNotExists = async (userInfo: AuthInfo) => {
+  // get db connection
+  const db = getDbConnection(userInfo.group);
+
+  // check if user already exists
+  const userExists = await db.query.users.findFirst({
+    where: eq(schema.users.auth0_id, userInfo.id),
+  });
+  if (userExists) {
+    return;
+  }
+
+  // check sum of all participation_percent
+  const users = await db.query.users.findMany({
+    columns: { participation_percent: true },
+  });
+  const sum = users.reduce(
+    (acc: any, user: any) => acc + user.participation_percent,
+    0,
+  );
+  const newParticipationPercent = 100 - sum;
+
+  try {
+    await db.insert(schema.users).values({
+      username: userInfo.name,
+      auth0_id: userInfo.id,
+      participation_percent: newParticipationPercent,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+  } catch (error) {
+    console.log(error);
+    return {
+      success: false,
+      message: `Failed to create user, ${error}`,
+    };
+  }
+};
+
+// helper function to get the db group from the api key
+const getAndValidateDbGroupFromApiKey = async (apiKey: string) => {
+  if (!apiKey) {
+    throw new Error('Invalid API key');
+  }
+
+  // parse group from api key (e.g. 'group__api_key')
+  const group = apiKey.split('__')[0];
+
+  if (!group) {
+    throw new Error('Invalid API key');
+  }
+
+  const db = getDbConnection(group, false);
+  const apiKeyExists = await db
+    .select({ key: schema.apikeys.key })
+    .from(schema.apikeys)
+    .where(eq(schema.apikeys.key, apiKey));
+
+  if (apiKeyExists.length === 0) {
+    throw new Error('Invalid API key');
+  }
+
+  return group;
+};
 
 // helper function to get the available status options based on the interval unit and repeats per week
 // TODO: this is also used in client, move to shared module
@@ -1461,10 +1672,3 @@ const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
   }
   return options;
 };
-
-// For testing purposes
-// await new AssignmentService().assignTasksForWeek({
-//   dryRun: true,
-//   clearAndReassign: false,
-//   groupByRepetition: false,
-// });

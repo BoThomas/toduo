@@ -1,6 +1,22 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
+export const apikeys = sqliteTable('apikeys', {
+  id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
+  key: text().unique().notNull(),
+  created_at: integer({ mode: 'timestamp' }).notNull(),
+});
+
+export const cronjobs = sqliteTable('cronjobs', {
+  id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
+  name: text().unique().notNull(),
+  cron_time: text().notNull(),
+  action: text().notNull(),
+  active: integer({ mode: 'boolean' }).notNull().default(true),
+  created_at: integer({ mode: 'timestamp' }).notNull(),
+  updated_at: integer({ mode: 'timestamp' }).notNull(),
+});
+
 export const users = sqliteTable('users', {
   id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
   username: text().unique().notNull(),

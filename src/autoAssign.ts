@@ -1,4 +1,4 @@
-import { db } from './database/db';
+import { getDbConnection } from './database/db';
 import {
   users,
   doings,
@@ -25,8 +25,8 @@ const ENABLE_LOGGING = true;
 export class AssignmentService {
   private db;
 
-  constructor() {
-    this.db = db;
+  constructor(group: string) {
+    this.db = getDbConnection(group);
   }
 
   // Main method to perform doing assignment
@@ -112,8 +112,8 @@ export class AssignmentService {
         inArray(
           doings.id,
           currentlyCompletedOnceDoingIds
-            .map((doing) => doing.id)
-            .filter((id) => id !== null),
+            .map((doing: any) => doing.id)
+            .filter((id: any) => id !== null),
         ),
       );
   }

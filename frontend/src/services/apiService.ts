@@ -11,7 +11,8 @@ const apiRequest = async (
   options: { headers?: Record<string, string> } = {},
 ) => {
   try {
-    const token = await useAuthStore().getAccessTokenSilently({
+    const auth0 = useAuthStore();
+    const token = await auth0.getAccessTokenSilently({
       authorizationParams: {
         audience: import.meta.env.VITE_AUTH0_AUDIENCE,
       },
@@ -21,6 +22,7 @@ const apiRequest = async (
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
+        'x-user-name': auth0.user?.nickname || '',
         Authorization: `Bearer ${token}`,
       },
       body: data ? JSON.stringify(data) : undefined,
