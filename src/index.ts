@@ -662,6 +662,41 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
+    // delete assignment
+    .delete(
+      '/assignments/:id',
+      async (ctx: any) => {
+        const { id } = ctx.params;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        // check if assignment exists
+        const assignmentExists = await db.query.assignments.findFirst({
+          where: eq(schema.assignments.id, Number(id)),
+        });
+
+        if (!assignmentExists) {
+          return { success: false, message: 'Assignment not found' };
+        }
+
+        await db
+          .delete(schema.assignments)
+          .where(eq(schema.assignments.id, Number(id)));
+
+        return { success: true, message: 'Assignment deleted' };
+      },
+      {
+        params: t.Object({
+          id: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
 
     // Get todos (= assigned doings) to the current user
     .get(

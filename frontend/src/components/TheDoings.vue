@@ -287,6 +287,21 @@
         />
       </template>
     </Column>
+    <Column>
+      <template #body="slotProps">
+        <Button
+          icon="pi pi-trash"
+          @click="
+            confirmDeleteAssignment(
+              slotProps.data.assignmentId,
+              slotProps.data.doingName,
+            )
+          "
+          variant="text"
+          class="p-button-rounded p-button-danger"
+        />
+      </template>
+    </Column>
   </DataTable>
 
   <div class="mt-4 flex flex-wrap gap-3">
@@ -577,6 +592,37 @@ const updateAssignment = async (assignment: any) => {
       life: 3000,
     });
   }
+};
+
+const confirmDeleteAssignment = (assignmentId: number, doingName: string) => {
+  confirm.require({
+    header: `Are you sure you want to delete the assignment for "${doingName}"?`,
+    message:
+      'This action cannot be undone. The doing will be reassigned to the next iteration.',
+    defaultFocus: 'reject',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true,
+    },
+    acceptProps: {
+      label: 'Delete',
+    },
+    icon: 'pi pi-exclamation-triangle',
+    accept: async () => {
+      try {
+        await deleteApi(`/assignments/${assignmentId}`);
+        await fetchAssignments();
+      } catch (error) {
+        toast.add({
+          severity: 'error',
+          summary: 'Error Message',
+          detail: 'Could not delete assignment',
+          life: 3000,
+        });
+      }
+    },
+  });
 };
 
 // helper function to get the available status options based on the interval unit and repeats per week
