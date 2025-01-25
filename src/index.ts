@@ -414,6 +414,67 @@ app.group('/api', (apiGroup) =>
       },
     )
 
+    // Assign doing to user
+    .post(
+      '/doings/assign',
+      async (ctx: any) => {
+        const { doing_id, user_id } = ctx.body;
+
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        const assignmentExists = await db.query.assignments.findFirst({
+          where: eq(schema.assignments.doing_id, doing_id),
+        });
+
+        if (assignmentExists) {
+          return {
+            success: false,
+            message: 'Assignment already exists for this doing',
+          };
+        }
+
+        const doing = await db.query.doings.findFirst({
+          where: eq(schema.doings.id, doing_id),
+        });
+
+        if (!doing) {
+          return { success: false, message: 'Doing not found' };
+        }
+
+        const now = new Date();
+
+        // if repeats_per_week is greater than 1, create multiple assignments
+        const assignments = Array.from(
+          { length: doing.repeats_per_week },
+          (_, i) => ({
+            doing_id,
+            user_id,
+            status: i === 0 ? ('pending' as const) : ('waiting' as const),
+            created_at: now,
+            updated_at: now,
+          }),
+        );
+
+        console.log(assignments);
+
+        await db.insert(schema.assignments).values(assignments);
+
+        return { success: true, message: 'Assignment created' };
+      },
+      {
+        body: t.Object({
+          doing_id: t.Number(),
+          user_id: t.Number(),
+        }),
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+        }),
+      },
+    )
+
     // Trigger Autoassign
     .post(
       '/doings/autoassign',

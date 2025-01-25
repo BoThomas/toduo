@@ -535,7 +535,36 @@ const openAssignDoing = (doing: any) => {
 };
 
 const assignDoing = async () => {
-  // TODO: API call to assign doing to user
+  try {
+    if (!assignmentSelectedUser.value) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Error Message',
+        detail: 'Please select a user',
+        life: 3000,
+      });
+      return;
+    }
+    await createAPI('/doings/assign', {
+      doing_id: currentDoing.value.id,
+      user_id: users.value.find(
+        (user: any) => user.username === assignmentSelectedUser.value,
+      ).id,
+    });
+    toast.add({
+      severity: 'success',
+      summary: 'Success Message',
+      detail: 'Doing assigned successfully',
+      life: 3000,
+    });
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: error,
+      life: 3000,
+    });
+  }
   assignmentDialogVisible.value = false;
   await fetchAssignments();
 };
