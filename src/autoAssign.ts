@@ -552,27 +552,16 @@ export class AssignmentService {
   ): Promise<void> {
     const assignmentsToSave = assignmentObjects.flatMap((assignment) => {
       const now = new Date();
-
-      if (assignment.doing.repeats_per_week > 1) {
-        return Array.from(
-          { length: assignment.doing.repeats_per_week },
-          (_, i) => ({
-            doing_id: assignment.doing.id,
-            user_id: assignment.user.id,
-            status: i === 0 ? ('pending' as const) : ('waiting' as const),
-            created_at: now,
-            updated_at: now,
-          }),
-        );
-      }
-
-      return {
-        doing_id: assignment.doing.id,
-        user_id: assignment.user.id,
-        status: 'pending' as const,
-        created_at: now,
-        updated_at: now,
-      };
+      return Array.from(
+        { length: assignment.doing.repeats_per_week },
+        (_, i) => ({
+          doing_id: assignment.doing.id,
+          user_id: assignment.user.id,
+          status: i === 0 ? ('pending' as const) : ('waiting' as const),
+          created_at: now,
+          updated_at: now,
+        }),
+      );
     });
 
     if (dryRun) {
