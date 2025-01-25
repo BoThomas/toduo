@@ -214,8 +214,8 @@
       <template #body="slotProps">
         <i
           :class="{
-            'pi pi-check-circle text-green-500': slotProps.data.is_active,
-            'pi pi-times-circle text-red-500': !slotProps.data.is_active,
+            'pi pi-check-circle': slotProps.data.is_active,
+            'pi pi-times-circle text-red-300': !slotProps.data.is_active,
           }"
         ></i>
       </template>
@@ -227,13 +227,13 @@
             icon="pi pi-user-plus"
             @click="openAssignDoing(slotProps.data)"
             variant="text"
-            class="p-button-rounded p-button-warn"
+            class="p-button-rounded p-button-success"
           />
           <Button
             icon="pi pi-pencil"
             @click="openEditDoing(slotProps.data)"
             variant="text"
-            class="p-button-rounded p-button-success"
+            class="p-button-rounded p-button-warn"
           />
           <Button
             icon="pi pi-trash"
