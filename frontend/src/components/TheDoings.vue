@@ -1,7 +1,7 @@
 <template>
   <h2 class="mb-2">The Doings</h2>
   <Dialog
-    v-model:visible="dialogVisible"
+    v-model:visible="doingDialogVisible"
     header="Todo Details"
     :modal="true"
     class="w-full mx-5 max-w-2xl"
@@ -127,12 +127,35 @@
         <Button
           label="Cancel"
           icon="pi pi-times"
-          @click="closeDialog"
+          @click="doingDialogVisible = false"
           class="p-button-text"
         />
         <Button label="Save" icon="pi pi-check" type="submit" />
       </div>
     </Form>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="assignmentDialogVisible"
+    :header="`Assign '${currentDoing.name}' to:`"
+    :modal="true"
+    class="w-full mx-5 max-w-2xl"
+  >
+    <Select
+      v-model="assignmentSelectedUser"
+      :options="users.map((user: any) => user.username)"
+      placeholder="Select User"
+      class="w-full"
+    />
+    <div class="flex justify-end gap-2 mt-4">
+      <Button
+        label="Cancel"
+        icon="pi pi-times"
+        @click="assignmentDialogVisible = false"
+        class="p-button-text"
+      />
+      <Button label="Assign" icon="pi pi-check" @click="assignDoing()" />
+    </div>
   </Dialog>
 
   <DataTable
@@ -201,8 +224,14 @@
       <template #body="slotProps">
         <div class="flex">
           <Button
+            icon="pi pi-user-plus"
+            @click="openAssignDoing(slotProps.data)"
+            variant="text"
+            class="p-button-rounded p-button-warn"
+          />
+          <Button
             icon="pi pi-pencil"
-            @click="editDoing(slotProps.data)"
+            @click="openEditDoing(slotProps.data)"
             variant="text"
             class="p-button-rounded p-button-success"
           />
@@ -376,8 +405,13 @@ const confirm = useConfirm();
 const doings = ref<any>([]);
 const assignments = ref<any>([]);
 const users = ref<any>([]);
-const dialogVisible = ref(false);
+
+const doingDialogVisible = ref(false);
 const currentDoing = ref<any>({});
+
+const assignmentDialogVisible = ref(false);
+const assignmentSelectedUser = ref();
+
 const intervalUnitOptions = [
   { label: 'once', value: 'once' },
   { label: 'week(s)', value: 'weekly' },
@@ -491,16 +525,24 @@ const openNewTodoDialog = () => {
     notice: '',
     is_active: true,
   };
-  dialogVisible.value = true;
+  doingDialogVisible.value = true;
 };
 
-const editDoing = (todo: any) => {
+const openAssignDoing = (doing: any) => {
+  currentDoing.value = { ...doing };
+  assignmentSelectedUser.value = null;
+  assignmentDialogVisible.value = true;
+};
+
+const assignDoing = async () => {
+  // TODO: API call to assign doing to user
+  assignmentDialogVisible.value = false;
+  await fetchAssignments();
+};
+
+const openEditDoing = (todo: any) => {
   currentDoing.value = { ...todo };
-  dialogVisible.value = true;
-};
-
-const closeDialog = () => {
-  dialogVisible.value = false;
+  doingDialogVisible.value = true;
 };
 
 const saveDoing = async (formData: any) => {
@@ -530,7 +572,7 @@ const saveDoing = async (formData: any) => {
     } else {
       response = await createAPI('/doings', currentDoing.value);
     }
-    closeDialog();
+    doingDialogVisible.value = false;
     await fetchDoings();
   } catch (error: any) {
     toast.add({
