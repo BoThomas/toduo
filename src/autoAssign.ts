@@ -22,6 +22,11 @@ import {
 
 const ENABLE_LOGGING = true;
 
+type Assignment = {
+  doing: any;
+  user: any;
+};
+
 export class AssignmentService {
   private db;
 
@@ -38,8 +43,14 @@ export class AssignmentService {
     const {
       dryRun = false,
       clearAndReassign = false,
-      groupByRepetition = true,
+      groupByRepetition = false,
     } = options || {};
+
+    if (ENABLE_LOGGING) {
+      console.log(
+        `\n--- Autoassign Starting ---\nDry Run: ${dryRun}\nClear and Reassign: ${clearAndReassign}\nGroup by Repetition: ${groupByRepetition}\n---------------------------`,
+      );
+    }
 
     // Step 0: Pre-assignment operations
     if (!dryRun && !clearAndReassign) {
@@ -59,21 +70,37 @@ export class AssignmentService {
     const shittyPoints = await this.getShittyPoints();
     const todoHistory = await this.getRecentTodoHistory();
 
-    // Step 1: Randomize doing order
-    const shuffledDoings = this.shuffleArray(doings);
+    // Step 1: Extract static assigned doings and randomize the rest
+    const staticDoings = doings.filter(
+      (doing) => doing.static_user_id !== null,
+    );
+    const dnymaicDoings = doings.filter(
+      (doing) => doing.static_user_id === null,
+    );
+    const shuffledDynamicDoings = this.shuffleArray(dnymaicDoings);
 
-    // Step 2: Group doings by repetition type
-    let doingGroups;
+    // Step 2: Group dynamic doings by repetition type
+    let dynamicDoingGroups;
     if (groupByRepetition) {
-      doingGroups = this.groupDoingsByRepetition(shuffledDoings);
+      dynamicDoingGroups = this.groupDoingsByRepetition(shuffledDynamicDoings);
     } else {
-      doingGroups = { default: shuffledDoings };
+      dynamicDoingGroups = { default: shuffledDynamicDoings };
     }
 
-    // Step 3: Assign doings in batches by repetition type
+    // Step 3: Assign static doings
     const assignmentArray = [];
-    for (const repetition in doingGroups) {
-      const group = doingGroups[repetition];
+    if (ENABLE_LOGGING) {
+      console.log('\n--- Create Static Assignments ---');
+    }
+    const staticAssignments = this.createStaticAssignments(staticDoings, users);
+    assignmentArray.push(...staticAssignments);
+
+    // Step 4: Assign doings in batches by repetition type
+    if (ENABLE_LOGGING) {
+      console.log('\n--- Create Dynamic Assignments ---');
+    }
+    for (const repetition in dynamicDoingGroups) {
+      const group = dynamicDoingGroups[repetition];
       const groupAssignments = this.optimizeAssignments(
         group,
         users,
@@ -377,14 +404,40 @@ export class AssignmentService {
     );
   }
 
-  // Core: Optimize task assignments for a batch of doings
+  // Core: Create assignments for static doings
+  private createStaticAssignments(doings: any[], users: any[]): Assignment[] {
+    const assignments: Assignment[] = [];
+
+    doings.forEach((doing) => {
+      const user = users.find((u) => u.id === doing.static_user_id);
+      if (user) {
+        if (ENABLE_LOGGING) {
+          console.log(`\n# Static Doing ${doing.id}`);
+          console.log(
+            `-> assigning static doing ${doing.id} to user ${user.id}`,
+          );
+        }
+        assignments.push({ doing, user });
+      } else {
+        if (ENABLE_LOGGING) {
+          console.log(
+            `\n-> WARN: Static user ${doing.static_user_id} of doing ${doing.id}. This doing will not be assigned.\n`,
+          );
+        }
+      }
+    });
+
+    return assignments;
+  }
+
+  // Core: Create optimized assignments for a batch of dynamic doings
   private optimizeAssignments(
     doings: any[],
     users: any[],
     shittyPoints: any[],
     todoHistory: any[],
   ): any[] {
-    const assignments: any[] = [];
+    const assignments: Assignment[] = [];
 
     // Create a scoring matrix for doings and users
     const scores = this.calculateScores(
@@ -405,6 +458,12 @@ export class AssignmentService {
         assignments.push({ doing, user: bestUser });
         if (ENABLE_LOGGING) {
           console.log(`-> Assigned doing ${doing.id} to user ${bestUser.id}\n`);
+        }
+      } else {
+        if (ENABLE_LOGGING) {
+          console.log(
+            `-> WARN: No best user found for doing ${doing.id}. This doing will not be assigned.\n`,
+          );
         }
       }
     });
@@ -492,7 +551,7 @@ export class AssignmentService {
     scores: Map<string, number>,
     assignments: any[],
     users: any[],
-  ) {
+  ): any {
     const eligibleUsers = users.filter((user) => {
       // Apply fairness constraints (e.g., workload balance)
 
@@ -502,6 +561,7 @@ export class AssignmentService {
       }
 
       // get total effort of assignments assigned to this user in the current run
+      // TODO: this is flawed when using repetitionGroups, as it only considers assignments of the same repetitionGroup
       const usersAssignments = assignments.filter((a) => a.user.id === user.id);
       const usersCurrentEffort = usersAssignments.reduce(
         (sum, a) =>
