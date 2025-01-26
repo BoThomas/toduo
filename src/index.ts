@@ -340,6 +340,14 @@ app.group('/api', (apiGroup) =>
             updated_at: new Date(),
           })
           .where(eq(schema.doings.id, Number(id)));
+
+        // if static_user_id is set, remove all shitty points for this doing
+        if (static_user_id !== null) {
+          await db
+            .delete(schema.shitty_points)
+            .where(eq(schema.shitty_points.doing_id, Number(id)));
+        }
+
         return { success: true, message: 'Doing updated' };
       },
       {
@@ -909,6 +917,20 @@ app.group('/api', (apiGroup) =>
           return { success: false, message: 'User not found' };
         }
 
+        // Check if doing has a static assigned user
+        const doingStaticUser = await db.query.doings.findFirst({
+          where: eq(schema.doings.id, doing_id),
+          columns: { static_user_id: true },
+        });
+
+        if (doingStaticUser?.static_user_id !== null) {
+          return {
+            success: false,
+            message:
+              'Shitty points cannot be added to a staticly assigned doing',
+          };
+        }
+
         // Check if an entry already exists for the user and doing
         const existingEntry = await db.query.shitty_points.findFirst({
           where: and(
@@ -987,7 +1009,12 @@ app.group('/api', (apiGroup) =>
             shitty_points_id: schema.shitty_points.id,
           })
           .from(schema.doings)
-          .where(isNull(schema.doings.deleted_at))
+          .where(
+            and(
+              isNull(schema.doings.deleted_at),
+              isNull(schema.doings.static_user_id),
+            ),
+          )
           .leftJoin(
             schema.shitty_points,
             and(
@@ -1001,7 +1028,7 @@ app.group('/api', (apiGroup) =>
           id: row.shitty_points_id,
           doing_id: row.id,
           name: row.name,
-          points: row.points || 0,
+          points: row.points ?? 0,
         }));
 
         return {
@@ -1045,7 +1072,12 @@ app.group('/api', (apiGroup) =>
             totalDoings: count(),
           })
           .from(schema.doings)
-          .where(isNull(schema.doings.deleted_at));
+          .where(
+            and(
+              isNull(schema.doings.deleted_at),
+              isNull(schema.doings.static_user_id),
+            ),
+          );
 
         const totalNumberOfDoings =
           totalNumberOfDoingsArray[0].totalDoings ?? 0;
@@ -1522,7 +1554,12 @@ const maxShittyPointsExceeded = async (
       totalDoings: count(),
     })
     .from(schema.doings)
-    .where(isNull(schema.doings.deleted_at));
+    .where(
+      and(
+        isNull(schema.doings.deleted_at),
+        isNull(schema.doings.static_user_id),
+      ),
+    );
 
   const totalNumberOfDoings = totalNumberOfDoingsArray[0].totalDoings ?? 0;
 
