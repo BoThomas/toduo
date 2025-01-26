@@ -222,6 +222,7 @@ app.group('/api', (apiGroup) =>
           repeats_per_week,
           effort_in_minutes,
           is_active,
+          static_user_id,
         } = ctx.body;
 
         const { group: auth0Group } =
@@ -233,9 +234,10 @@ app.group('/api', (apiGroup) =>
           description,
           notice,
           interval_unit: interval_unit as 'once' | 'weekly' | 'monthly',
-          interval_value: interval_value || 1,
-          repeats_per_week: repeats_per_week || 1,
+          interval_value: interval_value ?? 1,
+          repeats_per_week: repeats_per_week ?? 1,
           effort_in_minutes,
+          static_user_id: static_user_id ?? null,
           is_active,
           created_at: new Date(),
           updated_at: new Date(),
@@ -257,6 +259,7 @@ app.group('/api', (apiGroup) =>
           interval_value: t.Optional(t.Number({ minimum: 1 })),
           repeats_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
+          static_user_id: t.Optional(t.Number()),
           is_active: t.Boolean(),
         }),
         response: t.Object({
@@ -315,6 +318,7 @@ app.group('/api', (apiGroup) =>
           repeats_per_week,
           effort_in_minutes,
           is_active,
+          static_user_id,
         } = ctx.body;
 
         const { group: auth0Group } =
@@ -328,9 +332,10 @@ app.group('/api', (apiGroup) =>
             description,
             notice,
             interval_unit: interval_unit as 'once' | 'weekly' | 'monthly',
-            interval_value: interval_value || 1,
-            repeats_per_week: repeats_per_week || 1,
+            interval_value: interval_value ?? 1,
+            repeats_per_week: repeats_per_week ?? 1,
             effort_in_minutes,
+            static_user_id: static_user_id ?? null,
             is_active,
             updated_at: new Date(),
           })
@@ -356,6 +361,7 @@ app.group('/api', (apiGroup) =>
           repeats_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
           is_active: t.Boolean(),
+          static_user_id: t.Optional(t.Number()),
         }),
         response: t.Object({
           success: t.Boolean(),

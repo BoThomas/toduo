@@ -110,6 +110,17 @@
           >{{ $form.effort_in_minutes.error?.message }}</Message
         >
       </div>
+      <div class="field col-span-12 mt-2">
+        <label for="static_user">Allways done by (optional)</label>
+        <Select
+          id="static_user"
+          name="static_user"
+          :options="users.map((user: any) => user.username)"
+          placeholder="Select User"
+          class="w-full"
+          showClear
+        />
+      </div>
       <div class="field col-span-12">
         <label for="notice">Notice (optional)</label>
         <InputText
@@ -212,12 +223,16 @@
     ></Column>
     <Column header="Active" sortable sortField="is_active">
       <template #body="slotProps">
-        <i
-          :class="{
-            'pi pi-check-circle': slotProps.data.is_active,
-            'pi pi-times-circle text-red-300': !slotProps.data.is_active,
-          }"
-        ></i>
+        <span v-if="slotProps.data.is_active">✅</span>
+        <span v-else>❌</span>
+      </template>
+    </Column>
+    <Column header="Done by" sortable sortField="static_user_id">
+      <template #body="slotProps">
+        {{
+          users.find((user: any) => user.id === slotProps.data.static_user_id)
+            ?.username || '🎲'
+        }}
       </template>
     </Column>
     <Column>
@@ -522,6 +537,7 @@ const openNewTodoDialog = () => {
     interval_value: 1,
     repeats_per_week: 1,
     effort_in_minutes: undefined,
+    static_user: null,
     notice: '',
     is_active: true,
   };
@@ -570,7 +586,13 @@ const assignDoing = async () => {
 };
 
 const openEditDoing = (todo: any) => {
-  currentDoing.value = { ...todo };
+  currentDoing.value = {
+    ...todo,
+    static_user: todo.static_user_id
+      ? users.value.find((user: any) => user.id === todo.static_user_id)
+          .username
+      : null,
+  };
   doingDialogVisible.value = true;
 };
 
@@ -589,6 +611,9 @@ const saveDoing = async (formData: any) => {
       interval_value: formData.states.interval_value.value,
       repeats_per_week: formData.states.repeats_per_week.value,
       effort_in_minutes: formData.states.effort_in_minutes.value,
+      static_user_id: users.value.find(
+        (user: any) => user.username === formData.states.static_user.value,
+      )?.id,
       notice: formData.states.notice.value,
       is_active: formData.states.is_active.value,
     };

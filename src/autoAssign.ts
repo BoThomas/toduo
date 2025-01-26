@@ -31,7 +31,7 @@ export class AssignmentService {
 
   // Main method to perform doing assignment
   async assignTasksForWeek(options?: {
-    dryRun?: boolean; // If true, will not save assignments to the database and skip pre-assignment operations/evaluation
+    dryRun?: boolean; // If true, will not touch current assignments, skip pre-assignment operations, and log assignments instead of saving them
     clearAndReassign?: boolean; // If true, will clear all current assignments and reassign without evaluation
     groupByRepetition?: boolean; // If true, will group doings by repetition type and assign in batches
   }): Promise<void | any[]> {

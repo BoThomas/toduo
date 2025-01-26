@@ -1,0 +1,1 @@
+ALTER TABLE `doings` ADD `static_user_id` integer REFERENCES users(id);

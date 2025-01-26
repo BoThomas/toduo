@@ -22,6 +22,13 @@
       "when": 1737498465786,
       "tag": "0002_lovely_doorman",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1737890480149,
+      "tag": "0003_sparkling_omega_red",
+      "breakpoints": true
     }
   ]
 }
