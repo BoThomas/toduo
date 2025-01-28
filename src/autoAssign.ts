@@ -88,12 +88,11 @@ export class AssignmentService {
     }
 
     // Step 3: Assign static doings
-    const assignmentArray = [];
+    const assignmentArray: Assignment[] = [];
     if (ENABLE_LOGGING) {
       console.log('\n--- Create Static Assignments ---');
     }
-    const staticAssignments = this.createStaticAssignments(staticDoings, users);
-    assignmentArray.push(...staticAssignments);
+    this.addStaticAssignments(assignmentArray, staticDoings, users);
 
     // Step 4: Assign doings in batches by repetition type
     if (ENABLE_LOGGING) {
@@ -101,13 +100,13 @@ export class AssignmentService {
     }
     for (const repetition in dynamicDoingGroups) {
       const group = dynamicDoingGroups[repetition];
-      const groupAssignments = this.optimizeAssignments(
+      this.addDynamicAssignments(
+        assignmentArray,
         group,
         users,
         shittyPoints,
         todoHistory,
       );
-      assignmentArray.push(...groupAssignments);
     }
 
     // Step 4: Save assignments to the database
@@ -405,9 +404,11 @@ export class AssignmentService {
   }
 
   // Core: Create assignments for static doings
-  private createStaticAssignments(doings: any[], users: any[]): Assignment[] {
-    const assignments: Assignment[] = [];
-
+  private addStaticAssignments(
+    assignmentArray: Assignment[],
+    doings: any[],
+    users: any[],
+  ): void {
     doings.forEach((doing) => {
       const user = users.find((u) => u.id === doing.static_user_id);
       if (user) {
@@ -417,7 +418,7 @@ export class AssignmentService {
             `-> assigning static doing ${doing.id} to user ${user.id}`,
           );
         }
-        assignments.push({ doing, user });
+        assignmentArray.push({ doing, user });
       } else {
         if (ENABLE_LOGGING) {
           console.log(
@@ -426,19 +427,16 @@ export class AssignmentService {
         }
       }
     });
-
-    return assignments;
   }
 
   // Core: Create optimized assignments for a batch of dynamic doings
-  private optimizeAssignments(
+  private addDynamicAssignments(
+    currentAssignments: Assignment[],
     doings: any[],
     users: any[],
     shittyPoints: any[],
     todoHistory: any[],
-  ): any[] {
-    const assignments: Assignment[] = [];
-
+  ): void {
     // Create a scoring matrix for doings and users
     const scores = this.calculateScores(
       doings,
@@ -453,9 +451,15 @@ export class AssignmentService {
 
     // Optimize assignment using a simple greedy approach
     doings.forEach((doing) => {
-      const bestUser = this.selectBestUser(doing, scores, assignments, users);
+      const bestUser = this.selectBestUser(
+        doing,
+        doings,
+        scores,
+        currentAssignments,
+        users,
+      );
       if (bestUser) {
-        assignments.push({ doing, user: bestUser });
+        currentAssignments.push({ doing, user: bestUser });
         if (ENABLE_LOGGING) {
           console.log(`-> Assigned doing ${doing.id} to user ${bestUser.id}\n`);
         }
@@ -467,8 +471,6 @@ export class AssignmentService {
         }
       }
     });
-
-    return assignments;
   }
 
   // Scoring: Calculate scores for doing-user pairs
@@ -547,7 +549,8 @@ export class AssignmentService {
 
   // Helper: Select the best user for a given doing
   private selectBestUser(
-    doing: any,
+    currentDoing: any,
+    doings: any[],
     scores: Map<string, number>,
     assignments: any[],
     users: any[],
@@ -561,7 +564,6 @@ export class AssignmentService {
       }
 
       // get total effort of assignments assigned to this user in the current run
-      // TODO: this is flawed when using repetitionGroups, as it only considers assignments of the same repetitionGroup
       const usersAssignments = assignments.filter((a) => a.user.id === user.id);
       const usersCurrentEffort = usersAssignments.reduce(
         (sum, a) =>
@@ -571,7 +573,13 @@ export class AssignmentService {
 
       // Calculate the maximum effort that the user can take
       const userMaxEffort =
-        (user.participation_percent / 100) * this.getTotalEffort(assignments);
+        (user.participation_percent / 100) * this.getTotalEffort(doings);
+
+      if (ENABLE_LOGGING) {
+        console.log(
+          `# Doing ${currentDoing.id} User ${user.id} Current Effort ${usersCurrentEffort} Max Effort ${userMaxEffort}`,
+        );
+      }
 
       // Allow assignment if the user has no assignments yet
       // or if their total effort is within their maximum effort
@@ -580,12 +588,14 @@ export class AssignmentService {
 
     // Find the user with the highest score for this doing
     return eligibleUsers.reduce((bestUser, user) => {
-      const score = scores.get(`${doing.id}-${user.id}`) || 0;
+      const score = scores.get(`${currentDoing.id}-${user.id}`) || 0;
       if (ENABLE_LOGGING) {
-        console.log(`# Doing ${doing.id} User ${user.id} Score ${score}`);
+        console.log(
+          `# Doing ${currentDoing.id} User ${user.id} Score ${score}`,
+        );
       }
       return !bestUser ||
-        score > (scores.get(`${doing.id}-${bestUser.id}`) || 0)
+        score > (scores.get(`${currentDoing.id}-${bestUser.id}`) || 0)
         ? user
         : bestUser;
     }, null);
@@ -640,11 +650,10 @@ export class AssignmentService {
     await this.db.insert(assignments).values(assignmentsToSave);
   }
 
-  // Helper: Calculate total effort from assignments
-  private getTotalEffort(assignments: any[]): number {
-    return assignments.reduce(
-      (sum, a) =>
-        sum + a.doing.effort_in_minutes * (a.doing.repeats_per_week ?? 1),
+  // Helper: Calculate total effort from assignments/doings
+  private getTotalEffort(doings: any[]): number {
+    return doings.reduce(
+      (sum, d) => sum + d.effort_in_minutes * (d.repeats_per_week ?? 1),
       0,
     );
   }
