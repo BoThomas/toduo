@@ -47,6 +47,7 @@
   <div v-if="autoassignCronInfo?.name" class="mt-10">
     <p>The autoassign cron is currently running.</p>
     <p><strong>Cron Time:</strong> {{ autoassignCronInfo.cronTime }}</p>
+    <p><strong>Cron Redable:</strong> {{ autoassignCronInfo.cronString }}</p>
     <p><strong>Next Dates:</strong></p>
     <ul class="list-disc pl-5">
       <li v-for="date in autoassignCronInfo.nextDates" :key="date">
@@ -57,18 +58,51 @@
   <div v-else class="mt-10">
     <p>The autoassign cron is currently stopped.</p>
   </div>
+
+  <Dialog
+    v-model:visible="cronTimeDialogVisible"
+    header="Set Autoassign Cron Time and enable the Cron Job"
+    :modal="true"
+    class="w-full mx-5 max-w-2xl"
+  >
+    <div class="field">
+      <label for="cronTime">Cron Time</label>
+      <InputText
+        id="cronTime"
+        v-model="cronTime"
+        placeholder="e.g. 0 23 * * 0"
+        class="w-full"
+      />
+      <p class="mt-2 text-sm text-gray-600">{{ cronExplanation }}</p>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <Button
+        label="Cancel"
+        icon="pi pi-times"
+        @click="cronTimeDialogVisible = false"
+        class="p-button-text"
+      />
+      <Button label="Save" icon="pi pi-check" @click="saveCronTime" />
+    </div>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import InputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { readAPI, createAPI, updateApi } from '@/services/apiService';
+import cronstrue from 'cronstrue';
 
 const toast = useToast();
 const confirm = useConfirm();
 const autoassignCronInfo = ref<any>({});
+
+const cronTimeDialogVisible = ref(false);
+const cronTime = ref();
 
 onMounted(async () => {
   await fetchAutoassignCronInfo();
@@ -76,7 +110,13 @@ onMounted(async () => {
 
 const fetchAutoassignCronInfo = async () => {
   try {
-    autoassignCronInfo.value = await readAPI('/doings/autoassign/cron');
+    const cronInfo = await readAPI('/doings/autoassign/cron');
+    if (cronInfo.cronTime) {
+      cronInfo.cronString = cronstrue.toString(cronInfo.cronTime, {
+        use24HourTimeFormat: true,
+      });
+    }
+    autoassignCronInfo.value = cronInfo;
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -88,25 +128,56 @@ const fetchAutoassignCronInfo = async () => {
 };
 
 const confirmCronControl = async () => {
-  confirm.require({
-    header: `Are you sure you want to ${
-      autoassignCronInfo.value.running ? 'stop' : 'start'
-    } the autoassign cron?`,
-    message: 'This only affects new future assignments.',
-    defaultFocus: 'reject',
-    rejectProps: {
-      label: 'Cancel',
-      severity: 'secondary',
-      outlined: true,
-    },
-    acceptProps: {
-      label: autoassignCronInfo.value.running ? 'Stop' : 'Start',
-    },
-    icon: 'pi pi-exclamation-triangle',
-    accept: async () => {
-      await controlAutoassignCron();
-    },
-  });
+  if (autoassignCronInfo.value.running) {
+    confirm.require({
+      header: 'Are you sure you want to stop the autoassign cron?',
+      message: 'This only affects new future assignments.',
+      defaultFocus: 'reject',
+      rejectProps: {
+        label: 'Cancel',
+        severity: 'secondary',
+        outlined: true,
+      },
+      acceptProps: {
+        label: 'Stop',
+      },
+      icon: 'pi pi-exclamation-triangle',
+      accept: async () => {
+        await controlAutoassignCron();
+      },
+    });
+  } else {
+    cronTime.value = autoassignCronInfo.value.cronTime ?? '0 23 * * 0';
+    cronTimeDialogVisible.value = true;
+  }
+};
+
+const cronExplanation = computed(() => {
+  try {
+    return cronstrue.toString(cronTime.value, { use24HourTimeFormat: true });
+  } catch (error) {
+    return 'Invalid cron time format';
+  }
+});
+
+const isValidCronTime = (cronTime: string) => {
+  const cronRegex =
+    /^(\*|([0-5]?\d)) (\*|([01]?\d|2[0-3])) (\*|([1-9]|[12]\d|3[01])) (\*|([1-9]|1[0-2])) (\*|([0-6]))$/;
+  return cronRegex.test(cronTime);
+};
+
+const saveCronTime = async () => {
+  if (!isValidCronTime(cronTime.value)) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error Message',
+      detail: 'Invalid cron time format. Please enter a valid cron time.',
+      life: 3000,
+    });
+    return;
+  }
+  cronTimeDialogVisible.value = false;
+  await controlAutoassignCron();
 };
 
 const controlAutoassignCron = async () => {
@@ -118,6 +189,7 @@ const controlAutoassignCron = async () => {
     } else {
       await updateApi('/doings/autoassign/cron', {
         enable: true,
+        cronTime: cronTime.value,
       });
     }
     await fetchAutoassignCronInfo();
