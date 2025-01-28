@@ -1811,3 +1811,6 @@ const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
   }
   return options;
 };
+
+// test auto assign
+await new AssignmentService('beto').assignTasksForWeek({ dryRun: true });

@@ -15,18 +15,18 @@
   },
   "dependencies": {
     "@elysiajs/cors": "^1.2.0",
-    "@elysiajs/static": "^1.1.1",
-    "@elysiajs/swagger": "^1.1.6",
+    "@elysiajs/static": "^1.2.0",
+    "@elysiajs/swagger": "^1.2.0",
     "croner": "^9.0.0",
     "drizzle-orm": "^0.36.4",
-    "elysia": "^1.2.9",
+    "elysia": "^1.2.10",
     "jose": "^5.9.6",
     "logestic": "^1.2.4"
   },
   "devDependencies": {
     "bun-types": "latest",
     "drizzle-kit": "^0.28.1",
-    "prettier": "^3.3.3"
+    "prettier": "^3.4.2"
   },
   "engines": {
     "bun": ">=0.1.0"
