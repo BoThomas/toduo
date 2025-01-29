@@ -19,7 +19,7 @@
 
     <div class="grid grid-cols-12 gap-4 sm:mt-6">
       <div class="col-span-12 md:col-span-6 md:mt-6">
-        <h3 class="mb-2">Work Done (in hours)</h3>
+        <h3 class="mb-2">Completed Todos</h3>
         <Tabs value="0">
           <TabList>
             <Tab value="0">This Week</Tab>
@@ -41,7 +41,7 @@
       </div>
 
       <div class="col-span-12 md:col-span-6 md:mt-6">
-        <h3 class="mb-2">Upcoming Work (in hours)</h3>
+        <h3 class="mb-2">Completed Minutes</h3>
         <Tabs value="0">
           <TabList>
             <Tab value="0">This Week</Tab>
