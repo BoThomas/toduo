@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "bunx --bun vite",
-    "build": "run-p type-check \"build-only {@}\" --",
-    "build-only": "bunx --bun vite build",
+    "build": "bunx --bun vite build",
     "type-check": "vue-tsc --build --force"
   },
   "dependencies": {

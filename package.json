@@ -7,7 +7,7 @@
     "dev-frontend": "cd frontend && bun run dev",
     "inst": "bun install && bun install --cwd ./frontend",
     "build": "bun run build-frontend && bun run build-backend",
-    "build-frontend": "cd frontend && bun run build-only",
+    "build-frontend": "cd frontend && bun run build",
     "build-backend": "bun build --target=bun src/index.ts --outdir dist",
     "start": "bun run dist/index.js",
     "format": "prettier --write .",
