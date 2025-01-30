@@ -618,7 +618,7 @@ const saveDoing = async (formData: any) => {
       is_active: formData.states.is_active.value,
     };
     if (currentDoingId) {
-      await updateApi(`/doings/${currentDoingId + 999}`, updateDoingData);
+      await updateApi(`/doings/${currentDoingId}`, updateDoingData);
     } else {
       await createAPI('/doings', updateDoingData);
     }
