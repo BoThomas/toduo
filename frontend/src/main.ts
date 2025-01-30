@@ -32,7 +32,7 @@ app.use(router);
 const MyPreset = definePreset(Aura, {
   components: {
     menubar: {
-      // TODO: not working in prime vue, handled in js/css
+      // currently not working in prime vue, handled in js/css
       // item: {
       //   active: {
       //     background: "red",
@@ -45,6 +45,18 @@ const MyPreset = definePreset(Aura, {
     },
   },
   semantic: {
+    // currently not working in prime vue, handled in js/css
+    //databaseHeaderCellBackground: 'red',
+    // datatable: {
+    //   header: {
+    //     border: {
+    //       color: 'red',
+    //     },
+    //     cell: {
+    //       background: 'red',
+    //     },
+    //   },
+    // },
     transitionDuration: '0.2s',
     focusRing: {
       width: '1px',

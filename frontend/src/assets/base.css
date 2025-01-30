@@ -24,7 +24,6 @@ body {
   font-family: 'Nunito', sans-serif;
 }
 
-/* TODO: add in PrimeVue Design Preset*/
 .p-datatable-header-cell {
   background-color: var(--p-primary-100) !important;
 }
