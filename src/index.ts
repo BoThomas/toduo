@@ -229,19 +229,36 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        await db.insert(schema.doings).values({
-          name,
-          description,
-          notice,
-          interval_unit: interval_unit as 'once' | 'weekly' | 'monthly',
-          interval_value: interval_value ?? 1,
-          repeats_per_week: repeats_per_week ?? 1,
-          effort_in_minutes,
-          static_user_id: static_user_id ?? null,
-          is_active,
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
+        try {
+          await db.insert(schema.doings).values({
+            name,
+            description,
+            notice,
+            interval_unit: interval_unit as 'once' | 'weekly' | 'monthly',
+            interval_value: interval_value ?? 1,
+            repeats_per_week: repeats_per_week ?? 1,
+            effort_in_minutes,
+            static_user_id: static_user_id ?? null,
+            is_active,
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+        } catch (error: any) {
+          if (
+            error.code === 'SQLITE_CONSTRAINT_UNIQUE' &&
+            error.message.includes('doings.name')
+          ) {
+            return {
+              success: false,
+              message: 'A doing with this name already exists',
+            };
+          }
+          console.log(error);
+          return {
+            success: false,
+            message: `Failed to create doing, ${error}`,
+          };
+        }
         return { success: true, message: 'Doing created' };
       },
       {
@@ -324,6 +341,18 @@ app.group('/api', (apiGroup) =>
         const { group: auth0Group } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
+
+        // check if doing exists
+        const doingExists = await db.query.doings.findFirst({
+          where: eq(schema.doings.id, Number(id)),
+        });
+
+        if (!doingExists) {
+          return {
+            success: false,
+            message: 'The doing you want to update was not found',
+          };
+        }
 
         await db
           .update(schema.doings)
