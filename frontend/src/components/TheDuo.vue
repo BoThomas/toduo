@@ -234,7 +234,7 @@ const updateShittyPoints = async (shittypoints: any, amount: number) => {
       summary: 'Error Message',
       detail: 'Shitty points could not be updated',
       life: 3000,
-    });
+    }); // TODO: Add error message from API
   }
 };
 </script>

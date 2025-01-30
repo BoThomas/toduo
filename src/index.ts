@@ -25,6 +25,7 @@ import {
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
 import { startActiveCronJobs } from './utils/startActiveCronJobs';
+import * as dbHelpers from './utils/dbHelpers';
 import CronJobManager from './timer';
 import type { BunFile } from 'bun';
 
@@ -941,7 +942,10 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
+        const user_id = await dbHelpers.getUserIdFromAuth0UserId(
+          auth0UserId,
+          db,
+        );
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -1025,7 +1029,10 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
+        const user_id = await dbHelpers.getUserIdFromAuth0UserId(
+          auth0UserId,
+          db,
+        );
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -1091,7 +1098,10 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
+        const user_id = await dbHelpers.getUserIdFromAuth0UserId(
+          auth0UserId,
+          db,
+        );
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -1146,7 +1156,10 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        const user_id = await getUserIdFromAuth0UserId(auth0UserId, db);
+        const user_id = await dbHelpers.getUserIdFromAuth0UserId(
+          auth0UserId,
+          db,
+        );
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -1687,15 +1700,6 @@ const getAggregationData = (
     (table === 'doings' || table === 'history')
     ? sql`sum(${schema[table].effort_in_minutes}) FILTER (WHERE ${timeframeCondition})`
     : sql`count(${schema[table].id}) FILTER (WHERE ${timeframeCondition})`;
-};
-
-// helper function to get user from context auth0 id
-const getUserIdFromAuth0UserId = async (auth0UserId: string, db: any) => {
-  const user = await db.query.users.findFirst({
-    where: eq(schema.users.auth0_id, auth0UserId),
-    columns: { id: true },
-  });
-  return user?.id;
 };
 
 // helper function to check if max shitty points is reached
