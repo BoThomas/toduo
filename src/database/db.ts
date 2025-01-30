@@ -5,6 +5,7 @@ import * as schema from './schema';
 import { mkdirSync, existsSync } from 'fs';
 
 const LOG_ENABLED = true;
+const DB_LOGGER_ENABLED = false;
 
 if (!process.env.SQLITE_PATH) {
   throw new Error('SQLITE_PATH environment variable is not set');
@@ -65,7 +66,7 @@ const getDbConnection = (
     create: createIfNotExists,
     readwrite: true,
   });
-  const db = drizzle(sqlite, { schema });
+  const db = drizzle(sqlite, { schema, logger: DB_LOGGER_ENABLED });
   migrate(db, {
     migrationsFolder: 'src/database/migrations',
   });
