@@ -35,7 +35,7 @@ const apiRequest = async (
     if (!responseJson.success) {
       throw new Error(responseJson.message);
     }
-    console.log('API Response:', responseJson.message); // TODO: remove
+    //console.log('API Response:', responseJson.message);
     return responseJson.data;
   } catch (error: any) {
     console.error(error.message);
