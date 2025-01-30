@@ -26,7 +26,7 @@ import {
 import { AssignmentService } from './autoAssign';
 import { startActiveCronJobs } from './utils/startActiveCronJobs';
 import { handleRepeatedAssignments } from './utils/handleRepeatedAssignments';
-import * as dbHelpers from './utils/dbHelpers';
+import * as Helpers from './utils/helpers';
 import CronJobManager from './timer';
 import type { BunFile } from 'bun';
 
@@ -127,7 +127,7 @@ app.group('/api', (apiGroup) =>
 
         // check if user needs to be added to the db
         try {
-          await dbHelpers.addUserToDbIfNotExists(userInfo);
+          await Helpers.addUserToDbIfNotExists(userInfo);
         } catch (e) {
           console.error('Failed to add user to db', userInfo, e);
           return error(500);
@@ -948,10 +948,7 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        const user_id = await dbHelpers.getUserIdFromAuth0UserId(
-          auth0UserId,
-          db,
-        );
+        const user_id = await Helpers.getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -992,7 +989,7 @@ app.group('/api', (apiGroup) =>
           };
         }
 
-        const maxMessage = await dbHelpers.maxShittyPointsExceeded(
+        const maxMessage = await Helpers.maxShittyPointsExceeded(
           db,
           0,
           points,
@@ -1048,10 +1045,7 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        const user_id = await dbHelpers.getUserIdFromAuth0UserId(
-          auth0UserId,
-          db,
-        );
+        const user_id = await Helpers.getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -1117,10 +1111,7 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        const user_id = await dbHelpers.getUserIdFromAuth0UserId(
-          auth0UserId,
-          db,
-        );
+        const user_id = await Helpers.getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -1175,10 +1166,7 @@ app.group('/api', (apiGroup) =>
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
-        const user_id = await dbHelpers.getUserIdFromAuth0UserId(
-          auth0UserId,
-          db,
-        );
+        const user_id = await Helpers.getUserIdFromAuth0UserId(auth0UserId, db);
         if (!user_id) {
           return { success: false, message: 'User not found' };
         }
@@ -1202,7 +1190,7 @@ app.group('/api', (apiGroup) =>
           };
         }
 
-        const maxMessage = await dbHelpers.maxShittyPointsExceeded(
+        const maxMessage = await Helpers.maxShittyPointsExceeded(
           db,
           currentPoints.points,
           points,
@@ -1601,7 +1589,7 @@ app.group('/siri', (siriGroup) =>
         const { userName } = ctx.query;
 
         const db = getDbConnection(
-          await dbHelpers.getAndValidateDbGroupFromApiKey(apiKey),
+          await Helpers.getAndValidateDbGroupFromApiKey(apiKey),
         );
 
         // Optional filter by userName
