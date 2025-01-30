@@ -604,7 +604,7 @@ const saveDoing = async (formData: any) => {
     const currentDoingId = currentDoing.value.id;
 
     // update currentDoing with form data
-    currentDoing.value = {
+    const updateDoingData = {
       name: formData.states.name.value,
       description: formData.states.description.value,
       interval_unit: formData.states.interval_unit.value,
@@ -617,25 +617,27 @@ const saveDoing = async (formData: any) => {
       notice: formData.states.notice.value,
       is_active: formData.states.is_active.value,
     };
-    let response;
     if (currentDoingId) {
-      response = await updateApi(
-        `/doings/${currentDoingId}`,
-        currentDoing.value,
-      );
+      await updateApi(`/doings/${currentDoingId + 999}`, updateDoingData);
     } else {
-      response = await createAPI('/doings', currentDoing.value);
+      await createAPI('/doings', updateDoingData);
     }
     doingDialogVisible.value = false;
-    await fetchDoings();
+    toast.add({
+      severity: 'success',
+      summary: 'Success Message',
+      detail: 'Doing saved successfully',
+      life: 3000,
+    });
   } catch (error: any) {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
-      detail: 'Doing could not be saved',
+      detail: `Doing not saved: ${error.message}`,
       life: 3000,
     });
-    // TODO: show error in form
+  } finally {
+    await fetchDoings();
   }
 };
 
