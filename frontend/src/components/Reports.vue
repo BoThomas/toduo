@@ -28,13 +28,28 @@
           </TabList>
           <TabPanels>
             <TabPanel value="0">
-              <h4>Total Hours: {{ workDone.week }}</h4>
+              <div v-for="user in completedTodosCount" :key="user.username">
+                <h4>
+                  {{ user.username }}:
+                  <span class="text-primary">{{ user.week }}</span>
+                </h4>
+              </div>
             </TabPanel>
             <TabPanel value="1">
-              <h4>Total Hours: {{ workDone.month }}</h4>
+              <div v-for="user in completedTodosCount" :key="user.username">
+                <h4>
+                  {{ user.username }}:
+                  <span class="text-primary">{{ user.month }}</span>
+                </h4>
+              </div>
             </TabPanel>
             <TabPanel value="2">
-              <h4>Total Hours: {{ workDone.year }}</h4>
+              <div v-for="user in completedTodosCount" :key="user.username">
+                <h4>
+                  {{ user.username }}:
+                  <span class="text-primary">{{ user.year }}</span>
+                </h4>
+              </div>
             </TabPanel>
           </TabPanels>
         </Tabs>
@@ -50,13 +65,43 @@
           </TabList>
           <TabPanels>
             <TabPanel value="0">
-              <h4>Total Hours: {{ upcomingWork.week }}</h4>
+              <div v-for="user in completedTodosMinutsSum" :key="user.username">
+                <h4>
+                  {{ user.username }}:
+                  <span class="text-primary"
+                    >{{ user.week }} min ({{
+                      Math.round(user.week / 60)
+                    }}
+                    h)</span
+                  >
+                </h4>
+              </div>
             </TabPanel>
             <TabPanel value="1">
-              <h4>Total Hours: {{ upcomingWork.month }}</h4>
+              <div v-for="user in completedTodosMinutsSum" :key="user.username">
+                <h4>
+                  {{ user.username }}:
+                  <span class="text-primary"
+                    >{{ user.month }} min ({{
+                      Math.round(user.month / 60)
+                    }}
+                    h)</span
+                  >
+                </h4>
+              </div>
             </TabPanel>
             <TabPanel value="2">
-              <h4>Total Hours: {{ upcomingWork.year }}</h4>
+              <div v-for="user in completedTodosMinutsSum" :key="user.username">
+                <h4>
+                  {{ user.username }}:
+                  <span class="text-primary"
+                    >{{ user.year }} min ({{
+                      Math.round(user.year / 60)
+                    }}
+                    h)</span
+                  >
+                </h4>
+              </div>
             </TabPanel>
           </TabPanels>
         </Tabs>
@@ -77,8 +122,8 @@ import { readAPI } from '@/services/apiService';
 
 const completedTodosData = ref<any>(null);
 const completedTodoMinutesData = ref<any>(null);
-const workDone = ref({ week: 0, month: 0, year: 0 });
-const upcomingWork = ref({ week: 0, month: 0, year: 0 });
+const completedTodosCount = ref<any>(null);
+const completedTodosMinutsSum = ref<any>(null);
 
 const chartOptions = {
   responsive: true,
@@ -119,8 +164,7 @@ onMounted(async () => {
   await Promise.all([
     fetchCompletedTodos(),
     fetchCompletedTodoMinutes(),
-    fetchWorkDone(),
-    fetchUpcomingWork(),
+    fetchCompletedTodosTotal(),
   ]);
 });
 
@@ -164,29 +208,25 @@ const fetchCompletedTodoMinutes = async () => {
   }
 };
 
-const fetchWorkDone = async () => {
+const fetchCompletedTodosTotal = async () => {
   try {
-    //TODO: implement
-    workDone.value = {
-      week: -1,
-      month: -1,
-      year: -1,
-    };
-  } catch (error) {
-    console.error('Error fetching work done:', error);
-  }
-};
+    const data = await readAPI('/statistics/completed/sum');
 
-const fetchUpcomingWork = async () => {
-  try {
-    //TODO: implement
-    upcomingWork.value = {
-      week: -1,
-      month: -1,
-      year: -1,
-    };
+    completedTodosCount.value = data.map((item: any) => ({
+      username: item.username,
+      week: item.count_current,
+      month: item.count_month,
+      year: item.count_year,
+    }));
+
+    completedTodosMinutsSum.value = data.map((item: any) => ({
+      username: item.username,
+      week: item.sum_minutes_current,
+      month: item.sum_minutes_month,
+      year: item.sum_minutes_year,
+    }));
   } catch (error) {
-    console.error('Error fetching upcoming work:', error);
+    console.error('Error fetching completed todos total:', error);
   }
 };
 </script>

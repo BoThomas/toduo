@@ -1195,31 +1195,13 @@ app.group('/api', (apiGroup) =>
           const xWeeksAgo = new Date();
           xWeeksAgo.setDate(xWeeksAgo.getDate() - weeksToShow * 7); // x weeks * 7 days
 
-          // Helper functions to get the correct data for the y-axis of the current assignments
-          const getYAxisAssignments = (
-            dataColumn: 'effort_in_minutes' | 'assignments',
-          ) => {
-            return dataColumn === 'effort_in_minutes'
-              ? sql`sum(${schema.doings.effort_in_minutes})`.as('data')
-              : sql`count(${schema.assignments.id})`.as('data');
-          };
-
-          // Helper functions to get the correct data for the y-axis of the history assignments
-          const getYAxisHistory = (
-            dataColumn: 'effort_in_minutes' | 'assignments',
-          ) => {
-            return dataColumn === 'effort_in_minutes'
-              ? sql`sum(${schema.history.effort_in_minutes})`.as('data')
-              : sql`count(${schema.history.id})`.as('data');
-          };
-
           const completedAssignments = await db
             .select({
               username: schema.users.username,
               week: sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`.as(
                 'week',
               ),
-              data: getYAxisAssignments(dataColumn),
+              data: getAggregationData(false, dataColumn),
             })
             .from(schema.assignments)
             .innerJoin(
@@ -1242,7 +1224,7 @@ app.group('/api', (apiGroup) =>
                   week: sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`.as(
                     'week',
                   ),
-                  data: getYAxisHistory(dataColumn),
+                  data: getAggregationData(true, dataColumn),
                 })
                 .from(schema.history)
                 .innerJoin(
@@ -1336,6 +1318,123 @@ app.group('/api', (apiGroup) =>
         }),
       },
     )
+    // Get count and sum of effort_in_minutes of completed todos per user for the last week/month/year
+    .get(
+      '/statistics/completed/sum',
+      async (ctx: any) => {
+        const { group: auth0Group } =
+          (await ctx.authenticatedUserInfo()) as AuthInfo;
+        const db = getDbConnection(auth0Group);
+
+        try {
+          const completedAssignmentCounts = await db
+            .select({
+              username: schema.users.username,
+              count_current: sql`sum("current")`,
+              count_month: sql`sum("month")`,
+              count_year: sql`sum("year")`,
+              sum_minutes_current: sql`sum("current_min")`,
+              sum_minutes_month: sql`sum("month_min")`,
+              sum_minutes_year: sql`sum("year_min")`,
+            })
+            .from(
+              db
+                .select({
+                  username: schema.users.username,
+                  current: sql`count(${schema.assignments.id}) as current`,
+                  month: sql`0 as month`,
+                  year: sql`0 as year`,
+                  current_min: sql`sum(${schema.doings.effort_in_minutes}) as current_min`,
+                  month_min: sql`0 as month_min`,
+                  year_min: sql`0 as year_min`,
+                })
+                .from(schema.assignments)
+                .innerJoin(
+                  schema.users,
+                  eq(schema.assignments.user_id, schema.users.id),
+                )
+                .leftJoin(
+                  schema.doings,
+                  eq(schema.assignments.doing_id, schema.doings.id),
+                )
+                .where(eq(schema.assignments.status, 'completed'))
+                .groupBy(schema.users.username)
+                .union(
+                  db
+                    .select({
+                      username: schema.users.username,
+                      current: sql`0 as current`,
+                      month: getAggregationData(
+                        true,
+                        'assignments',
+                        'month',
+                      ).as('month'),
+                      year: getAggregationData(true, 'assignments', 'year').as(
+                        'year',
+                      ),
+                      current_min: sql`0 as current_min`,
+                      month_min: getAggregationData(
+                        true,
+                        'effort_in_minutes',
+                        'month',
+                      ).as('month_min'),
+                      year_min: getAggregationData(
+                        true,
+                        'effort_in_minutes',
+                        'year',
+                      ).as('year_min'),
+                    })
+                    .from(schema.history)
+                    .innerJoin(
+                      schema.users,
+                      eq(schema.history.user_id, schema.users.id),
+                    )
+                    .where(eq(schema.history.status, 'completed'))
+                    .groupBy(schema.users.username),
+                )
+                .as('combined'),
+            )
+            .innerJoin(
+              schema.users,
+              eq(schema.users.username, sql`combined.username`),
+            )
+            .groupBy(schema.users.username)
+            .orderBy(schema.users.username);
+
+          return {
+            success: true,
+            message:
+              'Completed todo and minutes per user for the last week/month/year',
+            data: completedAssignmentCounts,
+          };
+        } catch (error) {
+          console.error(error);
+          return {
+            success: false,
+            message: `Failed to get statistics, ${error}`,
+            data: {},
+          };
+        }
+      },
+      {
+        response: t.Object({
+          success: t.Boolean(),
+          message: t.String(),
+          data: t.Array(
+            t.Object({
+              username: t.String(),
+              count_current: t.Number(),
+              count_month: t.Number(),
+              count_year: t.Number(),
+              sum_minutes_current: t.Number(),
+              sum_minutes_month: t.Number(),
+              sum_minutes_year: t.Number(),
+            }),
+          ),
+        }),
+      },
+    )
+
     // Download the database
     .get(
       '/database/download',
@@ -1527,6 +1626,39 @@ if (process.env.NODE_ENV === 'development') {
       return Bun.file('./frontend/dist/index.html');
     });
 }
+
+// helper functions to get the correct data for statistic aggregation
+const getAggregationData = (
+  isHistory: boolean,
+  dataColumn: 'effort_in_minutes' | 'assignments',
+  timeframe?: 'month' | 'year',
+) => {
+  // Determine the appropriate table based on the parameters
+  const table = isHistory
+    ? 'history'
+    : dataColumn === 'effort_in_minutes'
+      ? 'doings'
+      : 'assignments';
+
+  // Construct the SQL condition for the specified timeframe
+  let timeframeCondition;
+  switch (timeframe) {
+    case 'month':
+      timeframeCondition = sql`strftime('%Y-%m', datetime(${schema[table].updated_at}, 'unixepoch')) = strftime('%Y-%m', 'now')`;
+      break;
+    case 'year':
+      timeframeCondition = sql`strftime('%Y', datetime(${schema[table].updated_at}, 'unixepoch')) = strftime('%Y', 'now')`;
+      break;
+    default:
+      timeframeCondition = sql`1 = 1`;
+  }
+
+  // Return the appropriate SQL aggregation based on the data column
+  return dataColumn === 'effort_in_minutes' &&
+    (table === 'doings' || table === 'history')
+    ? sql`sum(${schema[table].effort_in_minutes}) FILTER (WHERE ${timeframeCondition})`
+    : sql`count(${schema[table].id}) FILTER (WHERE ${timeframeCondition})`;
+};
 
 // helper function to get user from context auth0 id
 const getUserIdFromAuth0UserId = async (auth0UserId: string, db: any) => {
