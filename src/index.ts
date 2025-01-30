@@ -25,6 +25,7 @@ import {
 } from 'drizzle-orm';
 import { AssignmentService } from './autoAssign';
 import { startActiveCronJobs } from './utils/startActiveCronJobs';
+import { handleRepeatedAssignments } from './utils/handleRepeatedAssignments';
 import * as dbHelpers from './utils/dbHelpers';
 import CronJobManager from './timer';
 import type { BunFile } from 'bun';
@@ -743,7 +744,7 @@ app.group('/api', (apiGroup) =>
         }
 
         // auto handling of repeated assignment states for same doing
-        await autoHandleRepeatedAssignments(
+        await handleRepeatedAssignments(
           db,
           currentDoingId[0].doing_id,
           updateData.status,
@@ -1724,103 +1725,6 @@ const getAggregationData = (
     (table === 'doings' || table === 'history')
     ? sql`sum(${schema[table].effort_in_minutes}) FILTER (WHERE ${timeframeCondition})`
     : sql`count(${schema[table].id}) FILTER (WHERE ${timeframeCondition})`;
-};
-
-// helper function to auto handle status of next repeated assignment
-const autoHandleRepeatedAssignments = async (
-  db: any,
-  parentDoingId: number,
-  parentStatus: string,
-) => {
-  try {
-    if (['completed', 'skipped', 'postponed'].includes(parentStatus)) {
-      // check if there is a pending assignment for the current doing
-      const pendingAssignment = await db
-        .select({
-          id: schema.assignments.id,
-        })
-        .from(schema.assignments)
-        .where(
-          and(
-            eq(schema.assignments.doing_id, parentDoingId),
-            eq(schema.assignments.status, 'pending'),
-          ),
-        )
-        .limit(1);
-
-      // If there is a pending assignment, do not change the status of the next waiting assignment
-      if (pendingAssignment.length > 0) {
-        return;
-      }
-
-      // get the next waiting assignment for the current doing
-      const nextWaitingAssignment = await db
-        .select({
-          id: schema.assignments.id,
-        })
-        .from(schema.assignments)
-        .where(
-          and(
-            eq(schema.assignments.doing_id, parentDoingId),
-            eq(schema.assignments.status, 'waiting'),
-          ),
-        )
-        .orderBy(asc(schema.assignments.id))
-        .limit(1);
-
-      // If there is no next waiting assignment, do nothing
-      if (nextWaitingAssignment.length === 0) {
-        return;
-      }
-
-      // Set the status of the next waiting assignment to pending
-      await db
-        .update(schema.assignments)
-        .set({
-          status: 'pending',
-          updated_at: new Date(),
-        })
-        .where(eq(schema.assignments.id, nextWaitingAssignment[0].id));
-    } else if (parentStatus === 'pending') {
-      // Get all pending assignments for the current doing
-      const pendingAssignments = await db
-        .select({
-          id: schema.assignments.id,
-        })
-        .from(schema.assignments)
-        .where(
-          and(
-            eq(schema.assignments.doing_id, parentDoingId),
-            eq(schema.assignments.status, 'pending'),
-          ),
-        )
-        .orderBy(asc(schema.assignments.id));
-
-      // If there are no pending assignments, do nothing
-      if (pendingAssignments.length === 0) {
-        return;
-      }
-
-      // Set the status of every pending assignment except the first one to waiting
-      await db
-        .update(schema.assignments)
-        .set({
-          status: 'waiting',
-          updated_at: new Date(),
-        })
-        .where(
-          inArray(
-            schema.assignments.id,
-            pendingAssignments.slice(1).map((a: any) => a.id), // Skip the first pending assignment
-          ),
-        );
-    }
-  } catch (error) {
-    console.log(
-      'Error during auto handling of repeated assignments states for same doing. Skipping this step.',
-      error,
-    );
-  }
 };
 
 // Start the server
