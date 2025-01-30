@@ -960,7 +960,7 @@ app.group('/api', (apiGroup) =>
           return {
             success: false,
             message:
-              'Shitty points cannot be added to a staticly assigned doing',
+              'Shitty points cannot be set for a staticly assigned doing',
           };
         }
 
@@ -979,8 +979,21 @@ app.group('/api', (apiGroup) =>
           };
         }
 
-        if (await maxShittyPointsExceeded(db, 0, points, user_id)) {
-          return { success: false, message: 'Max shitty points reached' };
+        if (points < 0) {
+          return {
+            success: false,
+            message: 'Shitty points cannot be negative',
+          };
+        }
+
+        const maxMessage = await dbHelpers.maxShittyPointsExceeded(
+          db,
+          0,
+          points,
+          user_id,
+        );
+        if (maxMessage !== '') {
+          return { success: false, message: maxMessage };
         }
 
         let idObject;
@@ -1012,7 +1025,7 @@ app.group('/api', (apiGroup) =>
       {
         body: t.Object({
           doing_id: t.Number(),
-          points: t.Number({ minimum: 0 }),
+          points: t.Number(),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -1176,15 +1189,21 @@ app.group('/api', (apiGroup) =>
           return { success: false, message: 'Shitty points not found' };
         }
 
-        if (
-          await maxShittyPointsExceeded(
-            db,
-            currentPoints.points,
-            points,
-            user_id,
-          )
-        ) {
-          return { success: false, message: 'Max shitty points reached' };
+        if (points < 0) {
+          return {
+            success: false,
+            message: 'Shitty points cannot be negative',
+          };
+        }
+
+        const maxMessage = await dbHelpers.maxShittyPointsExceeded(
+          db,
+          currentPoints.points,
+          points,
+          user_id,
+        );
+        if (maxMessage !== '') {
+          return { success: false, message: maxMessage };
         }
 
         const updatedRows = await db
@@ -1214,7 +1233,7 @@ app.group('/api', (apiGroup) =>
           id: t.Number(),
         }),
         body: t.Object({
-          points: t.Number({ minimum: 0 }),
+          points: t.Number(),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -1700,43 +1719,6 @@ const getAggregationData = (
     (table === 'doings' || table === 'history')
     ? sql`sum(${schema[table].effort_in_minutes}) FILTER (WHERE ${timeframeCondition})`
     : sql`count(${schema[table].id}) FILTER (WHERE ${timeframeCondition})`;
-};
-
-// helper function to check if max shitty points is reached
-const maxShittyPoints = Number(process.env.MAX_SHITTY_POINTS_PER_DOING || 3);
-const maxShittyPointsExceeded = async (
-  db: any,
-  currentPoints: number,
-  targetPoints: number,
-  user_id: number,
-) => {
-  if (targetPoints > maxShittyPoints) {
-    return true;
-  }
-
-  const totalNumberOfDoingsArray = await db
-    .select({
-      totalDoings: count(),
-    })
-    .from(schema.doings)
-    .where(
-      and(
-        isNull(schema.doings.deleted_at),
-        isNull(schema.doings.static_user_id),
-      ),
-    );
-
-  const totalNumberOfDoings = totalNumberOfDoingsArray[0].totalDoings ?? 0;
-
-  const totalPointsArray = await db
-    .select({
-      totalPoints: sum(schema.shitty_points.points),
-    })
-    .from(schema.shitty_points)
-    .where(eq(schema.shitty_points.user_id, user_id));
-
-  const totalPoints = Number(totalPointsArray[0].totalPoints ?? 0);
-  return totalPoints + targetPoints - currentPoints > totalNumberOfDoings;
 };
 
 // helper function to auto handle status of next repeated assignment

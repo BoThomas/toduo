@@ -74,13 +74,8 @@ import { ref, onMounted } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Slider from 'primevue/slider';
-import Select from 'primevue/select';
 import Button from 'primevue/button';
-import InputText from 'primevue/inputtext';
-import IconField from 'primevue/iconfield';
-import InputIcon from 'primevue/inputicon';
 import { useToast } from 'primevue/usetoast';
-import { FilterMatchMode } from '@primevue/core/api';
 import { createAPI, readAPI, updateApi } from '@/services/apiService';
 
 const toast = useToast();
@@ -227,14 +222,21 @@ const updateShittyPoints = async (shittypoints: any, amount: number) => {
       });
       shittypoints.id = newId;
     }
-    Promise.all([fetchShittyPoints(), fetchAvailableShittyPoints()]);
-  } catch (error) {
+    toast.add({
+      severity: 'success',
+      summary: 'Success Message',
+      detail: 'Shitty points updated',
+      life: 1000,
+    });
+  } catch (error: any) {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
-      detail: 'Shitty points could not be updated',
+      detail: error.message,
       life: 3000,
-    }); // TODO: Add error message from API
+    });
+  } finally {
+    Promise.all([fetchShittyPoints(), fetchAvailableShittyPoints()]);
   }
 };
 </script>
