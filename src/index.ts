@@ -1600,7 +1600,7 @@ app.group('/siri', (siriGroup) =>
         const { userName } = ctx.query;
 
         const db = getDbConnection(
-          await getAndValidateDbGroupFromApiKey(apiKey),
+          await dbHelpers.getAndValidateDbGroupFromApiKey(apiKey),
         );
 
         // Optional filter by userName
@@ -1830,32 +1830,6 @@ console.log(
 );
 
 await startActiveCronJobs(timer);
-
-// helper function to get the db group from the api key
-const getAndValidateDbGroupFromApiKey = async (apiKey: string) => {
-  if (!apiKey) {
-    throw new Error('Invalid API key');
-  }
-
-  // parse group from api key (e.g. 'group__api_key')
-  const group = apiKey.split('__')[0];
-
-  if (!group) {
-    throw new Error('Invalid API key');
-  }
-
-  const db = getDbConnection(group, false);
-  const apiKeyExists = await db
-    .select({ key: schema.apikeys.key })
-    .from(schema.apikeys)
-    .where(eq(schema.apikeys.key, apiKey));
-
-  if (apiKeyExists.length === 0) {
-    throw new Error('Invalid API key');
-  }
-
-  return group;
-};
 
 // helper function to get the available status options based on the interval unit and repeats per week
 // TODO: this is also used in client, move to shared module

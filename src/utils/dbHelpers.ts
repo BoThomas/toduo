@@ -143,3 +143,37 @@ export const addUserToDbIfNotExists = async (
     `User ${userInfo.name} added to database ${userInfo.group} with ${newParticipationPercent}% participation`,
   );
 };
+
+/**
+ * Retrieves and validates the database group from the provided API key.
+ *
+ * @param {string} apiKey - The API key to validate and extract the group from.
+ * @returns {Promise<string>} - A promise that resolves to the group extracted from the API key.
+ * @throws {Error} - Throws an error if the API key is invalid or does not exist in the database.
+ */
+export const getAndValidateDbGroupFromApiKey = async (
+  apiKey: string,
+): Promise<string> => {
+  if (!apiKey) {
+    throw new Error('Invalid API key');
+  }
+
+  // parse group from api key (e.g. 'group__api_key')
+  const group = apiKey.split('__')[0];
+
+  if (!group) {
+    throw new Error('Invalid API key');
+  }
+
+  const db = getDbConnection(group, false);
+  const apiKeyExists = await db
+    .select({ key: schema.apikeys.key })
+    .from(schema.apikeys)
+    .where(eq(schema.apikeys.key, apiKey));
+
+  if (apiKeyExists.length === 0) {
+    throw new Error('Invalid API key');
+  }
+
+  return group;
+};
