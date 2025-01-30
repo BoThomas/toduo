@@ -53,7 +53,7 @@ if (process.env.AUTH0_DISABLED === 'true') {
 }
 // create elysia auth service to use in the elysia app
 // use derive to add a scoped function to the Context for usage in route handlers
-type AuthInfo = { id: string; group: string; name: string };
+type AuthInfo = { id: string; group: string; name: string }; // TODO: move to a shared types file
 const AuthService = new Elysia({ name: 'Service.Auth' }).derive(
   { as: 'scoped' },
   async ({ headers }) => ({
@@ -125,7 +125,12 @@ app.group('/api', (apiGroup) =>
           return error(401);
 
         // check if user needs to be added to the db
-        addUserToDbIfNotExists(userInfo);
+        try {
+          await dbHelpers.addUserToDbIfNotExists(userInfo);
+        } catch (e) {
+          console.error('Failed to add user to db', userInfo, e);
+          return error(500);
+        }
       },
     })
 
@@ -1825,46 +1830,6 @@ console.log(
 );
 
 await startActiveCronJobs(timer);
-
-// helper function to add the user to the db if not already present
-const addUserToDbIfNotExists = async (userInfo: AuthInfo) => {
-  // get db connection
-  const db = getDbConnection(userInfo.group);
-
-  // check if user already exists
-  const userExists = await db.query.users.findFirst({
-    where: eq(schema.users.auth0_id, userInfo.id),
-  });
-  if (userExists) {
-    return;
-  }
-
-  // check sum of all participation_percent
-  const users = await db.query.users.findMany({
-    columns: { participation_percent: true },
-  });
-  const sum = users.reduce(
-    (acc: any, user: any) => acc + user.participation_percent,
-    0,
-  );
-  const newParticipationPercent = 100 - sum;
-
-  try {
-    await db.insert(schema.users).values({
-      username: userInfo.name,
-      auth0_id: userInfo.id,
-      participation_percent: newParticipationPercent,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-  } catch (error) {
-    console.log(error);
-    return {
-      success: false,
-      message: `Failed to create user, ${error}`,
-    };
-  }
-};
 
 // helper function to get the db group from the api key
 const getAndValidateDbGroupFromApiKey = async (apiKey: string) => {
