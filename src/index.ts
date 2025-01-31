@@ -26,6 +26,7 @@ import {
 import { AssignmentService } from './autoAssign';
 import { startActiveCronJobs } from './utils/startActiveCronJobs';
 import { handleRepeatedAssignments } from './utils/handleRepeatedAssignments';
+import { generateStatisticAggregationSql } from './utils/generateStatisticAggregationSql';
 import * as Helpers from './utils/helpers';
 import CronJobManager from './timer';
 import type { BunFile } from 'bun';
@@ -1256,7 +1257,7 @@ app.group('/api', (apiGroup) =>
               week: sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`.as(
                 'week',
               ),
-              data: getAggregationData(false, dataColumn),
+              data: generateStatisticAggregationSql(false, dataColumn),
             })
             .from(schema.assignments)
             .innerJoin(
@@ -1279,7 +1280,7 @@ app.group('/api', (apiGroup) =>
                   week: sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`.as(
                     'week',
                   ),
-                  data: getAggregationData(true, dataColumn),
+                  data: generateStatisticAggregationSql(true, dataColumn),
                 })
                 .from(schema.history)
                 .innerJoin(
@@ -1419,21 +1420,23 @@ app.group('/api', (apiGroup) =>
                     .select({
                       username: schema.users.username,
                       current: sql`0 as current`,
-                      month: getAggregationData(
+                      month: generateStatisticAggregationSql(
                         true,
                         'assignments',
                         'month',
                       ).as('month'),
-                      year: getAggregationData(true, 'assignments', 'year').as(
+                      year: generateStatisticAggregationSql(
+                        true,
+                        'assignments',
                         'year',
-                      ),
+                      ).as('year'),
                       current_min: sql`0 as current_min`,
-                      month_min: getAggregationData(
+                      month_min: generateStatisticAggregationSql(
                         true,
                         'effort_in_minutes',
                         'month',
                       ).as('month_min'),
-                      year_min: getAggregationData(
+                      year_min: generateStatisticAggregationSql(
                         true,
                         'effort_in_minutes',
                         'year',
@@ -1681,39 +1684,6 @@ if (process.env.NODE_ENV === 'development') {
       return Bun.file('./frontend/dist/index.html');
     });
 }
-
-// helper functions to get the correct data for statistic aggregation
-const getAggregationData = (
-  isHistory: boolean,
-  dataColumn: 'effort_in_minutes' | 'assignments',
-  timeframe?: 'month' | 'year',
-) => {
-  // Determine the appropriate table based on the parameters
-  const table = isHistory
-    ? 'history'
-    : dataColumn === 'effort_in_minutes'
-      ? 'doings'
-      : 'assignments';
-
-  // Construct the SQL condition for the specified timeframe
-  let timeframeCondition;
-  switch (timeframe) {
-    case 'month':
-      timeframeCondition = sql`strftime('%Y-%m', datetime(${schema[table].updated_at}, 'unixepoch')) = strftime('%Y-%m', 'now')`;
-      break;
-    case 'year':
-      timeframeCondition = sql`strftime('%Y', datetime(${schema[table].updated_at}, 'unixepoch')) = strftime('%Y', 'now')`;
-      break;
-    default:
-      timeframeCondition = sql`1 = 1`;
-  }
-
-  // Return the appropriate SQL aggregation based on the data column
-  return dataColumn === 'effort_in_minutes' &&
-    (table === 'doings' || table === 'history')
-    ? sql`sum(${schema[table].effort_in_minutes}) FILTER (WHERE ${timeframeCondition})`
-    : sql`count(${schema[table].id}) FILTER (WHERE ${timeframeCondition})`;
-};
 
 // Start the server
 app.listen(process.env.PORT || 3000);
