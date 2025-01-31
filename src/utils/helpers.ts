@@ -12,6 +12,13 @@ type AuthInfo = { id: string; group: string; name: string };
 const MAX_SHITTY_POINTS_PER_DOING = Number(
   process.env.MAX_SHITTY_POINTS_PER_DOING || 3,
 );
+const STATUS_OPTIONS = [
+  'waiting',
+  'pending',
+  'completed',
+  'skipped',
+  'postponed',
+];
 
 // helper functions
 
@@ -176,4 +183,42 @@ export const getAndValidateDbGroupFromApiKey = async (
   }
 
   return group;
+};
+
+/**
+ * Filters the status options based on the interval unit and the number of repeats per week.
+ *
+ * Also see '/frontend/src/Components/TheDoings.vue' for the corresponding frontend implementation.
+ *
+ * @param {string} interval_unit - The unit of the interval (e.g., 'weekly', 'once').
+ * @param {number} repeats_per_week - The number of times the task repeats per week.
+ * @returns {string[]} The filtered list of status options.
+ *
+ * The function performs the following filtering:
+ * - For 'weekly' interval unit, it removes the 'postponed' status option.
+ * - For 'once' interval unit, it removes the 'skipped' status option.
+ * - For tasks that repeat once or less per week, it removes the 'waiting' status option.
+ */
+export const filterStatusOptions = (
+  interval_unit: string,
+  repeats_per_week: number,
+): string[] => {
+  let options = [...STATUS_OPTIONS];
+
+  // for weekly todos, we don't want to show postponed status
+  // as it doesn't make sense because the todo will be reassigned the next day/week anyway
+  if (interval_unit === 'weekly') {
+    options = options.filter((option) => option !== 'postponed');
+  }
+
+  // for once todos, we don't want to show skipped status
+  if (interval_unit === 'once') {
+    options = options.filter((option) => option !== 'skipped');
+  }
+
+  // only for repeated todos is waiting status allowed
+  if (repeats_per_week <= 1) {
+    options = options.filter((option) => option !== 'waiting');
+  }
+  return options;
 };

@@ -322,7 +322,7 @@
         <Select
           v-model="slotProps.data.status"
           :options="
-            getStatusOptions(
+            filterStatusOptions(
               slotProps.data.doingIntervalUnit,
               slotProps.data.doingRepeatsPerWeek,
             )
@@ -447,7 +447,7 @@ const STATUS_OPTIONS = [
   'completed',
   'skipped',
   'postponed',
-]; //TODO: move to type model
+];
 
 const clearDoingsFilter = () => {
   doingFilters.value.global.value = null;
@@ -659,7 +659,12 @@ const deleteDoing = async (id: number) => {
     accept: async () => {
       try {
         await deleteApi(`/doings/${id}`);
-        await fetchDoings();
+        toast.add({
+          severity: 'success',
+          summary: 'Success Message',
+          detail: 'Doing deleted successfully',
+          life: 3000,
+        });
       } catch (error) {
         toast.add({
           severity: 'error',
@@ -667,6 +672,8 @@ const deleteDoing = async (id: number) => {
           detail: 'Doing could not be deleted',
           life: 3000,
         });
+      } finally {
+        await fetchDoings();
       }
     },
   });
@@ -681,7 +688,12 @@ const updateAssignment = async (assignment: any) => {
       assignedUserId: user.id,
       status: assignment.status,
     });
-    await fetchAssignments();
+    toast.add({
+      severity: 'success',
+      summary: 'Success Message',
+      detail: 'Assignment updated successfully',
+      life: 3000,
+    });
   } catch (error) {
     toast.add({
       severity: 'error',
@@ -689,6 +701,8 @@ const updateAssignment = async (assignment: any) => {
       detail: 'Could not update assignment',
       life: 3000,
     });
+  } finally {
+    await fetchAssignments();
   }
 };
 
@@ -724,7 +738,10 @@ const confirmDeleteAssignment = (assignmentId: number, doingName: string) => {
 };
 
 // helper function to get the available status options based on the interval unit and repeats per week
-const getStatusOptions = (interval_unit: string, repeats_per_week: number) => {
+const filterStatusOptions = (
+  interval_unit: string,
+  repeats_per_week: number,
+) => {
   let options = [...STATUS_OPTIONS];
 
   // for weekly todos, we don't want to show postponed status
