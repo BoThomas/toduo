@@ -19,7 +19,7 @@
     "@elysiajs/swagger": "^1.2.0",
     "croner": "^9.0.0",
     "drizzle-orm": "^0.36.4",
-    "elysia": "^1.2.10",
+    "elysia": "^1.2.11",
     "jose": "^5.9.6",
     "logestic": "^1.2.4"
   },
