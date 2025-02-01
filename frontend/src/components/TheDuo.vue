@@ -39,9 +39,10 @@
     responsiveLayout="scroll"
     removableSort
     paginator
-    :rows="10"
+    :rows="5"
     :rowsPerPageOptions="[5, 10, 20, 50]"
     size="small"
+    stripedRows
   >
     <Column field="name" header="Name" sortable></Column>
     <Column

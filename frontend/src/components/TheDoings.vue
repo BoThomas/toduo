@@ -175,8 +175,9 @@
     responsiveLayout="scroll"
     removableSort
     size="small"
+    stripedRows
     paginator
-    :rows="10"
+    :rows="5"
     :rowsPerPageOptions="[5, 10, 20, 50]"
     v-model:filters="doingFilters"
     :globalFilterFields="[
@@ -275,8 +276,9 @@
     responsiveLayout="scroll"
     removableSort
     size="small"
+    stripedRows
     paginator
-    :rows="10"
+    :rows="5"
     :rowsPerPageOptions="[5, 10, 20, 50]"
     v-model:filters="assignmentFilters"
     :globalFilterFields="['doingName', 'username', 'status']"

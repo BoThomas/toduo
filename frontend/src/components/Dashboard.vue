@@ -12,6 +12,7 @@
     dataKey="assignmentId"
     responsiveLayout="scroll"
     size="small"
+    stripedRows
     :rowClass="
       (data: any) => {
         return data.completed ? 'line-through  text-gray-400' : '';
