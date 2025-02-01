@@ -1,112 +1,114 @@
 <template>
   <div class="reports">
-    <h2 class="mb-2">Reports</h2>
+    <h2 class="mb-6">Reports</h2>
 
-    <div class="grid grid-cols-12 gap-4">
-      <div class="col-span-12 md:col-span-6">
-        <h3 class="mb-2">Completed Todos per Person</h3>
-        <Chart type="line" :data="completedTodosData" :options="chartOptions" />
-      </div>
-      <div class="col-span-12 md:col-span-6">
-        <h3 class="mb-2">Completed Minutes per Person</h3>
-        <Chart
-          type="line"
-          :data="completedTodoMinutesData"
-          :options="chartOptions"
-        />
-      </div>
-    </div>
-
-    <div class="grid grid-cols-12 gap-4 sm:mt-6">
-      <div class="col-span-12 md:col-span-6 md:mt-6">
-        <h3 class="mb-2">Completed Todos</h3>
-        <Tabs value="0">
-          <TabList>
-            <Tab value="0">This Week</Tab>
-            <Tab value="1">This Month</Tab>
-            <Tab value="2">This Year</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel value="0">
-              <div v-for="user in completedTodosCount" :key="user.username">
-                <h4>
-                  {{ user.username }}:
-                  <span class="text-primary">{{ user.week }}</span>
-                </h4>
-              </div>
-            </TabPanel>
-            <TabPanel value="1">
-              <div v-for="user in completedTodosCount" :key="user.username">
-                <h4>
-                  {{ user.username }}:
-                  <span class="text-primary">{{ user.month }}</span>
-                </h4>
-              </div>
-            </TabPanel>
-            <TabPanel value="2">
-              <div v-for="user in completedTodosCount" :key="user.username">
-                <h4>
-                  {{ user.username }}:
-                  <span class="text-primary">{{ user.year }}</span>
-                </h4>
-              </div>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
-      </div>
-
-      <div class="col-span-12 md:col-span-6 md:mt-6">
-        <h3 class="mb-2">Completed Minutes</h3>
-        <Tabs value="0">
-          <TabList>
-            <Tab value="0">This Week</Tab>
-            <Tab value="1">This Month</Tab>
-            <Tab value="2">This Year</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel value="0">
-              <div v-for="user in completedTodosMinutsSum" :key="user.username">
-                <h4>
-                  {{ user.username }}:
-                  <span class="text-primary"
-                    >{{ user.week }} min ({{
-                      Math.round(user.week / 60)
-                    }}
-                    h)</span
-                  >
-                </h4>
-              </div>
-            </TabPanel>
-            <TabPanel value="1">
-              <div v-for="user in completedTodosMinutsSum" :key="user.username">
-                <h4>
-                  {{ user.username }}:
-                  <span class="text-primary"
-                    >{{ user.month }} min ({{
-                      Math.round(user.month / 60)
-                    }}
-                    h)</span
-                  >
-                </h4>
-              </div>
-            </TabPanel>
-            <TabPanel value="2">
-              <div v-for="user in completedTodosMinutsSum" :key="user.username">
-                <h4>
-                  {{ user.username }}:
-                  <span class="text-primary"
-                    >{{ user.year }} min ({{
-                      Math.round(user.year / 60)
-                    }}
-                    h)</span
-                  >
-                </h4>
-              </div>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
-      </div>
-    </div>
+    <Tabs value="0">
+      <TabList>
+        <Tab value="0">Completed Todos</Tab>
+        <Tab value="1">Worked Minutes</Tab>
+      </TabList>
+      <TabPanels>
+        <TabPanel value="0">
+          <Chart
+            type="line"
+            :data="completedTodosData"
+            :options="chartOptions"
+            class="h-60"
+          />
+          <Tabs value="0">
+            <TabList>
+              <Tab value="0">This Week</Tab>
+              <Tab value="1">This Month</Tab>
+              <Tab value="2">This Year</Tab>
+            </TabList>
+            <TabPanels>
+              <TabPanel value="0">
+                <div v-for="user in completedTodosCount" :key="user.username">
+                  <h4>
+                    {{ user.username }}:
+                    <span class="text-primary">{{ user.week }}</span>
+                  </h4>
+                </div>
+              </TabPanel>
+              <TabPanel value="1">
+                <div v-for="user in completedTodosCount" :key="user.username">
+                  <h4>
+                    {{ user.username }}:
+                    <span class="text-primary">{{ user.month }}</span>
+                  </h4>
+                </div>
+              </TabPanel>
+              <TabPanel value="2">
+                <div v-for="user in completedTodosCount" :key="user.username">
+                  <h4>
+                    {{ user.username }}:
+                    <span class="text-primary">{{ user.year }}</span>
+                  </h4>
+                </div>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </TabPanel>
+        <TabPanel value="1">
+          <Chart
+            type="line"
+            :data="completedTodoMinutesData"
+            :options="chartOptions"
+            class="h-60"
+          />
+          <Tabs value="0">
+            <TabList>
+              <Tab value="0">This Week</Tab>
+              <Tab value="1">This Month</Tab>
+              <Tab value="2">This Year</Tab>
+            </TabList>
+            <TabPanels>
+              <TabPanel value="0">
+                <div
+                  v-for="user in completedTodosMinutsSum"
+                  :key="user.username"
+                >
+                  <h4>
+                    {{ user.username }}:
+                    <span class="text-primary"
+                      >{{ user.week }} ({{ Math.round(user.week / 60) }}h)</span
+                    >
+                  </h4>
+                </div>
+              </TabPanel>
+              <TabPanel value="1">
+                <div
+                  v-for="user in completedTodosMinutsSum"
+                  :key="user.username"
+                >
+                  <h4>
+                    {{ user.username }}:
+                    <span class="text-primary"
+                      >{{ user.month }} ({{
+                        Math.round(user.month / 60)
+                      }}h)</span
+                    >
+                  </h4>
+                </div>
+              </TabPanel>
+              <TabPanel value="2">
+                <div
+                  v-for="user in completedTodosMinutsSum"
+                  :key="user.username"
+                >
+                  <h4>
+                    {{ user.username }}:
+                    <span class="text-primary"
+                      >{{ user.year }} ({{ Math.round(user.year / 60) }}h)</span
+                    >
+                  </h4>
+                </div>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </TabPanel>
+      </TabPanels>
+    </Tabs>
   </div>
 </template>
 
@@ -181,6 +183,7 @@ const fetchCompletedTodos = async () => {
         backgroundColor: colors[index % colors.length],
         borderColor: borderColors[index % borderColors.length],
         borderWidth: 1,
+        tension: 0.4,
       })),
     };
   } catch (error) {
@@ -201,6 +204,7 @@ const fetchCompletedTodoMinutes = async () => {
         backgroundColor: colors[index % colors.length],
         borderColor: borderColors[index % borderColors.length],
         borderWidth: 1,
+        tension: 0.4,
       })),
     };
   } catch (error) {
