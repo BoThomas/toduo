@@ -52,6 +52,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
       },
     })
 
+    // ---------------
+    // vvvv USERS vvvv
+    // ---------------
+
     // get all users
     .get(
       '/users',
@@ -132,6 +136,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
         }),
       },
     )
+
+    // ----------------
+    // vvvv DOINGS vvvv
+    // ----------------
 
     // Create a new doing
     .post(
@@ -381,6 +389,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
       },
     )
 
+    // ---------------------
+    // vvvv ASSIGNMENTS vvvv
+    // ---------------------
+
     // Assign doing to user
     .post(
       '/doings/assign',
@@ -441,7 +453,6 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
         }),
       },
     )
-
     // Trigger Autoassign
     .post(
       '/doings/autoassign',
@@ -594,7 +605,6 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
         }),
       },
     )
-
     // Update assignment status or user
     .put(
       '/assignments/:id',
@@ -726,6 +736,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
       },
     )
 
+    // ---------------------------------
+    // vvvv ASSIGNED DOINGS (TODOS) vvvv
+    // ---------------------------------
+
     // Get todos (= assigned doings) to the current user
     .get(
       '/todos',
@@ -854,6 +868,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
         }),
       },
     )
+
+    // -----------------------
+    // vvvv SHITTY POINTS vvvv
+    // -----------------------
 
     // Create shitty points
     .post(
@@ -1153,6 +1171,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
       },
     )
 
+    // --------------------
+    // vvvv STATISTICS vvvv
+    // --------------------
+
     // Get count of completed doings per user and calendar week for the last 6 weeks
     .get(
       '/statistics/completed',
@@ -1419,6 +1441,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
       },
     )
 
+    // ------------------
+    // vvvv DATABASE vvvv
+    // ------------------
+
     // Download the database
     .get(
       '/database/download',
@@ -1480,6 +1506,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
         }),
       },
     )
+
+    // ------------------
+    // vvvv API KEYS vvvv
+    // ------------------
 
     // create or roll API key
     .get(
