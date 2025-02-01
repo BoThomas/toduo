@@ -214,14 +214,14 @@ const fetchCompletedTodosTotal = async () => {
 
     completedTodosCount.value = data.map((item: any) => ({
       username: item.username,
-      week: item.count_current,
+      week: item.count_week,
       month: item.count_month,
       year: item.count_year,
     }));
 
     completedTodosMinutsSum.value = data.map((item: any) => ({
       username: item.username,
-      week: item.sum_minutes_current,
+      week: item.sum_minutes_week,
       month: item.sum_minutes_month,
       year: item.sum_minutes_year,
     }));

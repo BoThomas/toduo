@@ -185,7 +185,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
               message: 'A doing with this name already exists',
             };
           }
-          console.log(error);
+          console.error(error);
           return {
             success: false,
             message: `Failed to create doing, ${error}`,
@@ -436,8 +436,6 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           }),
         );
 
-        console.log(assignments);
-
         await db.insert(schema.assignments).values(assignments);
 
         return { success: true, message: 'Assignment created' };
@@ -468,7 +466,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
               process.env.ENABLE_REPETITION_GROUPING === 'true',
           });
         } catch (error) {
-          console.log(error);
+          console.error(error);
           return {
             success: false,
             message: `Failed during autoassign,
@@ -948,7 +946,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
             })
             .returning({ insertedId: schema.shitty_points.id });
         } catch (error) {
-          console.log(error);
+          console.error(error);
           return {
             success: false,
             message: `Failed to create shitty points, ${error}`,
@@ -1175,7 +1173,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
     // vvvv STATISTICS vvvv
     // --------------------
 
-    // Get count of completed doings per user and calendar week for the last 6 weeks
+    // TODO: Drizzle currently does not support 'strftime' %V for Calendar Week, but only %W for week of year. Fix this when it does
+    // Workarround: Use %W for now and add 1 from the result to get the calendar week (i think this is false when the first year of the week starts on a Monday)
+
+    // Get detailed completed doings or their effort_in_minutes per user and calendar week for the last 6 weeks
     .get(
       '/statistics/completed',
       async (ctx: any) => {
@@ -1192,50 +1193,69 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           const completedAssignments = await db
             .select({
               username: schema.users.username,
-              week: sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`.as(
-                'week',
-              ),
-              data: generateStatisticAggregationSql(false, dataColumn),
+              week: sql`week`,
+              data: sql`sum(data) as data`,
             })
-            .from(schema.assignments)
-            .innerJoin(
-              schema.users,
-              eq(schema.assignments.user_id, schema.users.id),
-            )
-            .leftJoin(
-              schema.doings,
-              eq(schema.assignments.doing_id, schema.doings.id),
-            )
-            .where(eq(schema.assignments.status, 'completed'))
-            .groupBy(
-              schema.users.username,
-              sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`,
-            )
-            .union(
+            .from(
               db
                 .select({
                   username: schema.users.username,
-                  week: sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`.as(
+                  week: sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`.as(
                     'week',
                   ),
-                  data: generateStatisticAggregationSql(true, dataColumn),
+                  data: generateStatisticAggregationSql(false, dataColumn).as(
+                    'data',
+                  ),
                 })
-                .from(schema.history)
+                .from(schema.assignments)
                 .innerJoin(
                   schema.users,
-                  eq(schema.history.user_id, schema.users.id),
+                  eq(schema.assignments.user_id, schema.users.id),
                 )
-                .where(
-                  and(
-                    eq(schema.history.status, 'completed'),
-                    gte(schema.history.created_at, xWeeksAgo),
-                  ),
+                .innerJoin(
+                  schema.doings,
+                  eq(schema.assignments.doing_id, schema.doings.id),
                 )
+                .where(eq(schema.assignments.status, 'completed'))
                 .groupBy(
                   schema.users.username,
-                  sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`,
-                ),
+                  sql`strftime('%W', datetime(${schema.assignments.updated_at}, 'unixepoch'))`,
+                )
+                .union(
+                  db
+                    .select({
+                      username: schema.users.username,
+                      week: sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`.as(
+                        'week',
+                      ),
+                      data: generateStatisticAggregationSql(
+                        true,
+                        dataColumn,
+                      ).as('data'),
+                    })
+                    .from(schema.history)
+                    .innerJoin(
+                      schema.users,
+                      eq(schema.history.user_id, schema.users.id),
+                    )
+                    .where(
+                      and(
+                        eq(schema.history.status, 'completed'),
+                        gte(schema.history.created_at, xWeeksAgo),
+                      ),
+                    )
+                    .groupBy(
+                      schema.users.username,
+                      sql`strftime('%W', datetime(${schema.history.updated_at}, 'unixepoch'))`,
+                    ),
+                )
+                .as('combined'),
             )
+            .innerJoin(
+              schema.users,
+              eq(schema.users.username, sql`combined.username`),
+            )
+            .groupBy(schema.users.username, sql`combined.week`)
             .orderBy(schema.users.username);
 
           /**
@@ -1253,7 +1273,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
                   data: Array(weeksToShow).fill(0),
                 };
               }
-              const weekIndex = parseInt(week as string) % weeksToShow; // spread over weeksToShow data points
+              const weekIndex = (parseInt(week as string) + 1) % weeksToShow; // spread over weeksToShow data points
               acc[username].data[weekIndex] = data as number;
               return acc;
             }, {});
@@ -1267,8 +1287,9 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
            */
           function aggregateLables(assignments: any[]) {
             return assignments.reduce<string[]>((acc, { week }) => {
-              const weekIndex = parseInt(week as string) % weeksToShow; // spread over weeksToShow data points
-              acc[weekIndex] = `KW ${week}`;
+              const weekIndex = (parseInt(week as string) + 1) % weeksToShow; // spread over weeksToShow data points
+              acc[weekIndex] =
+                `KW ${String(parseInt(week) + 1).padStart(2, '0')}`;
               return acc;
             }, Array(weeksToShow).fill('')); // fill with empty strings to ensure weeksToShow labels even if some weeks are missing
           }
@@ -1312,7 +1333,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
         }),
       },
     )
-    // Get count and sum of effort_in_minutes of completed todos per user for the last week/month/year
+    // Get sum of count & effort_in_minutes of completed doings per user for the last week/month/year
     .get(
       '/statistics/completed/sum',
       async (ctx: any) => {
@@ -1324,30 +1345,54 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           const completedAssignmentCounts = await db
             .select({
               username: schema.users.username,
-              count_current: sql`sum("current")`,
-              count_month: sql`sum("month")`,
-              count_year: sql`sum("year")`,
-              sum_minutes_current: sql`sum("current_min")`,
-              sum_minutes_month: sql`sum("month_min")`,
-              sum_minutes_year: sql`sum("year_min")`,
+              count_week: sql`sum("count_week")`,
+              count_month: sql`sum("count_month")`,
+              count_year: sql`sum("count_year")`,
+              sum_minutes_week: sql`sum("sum_minutes_week")`,
+              sum_minutes_month: sql`sum("sum_minutes_month")`,
+              sum_minutes_year: sql`sum("sum_minutes_year")`,
             })
             .from(
               db
                 .select({
                   username: schema.users.username,
-                  current: sql`count(${schema.assignments.id}) as current`,
-                  month: sql`0 as month`,
-                  year: sql`0 as year`,
-                  current_min: sql`sum(${schema.doings.effort_in_minutes}) as current_min`,
-                  month_min: sql`0 as month_min`,
-                  year_min: sql`0 as year_min`,
+                  count_week: generateStatisticAggregationSql(
+                    false,
+                    'assignments',
+                    'week',
+                  ).as('count_week'),
+                  count_month: generateStatisticAggregationSql(
+                    false,
+                    'assignments',
+                    'month',
+                  ).as('count_month'),
+                  count_year: generateStatisticAggregationSql(
+                    false,
+                    'assignments',
+                    'year',
+                  ).as('count_year'),
+                  sum_minutes_week: generateStatisticAggregationSql(
+                    false,
+                    'effort_in_minutes',
+                    'week',
+                  ).as('sum_minutes_week'),
+                  sum_minutes_month: generateStatisticAggregationSql(
+                    false,
+                    'effort_in_minutes',
+                    'month',
+                  ).as('sum_minutes_month'),
+                  sum_minutes_year: generateStatisticAggregationSql(
+                    false,
+                    'effort_in_minutes',
+                    'year',
+                  ).as('sum_minutes_year'),
                 })
                 .from(schema.assignments)
                 .innerJoin(
                   schema.users,
                   eq(schema.assignments.user_id, schema.users.id),
                 )
-                .leftJoin(
+                .innerJoin(
                   schema.doings,
                   eq(schema.assignments.doing_id, schema.doings.id),
                 )
@@ -1357,28 +1402,36 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
                   db
                     .select({
                       username: schema.users.username,
-                      current: sql`0 as current`,
-                      month: generateStatisticAggregationSql(
+                      count_week: generateStatisticAggregationSql(
+                        true,
+                        'assignments',
+                        'week',
+                      ).as('count_week'),
+                      count_month: generateStatisticAggregationSql(
                         true,
                         'assignments',
                         'month',
-                      ).as('month'),
-                      year: generateStatisticAggregationSql(
+                      ).as('count_month'),
+                      count_year: generateStatisticAggregationSql(
                         true,
                         'assignments',
                         'year',
-                      ).as('year'),
-                      current_min: sql`0 as current_min`,
-                      month_min: generateStatisticAggregationSql(
+                      ).as('count_year'),
+                      sum_minutes_week: generateStatisticAggregationSql(
+                        true,
+                        'effort_in_minutes',
+                        'week',
+                      ).as('sum_minutes_week'),
+                      sum_minutes_month: generateStatisticAggregationSql(
                         true,
                         'effort_in_minutes',
                         'month',
-                      ).as('month_min'),
-                      year_min: generateStatisticAggregationSql(
+                      ).as('sum_minutes_month'),
+                      sum_minutes_year: generateStatisticAggregationSql(
                         true,
                         'effort_in_minutes',
                         'year',
-                      ).as('year_min'),
+                      ).as('sum_minutes_year'),
                     })
                     .from(schema.history)
                     .innerJoin(
@@ -1399,10 +1452,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
 
           const result = completedAssignmentCounts.map((row) => ({
             username: row.username,
-            count_current: Number(row.count_current),
+            count_week: Number(row.count_week),
             count_month: Number(row.count_month),
             count_year: Number(row.count_year),
-            sum_minutes_current: Number(row.sum_minutes_current),
+            sum_minutes_week: Number(row.sum_minutes_week),
             sum_minutes_month: Number(row.sum_minutes_month),
             sum_minutes_year: Number(row.sum_minutes_year),
           }));
@@ -1429,10 +1482,10 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           data: t.Array(
             t.Object({
               username: t.String(),
-              count_current: t.Number(),
+              count_week: t.Number(),
               count_month: t.Number(),
               count_year: t.Number(),
-              sum_minutes_current: t.Number(),
+              sum_minutes_week: t.Number(),
               sum_minutes_month: t.Number(),
               sum_minutes_year: t.Number(),
             }),

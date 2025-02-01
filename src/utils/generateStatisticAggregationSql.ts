@@ -11,32 +11,42 @@ import * as schema from '../database/schema';
  */
 export const generateStatisticAggregationSql = (
   isHistory: boolean,
-  dataColumn: 'effort_in_minutes' | 'assignments',
-  timeframe?: 'month' | 'year',
+  metric: 'effort_in_minutes' | 'assignments',
+  timeframe?: 'week' | 'month' | 'year',
 ) => {
-  // Determine the appropriate table based on the parameters
-  const table = isHistory
+  // Determine the appropriate tables based on the parameters
+  const dataTable = isHistory
     ? 'history'
-    : dataColumn === 'effort_in_minutes'
+    : metric === 'effort_in_minutes'
       ? 'doings'
       : 'assignments';
+  const timeConsstraintTable = isHistory ? 'history' : 'assignments';
 
   // Construct the SQL condition for the specified timeframe
   let timeframeCondition;
   switch (timeframe) {
+    case 'week':
+      timeframeCondition = sql`strftime('%Y-%W', datetime(${schema[timeConsstraintTable].updated_at}, 'unixepoch')) = strftime('%Y-%W', 'now')`;
+      break;
     case 'month':
-      timeframeCondition = sql`strftime('%Y-%m', datetime(${schema[table].updated_at}, 'unixepoch')) = strftime('%Y-%m', 'now')`;
+      timeframeCondition = sql`strftime('%Y-%m', datetime(${schema[timeConsstraintTable].updated_at}, 'unixepoch')) = strftime('%Y-%m', 'now')`;
       break;
     case 'year':
-      timeframeCondition = sql`strftime('%Y', datetime(${schema[table].updated_at}, 'unixepoch')) = strftime('%Y', 'now')`;
+      timeframeCondition = sql`strftime('%Y', datetime(${schema[timeConsstraintTable].updated_at}, 'unixepoch')) = strftime('%Y', 'now')`;
       break;
     default:
       timeframeCondition = sql`1 = 1`;
   }
 
   // Return the appropriate SQL aggregation based on the data column
-  return dataColumn === 'effort_in_minutes' &&
-    (table === 'doings' || table === 'history')
-    ? sql`sum(${schema[table].effort_in_minutes}) FILTER (WHERE ${timeframeCondition})`
-    : sql`count(${schema[table].id}) FILTER (WHERE ${timeframeCondition})`;
+  if (metric === 'effort_in_minutes') {
+    if (dataTable === 'assignments') {
+      throw new Error('Effort aggregation is not supported for assignments');
+    }
+    // Sum the effort in minutes
+    return sql`sum(${schema[dataTable].effort_in_minutes}) FILTER (WHERE ${timeframeCondition})`;
+  } else {
+    // Count the number of assignments
+    return sql`count(${schema[dataTable].id}) FILTER (WHERE ${timeframeCondition})`;
+  }
 };
