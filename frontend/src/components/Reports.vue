@@ -13,99 +13,46 @@
             type="line"
             :data="completedTodosData"
             :options="chartOptions"
-            class="h-60"
+            style="height: 220px"
           />
-          <Tabs value="0">
-            <TabList>
-              <Tab value="0">This Week</Tab>
-              <Tab value="1">This Month</Tab>
-              <Tab value="2">This Year</Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel value="0">
-                <div v-for="user in completedTodosCount" :key="user.username">
-                  <h4>
-                    {{ user.username }}:
-                    <span class="text-primary">{{ user.week }}</span>
-                  </h4>
-                </div>
-              </TabPanel>
-              <TabPanel value="1">
-                <div v-for="user in completedTodosCount" :key="user.username">
-                  <h4>
-                    {{ user.username }}:
-                    <span class="text-primary">{{ user.month }}</span>
-                  </h4>
-                </div>
-              </TabPanel>
-              <TabPanel value="2">
-                <div v-for="user in completedTodosCount" :key="user.username">
-                  <h4>
-                    {{ user.username }}:
-                    <span class="text-primary">{{ user.year }}</span>
-                  </h4>
-                </div>
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
+          <DataTable :value="completedTodosCount" stripedRows class="mt-14">
+            <Column field="username" header="" style="width: 25%" />
+            <Column field="week" header="This Week" style="width: 25%" />
+            <Column field="month" header="This Month" style="width: 25%" />
+            <Column field="year" header="This Year" style="width: 25%" />
+          </DataTable>
         </TabPanel>
         <TabPanel value="1">
           <Chart
             type="line"
             :data="completedTodoMinutesData"
             :options="chartOptions"
-            class="h-60"
+            style="height: 220px"
           />
-          <Tabs value="0">
-            <TabList>
-              <Tab value="0">This Week</Tab>
-              <Tab value="1">This Month</Tab>
-              <Tab value="2">This Year</Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel value="0">
-                <div
-                  v-for="user in completedTodosMinutsSum"
-                  :key="user.username"
-                >
-                  <h4>
-                    {{ user.username }}:
-                    <span class="text-primary"
-                      >{{ user.week }} ({{ Math.round(user.week / 60) }}h)</span
-                    >
-                  </h4>
-                </div>
-              </TabPanel>
-              <TabPanel value="1">
-                <div
-                  v-for="user in completedTodosMinutsSum"
-                  :key="user.username"
-                >
-                  <h4>
-                    {{ user.username }}:
-                    <span class="text-primary"
-                      >{{ user.month }} ({{
-                        Math.round(user.month / 60)
-                      }}h)</span
-                    >
-                  </h4>
-                </div>
-              </TabPanel>
-              <TabPanel value="2">
-                <div
-                  v-for="user in completedTodosMinutsSum"
-                  :key="user.username"
-                >
-                  <h4>
-                    {{ user.username }}:
-                    <span class="text-primary"
-                      >{{ user.year }} ({{ Math.round(user.year / 60) }}h)</span
-                    >
-                  </h4>
-                </div>
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
+          <DataTable :value="completedTodosMinutsSum" stripedRows class="mt-14">
+            <Column field="username" header="" style="width: 25%" />
+            <Column header="This Week" style="width: 25%">
+              <template #body="slotProps">
+                {{ slotProps.data.week }} ({{
+                  Math.round(slotProps.data.week / 60)
+                }}h)
+              </template>
+            </Column>
+            <Column header="This Month" style="width: 25%">
+              <template #body="slotProps">
+                {{ slotProps.data.month }} ({{
+                  Math.round(slotProps.data.month / 60)
+                }}h)
+              </template>
+            </Column>
+            <Column header="This Year" style="width: 25%">
+              <template #body="slotProps">
+                {{ slotProps.data.year }} ({{
+                  Math.round(slotProps.data.year / 60)
+                }}h)
+              </template>
+            </Column>
+          </DataTable>
         </TabPanel>
       </TabPanels>
     </Tabs>
@@ -120,6 +67,8 @@ import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 import { readAPI } from '@/services/apiService';
 
 const completedTodosData = ref<any>(null);
@@ -133,6 +82,9 @@ const chartOptions = {
   scales: {
     y: {
       beginAtZero: true,
+      afterFit(scale: any) {
+        scale.width = 42;
+      },
     },
   },
 };
@@ -183,7 +135,7 @@ const fetchCompletedTodos = async () => {
         backgroundColor: colors[index % colors.length],
         borderColor: borderColors[index % borderColors.length],
         borderWidth: 1,
-        tension: 0.4,
+        tension: 0.3,
       })),
     };
   } catch (error) {
@@ -204,7 +156,7 @@ const fetchCompletedTodoMinutes = async () => {
         backgroundColor: colors[index % colors.length],
         borderColor: borderColors[index % borderColors.length],
         borderWidth: 1,
-        tension: 0.4,
+        tension: 0.3,
       })),
     };
   } catch (error) {
