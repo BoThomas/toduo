@@ -501,8 +501,16 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
     .get(
       '/doings/autoassign/cron',
       async (ctx: any) => {
-        const { group: auth0Group } =
+        const { group: auth0Group, hasSettingsPermission } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        if (!hasSettingsPermission) {
+          return {
+            success: false,
+            message: 'You do not have permission to get autoassign cron info',
+          };
+        }
+
         const db = getDbConnection(auth0Group);
 
         const activeAutoAssignCron = await db.query.cronjobs.findFirst({
@@ -530,7 +538,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
         response: t.Object({
           success: t.Boolean(),
           message: t.String(),
-          data: t.Any(),
+          data: t.Optional(t.Any()),
         }),
       },
     )

@@ -1,6 +1,15 @@
 <template>
   <h2 class="mb-2">The Duo</h2>
   <h3 class="mb-4">User Participation</h3>
+
+  <div
+    v-if="!hasSettingsPermission"
+    class="mb-4 p-3 border-round border-1 border-300 bg-gray-100 flex items-center"
+  >
+    <i class="pi pi-lock mr-2"></i>
+    <span>You don't have permission to modify participation values</span>
+  </div>
+
   <div
     v-for="user in users"
     :key="user.id"
@@ -12,14 +21,17 @@
       <Slider
         v-model="user.participation_percent"
         :disabled="
+          !hasSettingsPermission ||
           user.locked ||
           (users.filter((u: any) => !u.locked).length === 1 && !user.locked)
         "
         @change="updateParticipationLive(user.id)"
         @slideend="updateParticipation"
         style="flex: 1; margin-right: 10px"
+        :class="{ 'opacity-50': !hasSettingsPermission }"
       />
       <Button
+        v-if="hasSettingsPermission"
         :icon="`pi ${user.locked ? 'pi-lock' : 'pi-unlock'}`"
         @click="toggleLock(user.id)"
         :class="{ 'p-button-secondary': user.locked }"
@@ -71,22 +83,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Slider from 'primevue/slider';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
 import { createAPI, readAPI, updateApi } from '@/services/apiService';
+import { usePermissions } from '@/composables/usePermissions';
 
 const toast = useToast();
 const users = ref<any>([]);
+const { hasSettingsPermission, checkSettingsPermission } = usePermissions();
 
 const shittyPoints = ref<any>([]);
 const availableShittyPoints = ref<any>();
 
 onMounted(async () => {
   await Promise.all([
+    checkSettingsPermission(),
     fetchUsers(),
     fetchShittyPoints(),
     fetchAvailableShittyPoints(),
@@ -202,7 +217,7 @@ const updateParticipation = async () => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Error Message',
+      summary: 'Error',
       detail: `Could not update participation: ${error.message}`,
       life: 3000,
     });
@@ -225,7 +240,7 @@ const updateShittyPoints = async (shittypoints: any, amount: number) => {
     }
     toast.add({
       severity: 'success',
-      summary: 'Success Message',
+      summary: 'Success',
       detail: 'Shitty points updated',
       life: 1000,
     });

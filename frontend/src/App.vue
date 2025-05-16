@@ -44,7 +44,7 @@
         v-else-if="isAuthenticated"
         class="sm:flex sm:flex-col sm:items-center sm:my-2 mt-6 mb-2"
       >
-        <Menubar :model="items" breakpoint="0px" class="menubar" />
+        <Menubar :model="menuItems" breakpoint="0px" class="menubar" />
       </div>
     </header>
     <main v-if="!isLoading && isAuthenticated" class="py-2 sm:px-8 px-4 mb-10">
@@ -64,10 +64,12 @@ import ConfirmDialog from 'primevue/confirmdialog';
 import Menubar from 'primevue/menubar';
 import { readAPI } from '@/services/apiService';
 import PullToRefresh from 'pulltorefreshjs';
+import { usePermissions } from '@/composables/usePermissions';
 
 const router = useRouter();
 const auth0 = useAuth0();
 const toast = useToast();
+const { hasSettingsPermission, checkSettingsPermission } = usePermissions();
 
 const isLoading = computed(() => auth0.isLoading.value);
 const isAuthenticated = computed(() => auth0.isAuthenticated.value);
@@ -106,57 +108,68 @@ const setActiveItem = (label: string) => {
   activeItem.value = label;
 };
 
-const items = ref([
-  {
-    label: 'Dashboard',
-    icon: 'pi pi-home',
-    command: () => {
-      router.push('/');
+const menuItems = computed(() => {
+  const items = [
+    {
+      label: 'Dashboard',
+      icon: 'pi pi-home',
+      command: () => {
+        router.push('/');
+      },
+      class: activeItem.value === '/' ? 'active-menu-item' : '',
     },
-    class: computed(() => (activeItem.value === '/' ? 'active-menu-item' : '')),
-  },
-  {
-    label: 'Doings',
-    icon: 'pi pi-list',
-    command: () => {
-      router.push('/doings');
+    {
+      label: 'Doings',
+      icon: 'pi pi-list',
+      command: () => {
+        router.push('/doings');
+      },
+      class: activeItem.value === '/doings' ? 'active-menu-item' : '',
     },
-    class: computed(() =>
-      activeItem.value === '/doings' ? 'active-menu-item' : '',
-    ),
-  },
-  {
-    label: 'Duo',
-    icon: 'pi pi-users',
-    command: () => {
-      router.push('/duo');
+    {
+      label: 'Duo',
+      icon: 'pi pi-users',
+      command: () => {
+        router.push('/duo');
+      },
+      class: activeItem.value === '/duo' ? 'active-menu-item' : '',
     },
-    class: computed(() =>
-      activeItem.value === '/duo' ? 'active-menu-item' : '',
-    ),
-  },
-  {
-    label: 'Reports',
-    icon: 'pi pi-chart-bar',
-    command: () => {
-      router.push('/report');
+    {
+      label: 'Reports',
+      icon: 'pi pi-chart-bar',
+      command: () => {
+        router.push('/report');
+      },
+      class: activeItem.value === '/report' ? 'active-menu-item' : '',
     },
-    class: computed(() =>
-      activeItem.value === '/report' ? 'active-menu-item' : '',
-    ),
+  ];
+
+  // Add Settings menu item only if user has permission
+  if (hasSettingsPermission.value) {
+    items.push({
+      label: 'Settings',
+      icon: 'pi pi-cog',
+      command: () => {
+        router.push('/settings');
+        setActiveItem('/settings');
+      },
+      class: activeItem.value === '/settings' ? 'active-menu-item' : '',
+    });
+  }
+
+  return items;
+});
+
+// Check settings permission when user is authenticated
+watch(
+  isAuthenticated,
+  (authenticated) => {
+    if (authenticated) {
+      checkSettingsPermission();
+    }
   },
-  {
-    label: 'Settings',
-    icon: 'pi pi-cog',
-    command: () => {
-      router.push('/settings');
-      setActiveItem('/settings');
-    },
-    class: computed(() =>
-      activeItem.value === '/settings' ? 'active-menu-item' : '',
-    ),
-  },
-]);
+  { immediate: true },
+);
 
 // auth
 watch(isLoading, (nowLoading) => {
