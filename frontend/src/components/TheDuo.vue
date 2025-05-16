@@ -203,7 +203,7 @@ const updateParticipation = async () => {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
-      detail: 'Could not update participation',
+      detail: `Could not update participation: ${error.message}`,
       life: 3000,
     });
   }

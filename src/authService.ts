@@ -2,7 +2,12 @@ import { Elysia } from 'elysia';
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 
 // types
-type AuthInfo = { id: string; group: string; name: string }; // TODO: move to a shared types file
+export type AuthInfo = {
+  id: string;
+  group: string;
+  name: string;
+  hasSettingsPermission: boolean;
+}; // TODO: move to a shared types file
 
 // Auth service
 let JWKS: any = undefined;
@@ -20,12 +25,22 @@ const authService = new Elysia({ name: 'Service.Auth' }).derive(
   async ({ headers }) => ({
     authenticatedUserInfo: async (): Promise<AuthInfo> => {
       if (process.env.AUTH0_DISABLED === 'true') {
-        return { id: 'auth0|123456789', group: 'default', name: 'Testuser' };
+        return {
+          id: 'auth0|123456789',
+          group: 'default',
+          name: 'Testuser',
+          hasSettingsPermission: true,
+        };
       }
 
       const authHeader = headers?.['authorization'];
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return { id: '', group: '', name: '' };
+        return {
+          id: '',
+          group: '',
+          name: '',
+          hasSettingsPermission: false,
+        };
       }
       const token = authHeader.split(' ')[1];
       const { payload } = await jwtVerify(token, JWKS, {
@@ -46,7 +61,12 @@ const authService = new Elysia({ name: 'Service.Auth' }).derive(
             ?.split(':')[1] || ''
         : '';
 
-      return { id, group, name };
+      // check for settings permission
+      const hasSettingsPermission = Array.isArray(payload.permissions)
+        ? payload.permissions.includes('settings')
+        : false;
+
+      return { id, group, name, hasSettingsPermission };
     },
   }),
 );

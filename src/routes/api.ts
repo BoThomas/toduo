@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import authService from '../authService';
+import authService, { type AuthInfo } from '../authService';
 import {
   getDbConnection,
   getDbPath,
@@ -23,9 +23,6 @@ import { handleRepeatedAssignments } from '../utils/handleRepeatedAssignments';
 import { generateStatisticAggregationSql } from '../utils/generateStatisticAggregationSql';
 import * as Helpers from '../utils/helpers';
 import { timer } from '../index';
-
-// types
-type AuthInfo = { id: string; group: string; name: string };
 
 const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
   apiGroup
@@ -92,9 +89,16 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
       async (ctx: any) => {
         const userArray = ctx.body;
 
-        const { group: auth0Group } =
+        const { group: auth0Group, hasSettingsPermission } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
+
+        if (!hasSettingsPermission) {
+          return {
+            success: false,
+            message: 'You do not have permission to update participation',
+          };
+        }
 
         // check userArray for valid participation_percent
         const sum = userArray.reduce(
@@ -456,8 +460,16 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
       '/doings/autoassign',
       async (ctx: any) => {
         const { reassign } = ctx.body;
-        const { group: auth0Group } =
+        const { group: auth0Group, hasSettingsPermission } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        if (!hasSettingsPermission) {
+          return {
+            success: false,
+            message: 'You do not have permission to trigger autoassign',
+          };
+        }
+
         try {
           await new AssignmentService(auth0Group).assignTasksForWeek({
             dryRun: false,
@@ -528,9 +540,16 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
       async (ctx: any) => {
         const { enable, cronTime = '0 23 * * 0' } = ctx.body;
 
-        const { group: auth0Group } =
+        const { group: auth0Group, hasSettingsPermission } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
+
+        if (!hasSettingsPermission) {
+          return {
+            success: false,
+            message: 'You do not have permission to change autoassign settings',
+          };
+        }
 
         if (enable) {
           // check if job already exists in db
@@ -1502,8 +1521,15 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
     .get(
       '/database/download',
       async (ctx: any) => {
-        const { group: auth0Group } =
+        const { group: auth0Group, hasSettingsPermission } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        if (!hasSettingsPermission) {
+          return {
+            success: false,
+            message: 'You do not have permission to download the database',
+          };
+        }
 
         const dbPath = getDbPath(auth0Group);
         if (!dbPath) {
@@ -1532,8 +1558,15 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
     .put(
       '/database/upload',
       async (ctx: any) => {
-        const { group: auth0Group } =
+        const { group: auth0Group, hasSettingsPermission } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        if (!hasSettingsPermission) {
+          return {
+            success: false,
+            message: 'You do not have permission to upload the database',
+          };
+        }
 
         const dbPath = getDbPath(auth0Group);
         if (!dbPath) {
@@ -1568,8 +1601,16 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
     .get(
       '/apikey',
       async (ctx: any) => {
-        const { group: auth0Group } =
+        const { group: auth0Group, hasSettingsPermission } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
+
+        if (!hasSettingsPermission) {
+          return {
+            success: false,
+            message: 'You do not have permission to create or roll an API key',
+          };
+        }
+
         const db = getDbConnection(auth0Group);
 
         const apiKey = `${auth0Group}__${crypto.randomUUID()}`;
@@ -1585,7 +1626,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
         response: t.Object({
           success: t.Boolean(),
           message: t.String(),
-          data: t.String(),
+          data: t.Optional(t.String()),
         }),
       },
     ),

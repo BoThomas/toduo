@@ -121,7 +121,7 @@ const fetchAutoassignCronInfo = async () => {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
-      detail: 'Could not load autoassign cron info',
+      detail: `Could not load autoassign cron info: ${error.message}`,
       life: 3000,
     });
   }
@@ -197,7 +197,7 @@ const controlAutoassignCron = async () => {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
-      detail: 'Could not control autoassign cron',
+      detail: `Could not control autoassign cron: ${error.message}`,
       life: 3000,
     });
   }
@@ -219,7 +219,7 @@ const triggerReassignment = async (reassign: boolean) => {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
-      detail: 'Error during reassignment',
+      detail: `Error during reassignment: ${error.message}`,
       life: 3000,
     });
   }
@@ -275,7 +275,7 @@ const downloadDatabase = async () => {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
-      detail: 'Could not download database',
+      detail: `Could not download database: ${error.message}`,
       life: 3000,
     });
   }
@@ -334,7 +334,7 @@ const uploadDatabase = async () => {
         toast.add({
           severity: 'error',
           summary: 'Error Message',
-          detail: 'Could not upload database',
+          detail: `Could not upload database: ${error.message}`,
           life: 3000,
         });
       }
@@ -377,7 +377,7 @@ const createOrRollApiKey = async () => {
     toast.add({
       severity: 'error',
       summary: 'Error Message',
-      detail: 'Could not create or roll API key',
+      detail: `Could not create or roll API key: ${error.message}`,
       life: 3000,
     });
   }
