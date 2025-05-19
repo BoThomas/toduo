@@ -22,7 +22,7 @@ const apiRequest = async (
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
-        'x-user-name': auth0.user?.nickname || '',
+        'x-user-name': auth0.user?.name ?? auth0.user?.nickname ?? '',
         Authorization: `Bearer ${token}`,
       },
       body: data ? JSON.stringify(data) : undefined,

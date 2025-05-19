@@ -73,7 +73,9 @@ const { hasSettingsPermission, checkSettingsPermission } = usePermissions();
 
 const isLoading = computed(() => auth0.isLoading.value);
 const isAuthenticated = computed(() => auth0.isAuthenticated.value);
-const user = computed(() => auth0.user.value?.nickname);
+const user = computed(
+  () => auth0.user.value?.name ?? auth0.user.value?.nickname,
+);
 const changeThisIdToRerenderRouter = ref(0);
 
 const logout = () => {
