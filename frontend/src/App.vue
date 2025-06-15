@@ -3,8 +3,11 @@
   <Toast />
   <ConfirmDialog class="max-w-lg m-5" />
   <div class="app-container">
-    <header>
-      <div class="absolute cursor-pointer" style="top: 0.8rem; left: 1.2rem">
+    <header class="mb-6 sm:mb-0">
+      <div
+        class="absolute cursor-pointer z-20"
+        style="top: 0.8rem; left: 1.2rem"
+      >
         <span class="text-2xl text-primary" @click="toggleDarkMode">
           <span v-if="isDarkMode" class="pi pi-sun"></span>
           <span v-else class="pi pi-moon"></span>
@@ -13,15 +16,29 @@
       <div
         class="flex items-center text-primary justify-between flex-col sm:flex-row"
       >
-        <div class="flex-1"></div>
-        <div class="flex items-center gap-1">
+        <div class="flex-1 sm:hidden">
+          <!-- Hamburger Menu Button -->
+          <Button
+            icon="pi pi-bars"
+            @click="isMobileNavOpen = !isMobileNavOpen"
+            class="p-button-text text-primary text-2xl absolute"
+            style="top: 0.5rem; right: 0.5rem; z-index: 1051"
+          />
+        </div>
+        <div class="flex-1 hidden sm:block"></div>
+        <!-- Spacer for larger screens -->
+        <router-link
+          to="/"
+          class="flex items-center gap-1 cursor-pointer"
+          @click="isMobileNavOpen = false"
+        >
           <img
             src="@/assets/logo.png"
             alt="ToDuo Logo"
             class="h-16 w-16 mb-2"
           />
           <h1>ToDuo</h1>
-        </div>
+        </router-link>
         <div class="flex-1 justify-end">
           <div
             v-if="isAuthenticated"
@@ -32,8 +49,8 @@
               @click="logout"
               class="p-menuitem-link flex items-center gap-2 cursor-pointer text-gray-400 transition-colors duration-300 hover:text-primary"
             >
-              <span class="pi pi-sign-out"></span>
-              <span>logout</span>
+              <span class="pi pi-sign-out text-xs"></span>
+              <span class="text-xs">logout</span>
             </a>
           </div>
         </div>
@@ -41,12 +58,23 @@
       <div v-if="isLoading" class="flex h-80 justify-center items-center">
         <ProgressSpinner strokeWidth="3" />
       </div>
+      <!-- Desktop Menubar -->
       <div
         v-else-if="isAuthenticated"
-        class="sm:flex sm:flex-col sm:items-center sm:my-2 mt-6 mb-2"
+        class="hidden sm:flex sm:flex-col sm:items-center sm:my-2 mt-6 mb-2"
       >
         <Menubar :model="menuItems" breakpoint="0px" class="menubar" />
       </div>
+
+      <!-- Mobile Sidebar -->
+      <Sidebar
+        v-if="isAuthenticated"
+        v-model:visible="isMobileNavOpen"
+        position="right"
+        class="sm:hidden w-full max-w-xs"
+      >
+        <Menubar :model="menuItems" breakpoint="0px" class="menubar-mobile" />
+      </Sidebar>
     </header>
     <main v-if="!isLoading && isAuthenticated" class="py-2 sm:px-8 px-4 mb-10">
       <router-view :key="changeThisIdToRerenderRouter"></router-view>
@@ -62,6 +90,8 @@ import { useAuth0 } from '@auth0/auth0-vue';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
+import Button from 'primevue/button';
+import Sidebar from 'primevue/sidebar';
 import Menubar from 'primevue/menubar';
 import GlobalLoadingIndicator from '@/components/GlobalLoadingIndicator.vue';
 import { readAPI } from '@/services/apiService';
@@ -72,6 +102,7 @@ const router = useRouter();
 const auth0 = useAuth0();
 const toast = useToast();
 const { hasSettingsPermission, checkSettingsPermission } = usePermissions();
+const isMobileNavOpen = ref(false);
 
 const isLoading = computed(() => auth0.isLoading.value);
 const isAuthenticated = computed(() => auth0.isAuthenticated.value);
@@ -119,6 +150,7 @@ const menuItems = computed(() => {
       icon: 'pi pi-home',
       command: () => {
         router.push('/');
+        isMobileNavOpen.value = false;
       },
       class: activeItem.value === '/' ? 'active-menu-item' : '',
     },
@@ -127,6 +159,7 @@ const menuItems = computed(() => {
       icon: 'pi pi-list',
       command: () => {
         router.push('/doings');
+        isMobileNavOpen.value = false;
       },
       class: activeItem.value === '/doings' ? 'active-menu-item' : '',
     },
@@ -135,6 +168,7 @@ const menuItems = computed(() => {
       icon: 'pi pi-users',
       command: () => {
         router.push('/duo');
+        isMobileNavOpen.value = false;
       },
       class: activeItem.value === '/duo' ? 'active-menu-item' : '',
     },
@@ -143,6 +177,7 @@ const menuItems = computed(() => {
       icon: 'pi pi-chart-bar',
       command: () => {
         router.push('/report');
+        isMobileNavOpen.value = false;
       },
       class: activeItem.value === '/report' ? 'active-menu-item' : '',
     },
@@ -156,6 +191,7 @@ const menuItems = computed(() => {
       command: () => {
         router.push('/settings');
         setActiveItem('/settings');
+        isMobileNavOpen.value = false;
       },
       class: activeItem.value === '/settings' ? 'active-menu-item' : '',
     });
@@ -251,19 +287,26 @@ router.beforeEach((to, from, next) => {
   margin: auto;
 }
 
-@media (max-width: 640px) {
-  .menubar .p-menubar-root-list {
-    flex-direction: column;
-    margin: auto;
-  }
+/* Styling for Menubar inside mobile Sidebar */
+.menubar-mobile .p-menubar-root-list {
+  flex-direction: column;
+  width: 100%;
+}
 
-  .menubar .p-menubar-root-list > li {
-    width: 100%;
-    text-align: center;
-  }
+.menubar-mobile .p-menubar-root-list > li {
+  width: 100%;
+}
 
-  .menubar .p-menubar-root-list > li div {
-    padding: 0.2rem 1.5rem;
-  }
+.menubar-mobile
+  .p-menubar-root-list
+  > li
+  > .p-menuitem-content
+  > .p-menuitem-link {
+  justify-content: flex-start; /* Align items to the start */
+  padding: 0.75rem 1rem;
+}
+
+.menubar-mobile .p-menuitem-text {
+  margin-left: 0.5rem;
 }
 </style>
