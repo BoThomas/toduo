@@ -69,6 +69,7 @@ export class AssignmentService {
     const doings = await this.getQualifiedDoings();
     const shittyPoints = await this.getShittyPoints();
     const todoHistory = await this.getRecentTodoHistory();
+    const totalEffort = this.getTotalEffort(doings);
 
     // Step 1: Extract static assigned doings and randomize the rest
     const staticDoings = doings.filter(
@@ -106,6 +107,7 @@ export class AssignmentService {
         users,
         shittyPoints,
         todoHistory,
+        totalEffort,
       );
     }
 
@@ -436,6 +438,7 @@ export class AssignmentService {
     users: any[],
     shittyPoints: any[],
     todoHistory: any[],
+    totalEffort: number,
   ): void {
     // Create a scoring matrix for doings and users
     const scores = this.calculateScores(
@@ -453,10 +456,10 @@ export class AssignmentService {
     doings.forEach((doing) => {
       const bestUser = this.selectBestUser(
         doing,
-        doings,
         scores,
         currentAssignments,
         users,
+        totalEffort,
       );
       if (bestUser) {
         currentAssignments.push({ doing, user: bestUser });
@@ -468,6 +471,8 @@ export class AssignmentService {
           console.log(
             `-> WARN: No best user found for doing ${doing.id}. This doing will not be assigned.\n`,
           );
+          // TODO: add a messages table to the db and store such important messages for chron tasks and show them on next visit to the admin.
+          // For sync usage via ui, show them in the ui directly
         }
       }
     });
@@ -550,10 +555,10 @@ export class AssignmentService {
   // Helper: Select the best user for a given doing
   private selectBestUser(
     currentDoing: any,
-    doings: any[],
     scores: Map<string, number>,
     assignments: any[],
     users: any[],
+    totalEffort: number,
   ): any {
     const eligibleUsers = users.filter((user) => {
       // Apply fairness constraints (e.g., workload balance)
@@ -572,8 +577,7 @@ export class AssignmentService {
       );
 
       // Calculate the maximum effort that the user can take
-      const userMaxEffort =
-        (user.participation_percent / 100) * this.getTotalEffort(doings);
+      const userMaxEffort = (user.participation_percent / 100) * totalEffort;
 
       if (ENABLE_LOGGING) {
         console.log(
