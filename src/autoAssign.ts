@@ -346,7 +346,7 @@ export class AssignmentService {
               sql`(${Date.now()} - ${doings.interval_value} *
               (CASE
                 WHEN ${doings.interval_unit} = 'weekly' THEN 7
-                WHEN ${doings.interval_unit} = 'monthly' THEN 12
+                WHEN ${doings.interval_unit} = 'monthly' THEN 30
                 ELSE 1
               END) * 24 * 60 * 60 * 1000 + (6*60*60*1000)) / 1000`,
             ),
