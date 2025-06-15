@@ -1,10 +1,13 @@
 <template>
-  <h2>This Week's Todos</h2>
-
   <!-- Skeleton Loader -->
   <div v-if="pageLoading">
-    <div class="flex justify-end mb-2">
-      <Skeleton width="10rem" height="2.5rem" />
+    <div
+      class="flex flex-col sm:flex-row sm:justify-between sm:items-center my-2 text-center sm:text-left"
+    >
+      <h2 class="mb-2 sm:mb-0">This Week's Todos</h2>
+      <div class="flex justify-center sm:justify-end">
+        <Skeleton width="10rem" height="2.5rem" />
+      </div>
     </div>
     <DataTable :value="skeletonTodos" responsiveLayout="scroll" size="small">
       <Column>
@@ -37,12 +40,17 @@
 
   <!-- Actual Content -->
   <div v-else>
-    <div class="flex justify-end mb-2">
-      <SelectButton
-        v-model="currentFilter"
-        :options="filterOptions"
-        :allowEmpty="false"
-      />
+    <div
+      class="flex flex-col sm:flex-row sm:justify-between sm:items-center my-2 text-center sm:text-left"
+    >
+      <h2 class="mb-2 sm:mb-0">This Week's Todos</h2>
+      <div class="flex justify-center sm:justify-end">
+        <SelectButton
+          v-model="currentFilter"
+          :options="filterOptions"
+          :allowEmpty="false"
+        />
+      </div>
     </div>
     <DataTable
       :value="filteredTodos"

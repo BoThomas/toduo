@@ -4,7 +4,7 @@
   <!-- Skeleton Loader -->
   <div v-if="pageLoading">
     <div class="flex justify-end gap-2 mb-2">
-      <Skeleton width="8rem" height="2.5rem" />
+      <Skeleton width="4rem" height="2.5rem" />
       <Skeleton width="12rem" height="2.5rem" />
     </div>
     <DataTable :value="skeletonItems" responsiveLayout="scroll" size="small">
@@ -40,7 +40,7 @@
 
     <h3 class="mt-16 mb-3"><Skeleton width="15rem" height="2rem" /></h3>
     <div class="flex justify-end gap-2 mb-2">
-      <Skeleton width="8rem" height="2.5rem" />
+      <Skeleton width="4rem" height="2.5rem" />
       <Skeleton width="12rem" height="2.5rem" />
     </div>
     <DataTable :value="skeletonItems" responsiveLayout="scroll" size="small">
