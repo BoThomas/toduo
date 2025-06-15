@@ -1,4 +1,5 @@
 <template>
+  <GlobalLoadingIndicator />
   <Toast />
   <ConfirmDialog class="max-w-lg m-5" />
   <div class="app-container">
@@ -62,6 +63,7 @@ import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Menubar from 'primevue/menubar';
+import GlobalLoadingIndicator from '@/components/GlobalLoadingIndicator.vue';
 import { readAPI } from '@/services/apiService';
 import PullToRefresh from 'pulltorefreshjs';
 import { usePermissions } from '@/composables/usePermissions';

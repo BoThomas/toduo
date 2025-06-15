@@ -1,394 +1,460 @@
 <template>
   <h2 class="mb-2">The Doings</h2>
-  <Dialog
-    v-model:visible="doingDialogVisible"
-    header="Todo Details"
-    :modal="true"
-    class="w-full mx-5 max-w-2xl"
-  >
-    <Form
-      v-slot="$form"
-      :initialValues="currentDoing"
-      :resolver="resolver"
-      @submit="saveDoing"
-      class="formgrid grid grid-cols-12 gap-4"
+
+  <!-- Skeleton Loader -->
+  <div v-if="pageLoading">
+    <div class="flex justify-end gap-2 mb-2">
+      <Skeleton width="8rem" height="2.5rem" />
+      <Skeleton width="12rem" height="2.5rem" />
+    </div>
+    <DataTable :value="skeletonItems" responsiveLayout="scroll" size="small">
+      <Column header="Name"
+        ><template #body><Skeleton width="100%"></Skeleton></template
+      ></Column>
+      <Column header="Description"
+        ><template #body><Skeleton width="100%"></Skeleton></template
+      ></Column>
+      <Column header="Interval"
+        ><template #body><Skeleton width="100%"></Skeleton></template
+      ></Column>
+      <Column header="Effort (minutes)"
+        ><template #body><Skeleton width="8rem"></Skeleton></template
+      ></Column>
+      <Column header="Active"
+        ><template #body><Skeleton width="4rem"></Skeleton></template
+      ></Column>
+      <Column header="Done by"
+        ><template #body><Skeleton width="6rem"></Skeleton></template
+      ></Column>
+      <Column
+        ><template #body
+          ><div class="flex">
+            <Skeleton shape="circle" size="2rem" class="mr-2" /><Skeleton
+              shape="circle"
+              size="2rem"
+              class="mr-2"
+            /><Skeleton shape="circle" size="2rem" /></div></template
+      ></Column>
+    </DataTable>
+    <Skeleton width="10rem" height="2.5rem" class="mt-4 mb-3" />
+
+    <h3 class="mt-16 mb-3"><Skeleton width="15rem" height="2rem" /></h3>
+    <div class="flex justify-end gap-2 mb-2">
+      <Skeleton width="8rem" height="2.5rem" />
+      <Skeleton width="12rem" height="2.5rem" />
+    </div>
+    <DataTable :value="skeletonItems" responsiveLayout="scroll" size="small">
+      <Column header="Todo"
+        ><template #body><Skeleton width="100%"></Skeleton></template
+      ></Column>
+      <Column header="Assigned To"
+        ><template #body><Skeleton width="100%"></Skeleton></template
+      ></Column>
+      <Column header="Status"
+        ><template #body><Skeleton width="100%"></Skeleton></template
+      ></Column>
+      <Column
+        ><template #body><Skeleton shape="circle" size="2rem" /></template
+      ></Column>
+    </DataTable>
+    <div class="mt-4 flex flex-wrap gap-3">
+      <Skeleton width="15rem" height="2.5rem" />
+    </div>
+  </div>
+
+  <!-- Actual Content -->
+  <div v-else>
+    <Dialog
+      v-model:visible="doingDialogVisible"
+      header="Todo Details"
+      :modal="true"
+      class="w-full mx-5 max-w-2xl"
     >
-      <div class="field col-span-12">
-        <label for="name">Name</label>
-        <InputText
-          id="name"
-          name="name"
-          placeholder="e.g. do the dishes"
-          class="w-full"
-        />
-        <Message
-          v-if="$form.name?.invalid"
-          severity="error"
-          size="small"
-          variant="simple"
-          >{{ $form.name.error?.message }}</Message
-        >
-      </div>
-      <div class="field col-span-12">
-        <label for="description">Description (optional)</label>
-        <Textarea
-          id="description"
-          name="description"
-          rows="3"
-          placeholder="e.g. dry them afterwards"
-          class="w-full"
-        />
-      </div>
-      <div class="field col-span-12 sm:col-span-6">
-        <label for="interval_value">Interval Value</label>
-        <InputNumber
-          id="interval_value"
-          name="interval_value"
-          placeholder="e.g. every 2"
-          :min="1"
-          class="w-full"
-          :showButtons="true"
-          prefix="every "
-        />
-        <Message
-          v-if="$form.interval_value?.invalid"
-          severity="error"
-          size="small"
-          variant="simple"
-          >{{ $form.interval_value.error?.message }}</Message
-        >
-      </div>
-      <div class="field col-span-12 sm:col-span-6">
-        <label for="interval_unit">Interval Unit</label>
-        <Select
-          id="interval_unit"
-          name="interval_unit"
-          :options="intervalUnitOptions"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select..."
-          class="w-full"
-        />
-        <Message
-          v-if="$form.interval_unit?.invalid"
-          severity="error"
-          size="small"
-          variant="simple"
-          >{{ $form.interval_unit.error?.message }}</Message
-        >
-      </div>
-      <div class="field col-span-12 sm:col-span-6">
-        <label for="repeats_per_week">Repeats per Week</label>
-        <Select
-          id="repeats_per_week"
-          name="repeats_per_week"
-          :options="[1, 2, 3, 4, 5, 6, 7]"
-          class="w-full"
-        />
-        <Message
-          v-if="$form.repeats_per_week?.invalid"
-          severity="error"
-          size="small"
-          variant="simple"
-          >{{ $form.repeats_per_week.error?.message }}
-        </Message>
-      </div>
-      <div class="field col-span-12 sm:col-span-6">
-        <label for="effort_in_minutes">Effort (in minutes)</label>
-        <InputNumber
-          id="effort_in_minutes"
-          name="effort_in_minutes"
-          placeholder="e.g. 30"
-          :min="1"
-          class="w-full"
-        />
-        <Message
-          v-if="$form.effort_in_minutes?.invalid"
-          severity="error"
-          size="small"
-          variant="simple"
-          >{{ $form.effort_in_minutes.error?.message }}</Message
-        >
-      </div>
-      <div class="field col-span-12 mt-2">
-        <label for="static_user">Allways done by (optional)</label>
-        <Select
-          id="static_user"
-          name="static_user"
-          :options="users.map((user: any) => user.username)"
-          placeholder="Select User"
-          class="w-full"
-          showClear
-        />
-      </div>
-      <div class="field col-span-12">
-        <label for="notice">Notice (optional)</label>
-        <InputText
-          id="notice"
-          name="notice"
-          placeholder="e.g. use the blue sponge"
-          class="w-full"
-        />
-      </div>
-      <div class="field-checkbox col-span-12 mt-2 flex gap-1">
-        <Checkbox id="is_active" name="is_active" :binary="true" />
-        <label for="is_active">Active</label>
-      </div>
-      <div class="col-span-12 flex justify-end gap-2">
+      <Form
+        v-slot="$form"
+        :initialValues="currentDoing"
+        :resolver="resolver"
+        @submit="saveDoing"
+        class="formgrid grid grid-cols-12 gap-4"
+      >
+        <div class="field col-span-12">
+          <label for="name">Name</label>
+          <InputText
+            id="name"
+            name="name"
+            placeholder="e.g. do the dishes"
+            class="w-full"
+          />
+          <Message
+            v-if="$form.name?.invalid"
+            severity="error"
+            size="small"
+            variant="simple"
+            >{{ $form.name.error?.message }}</Message
+          >
+        </div>
+        <div class="field col-span-12">
+          <label for="description">Description (optional)</label>
+          <Textarea
+            id="description"
+            name="description"
+            rows="3"
+            placeholder="e.g. dry them afterwards"
+            class="w-full"
+          />
+        </div>
+        <div class="field col-span-12 sm:col-span-6">
+          <label for="interval_value">Interval Value</label>
+          <InputNumber
+            id="interval_value"
+            name="interval_value"
+            placeholder="e.g. every 2"
+            :min="1"
+            class="w-full"
+            :showButtons="true"
+            prefix="every "
+          />
+          <Message
+            v-if="$form.interval_value?.invalid"
+            severity="error"
+            size="small"
+            variant="simple"
+            >{{ $form.interval_value.error?.message }}</Message
+          >
+        </div>
+        <div class="field col-span-12 sm:col-span-6">
+          <label for="interval_unit">Interval Unit</label>
+          <Select
+            id="interval_unit"
+            name="interval_unit"
+            :options="intervalUnitOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select..."
+            class="w-full"
+          />
+          <Message
+            v-if="$form.interval_unit?.invalid"
+            severity="error"
+            size="small"
+            variant="simple"
+            >{{ $form.interval_unit.error?.message }}</Message
+          >
+        </div>
+        <div class="field col-span-12 sm:col-span-6">
+          <label for="repeats_per_week">Repeats per Week</label>
+          <Select
+            id="repeats_per_week"
+            name="repeats_per_week"
+            :options="[1, 2, 3, 4, 5, 6, 7]"
+            class="w-full"
+          />
+          <Message
+            v-if="$form.repeats_per_week?.invalid"
+            severity="error"
+            size="small"
+            variant="simple"
+            >{{ $form.repeats_per_week.error?.message }}
+          </Message>
+        </div>
+        <div class="field col-span-12 sm:col-span-6">
+          <label for="effort_in_minutes">Effort (in minutes)</label>
+          <InputNumber
+            id="effort_in_minutes"
+            name="effort_in_minutes"
+            placeholder="e.g. 30"
+            :min="1"
+            class="w-full"
+          />
+          <Message
+            v-if="$form.effort_in_minutes?.invalid"
+            severity="error"
+            size="small"
+            variant="simple"
+            >{{ $form.effort_in_minutes.error?.message }}</Message
+          >
+        </div>
+        <div class="field col-span-12 mt-2">
+          <label for="static_user">Allways done by (optional)</label>
+          <Select
+            id="static_user"
+            name="static_user"
+            :options="users.map((user: any) => user.username)"
+            placeholder="Select User"
+            class="w-full"
+            showClear
+          />
+        </div>
+        <div class="field col-span-12">
+          <label for="notice">Notice (optional)</label>
+          <InputText
+            id="notice"
+            name="notice"
+            placeholder="e.g. use the blue sponge"
+            class="w-full"
+          />
+        </div>
+        <div class="field-checkbox col-span-12 mt-2 flex gap-1">
+          <Checkbox id="is_active" name="is_active" :binary="true" />
+          <label for="is_active">Active</label>
+        </div>
+        <div class="col-span-12 flex justify-end gap-2">
+          <Button
+            label="Cancel"
+            icon="pi pi-times"
+            @click="doingDialogVisible = false"
+            class="p-button-text"
+          />
+          <Button label="Save" icon="pi pi-check" type="submit" />
+        </div>
+      </Form>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="assignmentDialogVisible"
+      :header="`Assign '${currentDoing.name}' to:`"
+      :modal="true"
+      class="w-full mx-5 max-w-2xl"
+    >
+      <Select
+        v-model="assignmentSelectedUser"
+        :options="users.map((user: any) => user.username)"
+        placeholder="Select User"
+        class="w-full"
+      />
+      <div class="flex justify-end gap-2 mt-4">
         <Button
           label="Cancel"
           icon="pi pi-times"
-          @click="doingDialogVisible = false"
+          @click="assignmentDialogVisible = false"
           class="p-button-text"
         />
-        <Button label="Save" icon="pi pi-check" type="submit" />
+        <Button label="Assign" icon="pi pi-check" @click="assignDoing()" />
       </div>
-    </Form>
-  </Dialog>
+    </Dialog>
 
-  <Dialog
-    v-model:visible="assignmentDialogVisible"
-    :header="`Assign '${currentDoing.name}' to:`"
-    :modal="true"
-    class="w-full mx-5 max-w-2xl"
-  >
-    <Select
-      v-model="assignmentSelectedUser"
-      :options="users.map((user: any) => user.username)"
-      placeholder="Select User"
-      class="w-full"
-    />
-    <div class="flex justify-end gap-2 mt-4">
-      <Button
-        label="Cancel"
-        icon="pi pi-times"
-        @click="assignmentDialogVisible = false"
-        class="p-button-text"
-      />
-      <Button label="Assign" icon="pi pi-check" @click="assignDoing()" />
-    </div>
-  </Dialog>
-
-  <DataTable
-    :value="doings"
-    dataKey="id"
-    responsiveLayout="scroll"
-    removableSort
-    size="small"
-    stripedRows
-    paginator
-    :rows="5"
-    :rowsPerPageOptions="[5, 10, 20, 50]"
-    v-model:filters="doingFilters"
-    :globalFilterFields="[
-      'name',
-      'description',
-      'interval_unit',
-      'effort_in_minutes',
-    ]"
-  >
-    <div class="flex justify-end gap-2 mb-2">
-      <Button
-        type="button"
-        icon="pi pi-filter-slash"
-        outlined
-        @click="clearDoingsFilter()"
-      />
-      <IconField>
-        <InputIcon>
-          <i class="pi pi-search" />
-        </InputIcon>
-        <InputText
-          v-model="doingFilters['global'].value"
-          placeholder="Keyword Search"
+    <DataTable
+      :value="doings"
+      dataKey="id"
+      responsiveLayout="scroll"
+      removableSort
+      size="small"
+      stripedRows
+      paginator
+      :rows="5"
+      :rowsPerPageOptions="[5, 10, 20, 50]"
+      v-model:filters="doingFilters"
+      :globalFilterFields="[
+        'name',
+        'description',
+        'interval_unit',
+        'effort_in_minutes',
+      ]"
+    >
+      <div class="flex justify-end gap-2 mb-2">
+        <Button
+          type="button"
+          icon="pi pi-filter-slash"
+          outlined
+          @click="clearDoingsFilter()"
         />
-      </IconField>
-    </div>
-    <Column field="name" header="Name" sortable></Column>
-    <Column field="description" header="Description" sortable></Column>
-    <Column header="Interval" sortable sortField="interval_unit">
-      <template #body="slotProps">
-        <span v-if="slotProps.data.interval_value > 1">
-          {{ slotProps.data.interval_value }} -
-        </span>
-        <span>{{ slotProps.data.interval_unit }}</span>
-        <span v-if="slotProps.data.repeats_per_week > 1">
-          ({{ slotProps.data.repeats_per_week }}x)
-        </span>
-      </template>
-    </Column>
-    <Column
-      field="effort_in_minutes"
-      header="Effort (minutes)"
-      sortable
-    ></Column>
-    <Column header="Active" sortable sortField="is_active">
-      <template #body="slotProps">
-        <span v-if="slotProps.data.is_active">✅</span>
-        <span v-else>❌</span>
-      </template>
-    </Column>
-    <Column header="Done by" sortable sortField="static_user_id">
-      <template #body="slotProps">
-        {{
-          users.find((user: any) => user.id === slotProps.data.static_user_id)
-            ?.username || '🎲'
-        }}
-      </template>
-    </Column>
-    <Column>
-      <template #body="slotProps">
-        <div class="flex">
-          <Button
-            icon="pi pi-user-plus"
-            @click="openAssignDoing(slotProps.data)"
-            variant="text"
-            class="p-button-rounded p-button-success"
+        <IconField>
+          <InputIcon>
+            <i class="pi pi-search" />
+          </InputIcon>
+          <InputText
+            v-model="doingFilters['global'].value"
+            placeholder="Keyword Search"
           />
-          <Button
-            icon="pi pi-pencil"
-            @click="openEditDoing(slotProps.data)"
-            variant="text"
-            class="p-button-rounded p-button-warn"
+        </IconField>
+      </div>
+      <Column field="name" header="Name" sortable></Column>
+      <Column field="description" header="Description" sortable></Column>
+      <Column header="Interval" sortable sortField="interval_unit">
+        <template #body="slotProps">
+          <span v-if="slotProps.data.interval_value > 1">
+            {{ slotProps.data.interval_value }} -
+          </span>
+          <span>{{ slotProps.data.interval_unit }}</span>
+          <span v-if="slotProps.data.repeats_per_week > 1">
+            ({{ slotProps.data.repeats_per_week }}x)
+          </span>
+        </template>
+      </Column>
+      <Column
+        field="effort_in_minutes"
+        header="Effort (minutes)"
+        sortable
+      ></Column>
+      <Column header="Active" sortable sortField="is_active">
+        <template #body="slotProps">
+          <span v-if="slotProps.data.is_active">✅</span>
+          <span v-else>❌</span>
+        </template>
+      </Column>
+      <Column header="Done by" sortable sortField="static_user_id">
+        <template #body="slotProps">
+          {{
+            users.find((user: any) => user.id === slotProps.data.static_user_id)
+              ?.username || '🎲'
+          }}
+        </template>
+      </Column>
+      <Column>
+        <template #body="slotProps">
+          <div class="flex">
+            <Button
+              icon="pi pi-user-plus"
+              @click="openAssignDoing(slotProps.data)"
+              variant="text"
+              class="p-button-rounded p-button-success"
+            />
+            <Button
+              icon="pi pi-pencil"
+              @click="openEditDoing(slotProps.data)"
+              variant="text"
+              class="p-button-rounded p-button-warn"
+            />
+            <Button
+              icon="pi pi-trash"
+              @click="deleteDoing(slotProps.data.id)"
+              variant="text"
+              class="p-button-rounded p-button-danger"
+            />
+          </div>
+        </template>
+      </Column>
+    </DataTable>
+
+    <Button
+      label="Add Todo"
+      icon="pi pi-plus"
+      @click="openNewTodoDialog"
+      class="mt-4"
+    />
+
+    <h3 class="mt-16 mb-3">This Week's Assignments</h3>
+    <DataTable
+      :value="assignments"
+      dataKey="assignmentId"
+      responsiveLayout="scroll"
+      removableSort
+      size="small"
+      stripedRows
+      paginator
+      :rows="5"
+      :rowsPerPageOptions="[5, 10, 20, 50]"
+      v-model:filters="assignmentFilters"
+      :globalFilterFields="['doingName', 'username', 'status']"
+    >
+      <div class="flex justify-end gap-2 mb-2">
+        <Button
+          type="button"
+          icon="pi pi-filter-slash"
+          outlined
+          @click="clearAssignmentFilter()"
+        />
+        <IconField>
+          <InputIcon>
+            <i class="pi pi-search" />
+          </InputIcon>
+          <InputText
+            v-model="assignmentFilters['global'].value"
+            placeholder="Keyword Search"
           />
+        </IconField>
+      </div>
+      <Column header="Todo" sortable sortField="doingName">
+        <template #body="slotProps">
+          {{ slotProps.data.doingName }}
+          <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
+            ({{ slotProps.data.calcCounterCurrent }}/{{
+              slotProps.data.calcCounterTotal
+            }})
+          </span>
+        </template>
+      </Column>
+      <Column header="Assigned To" sortable sortField="username">
+        <template #body="slotProps">
+          <Select
+            v-model="slotProps.data.username"
+            :options="users.map((user: any) => user.username)"
+            @change="updateAssignment(slotProps.data)"
+          />
+        </template>
+      </Column>
+      <Column header="Status" sortable sortField="status">
+        <template #body="slotProps">
+          <Select
+            v-model="slotProps.data.status"
+            :options="
+              filterStatusOptions(
+                slotProps.data.doingIntervalUnit,
+                slotProps.data.doingRepeatsPerWeek,
+              )
+            "
+            @change="updateAssignment(slotProps.data)"
+          />
+        </template>
+      </Column>
+      <Column>
+        <template #body="slotProps">
           <Button
             icon="pi pi-trash"
-            @click="deleteDoing(slotProps.data.id)"
+            @click="
+              confirmDeleteAssignment(
+                slotProps.data.assignmentId,
+                slotProps.data.doingName,
+              )
+            "
             variant="text"
             class="p-button-rounded p-button-danger"
           />
-        </div>
-      </template>
-    </Column>
-  </DataTable>
+        </template>
+      </Column>
+    </DataTable>
 
-  <Button
-    label="Add Todo"
-    icon="pi pi-plus"
-    @click="openNewTodoDialog"
-    class="mt-4"
-  />
-
-  <h3 class="mt-16 mb-3">This Week's Assignments</h3>
-  <DataTable
-    :value="assignments"
-    dataKey="assignmentId"
-    responsiveLayout="scroll"
-    removableSort
-    size="small"
-    stripedRows
-    paginator
-    :rows="5"
-    :rowsPerPageOptions="[5, 10, 20, 50]"
-    v-model:filters="assignmentFilters"
-    :globalFilterFields="['doingName', 'username', 'status']"
-  >
-    <div class="flex justify-end gap-2 mb-2">
+    <div class="mt-4 flex flex-wrap gap-3">
       <Button
-        type="button"
-        icon="pi pi-filter-slash"
-        outlined
-        @click="clearAssignmentFilter()"
+        :label="
+          showStatusExplanation
+            ? 'Hide Status Explanation'
+            : 'Show Status Explanation'
+        "
+        :icon="showStatusExplanation ? 'pi pi-eye-slash' : 'pi pi-eye'"
+        @click="showStatusExplanation = !showStatusExplanation"
+        class="w-full sm:w-auto"
       />
-      <IconField>
-        <InputIcon>
-          <i class="pi pi-search" />
-        </InputIcon>
-        <InputText
-          v-model="assignmentFilters['global'].value"
-          placeholder="Keyword Search"
-        />
-      </IconField>
     </div>
-    <Column header="Todo" sortable sortField="doingName">
-      <template #body="slotProps">
-        {{ slotProps.data.doingName }}
-        <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
-          ({{ slotProps.data.calcCounterCurrent }}/{{
-            slotProps.data.calcCounterTotal
-          }})
-        </span>
-      </template>
-    </Column>
-    <Column header="Assigned To" sortable sortField="username">
-      <template #body="slotProps">
-        <Select
-          v-model="slotProps.data.username"
-          :options="users.map((user: any) => user.username)"
-          @change="updateAssignment(slotProps.data)"
-        />
-      </template>
-    </Column>
-    <Column header="Status" sortable sortField="status">
-      <template #body="slotProps">
-        <Select
-          v-model="slotProps.data.status"
-          :options="
-            filterStatusOptions(
-              slotProps.data.doingIntervalUnit,
-              slotProps.data.doingRepeatsPerWeek,
-            )
-          "
-          @change="updateAssignment(slotProps.data)"
-        />
-      </template>
-    </Column>
-    <Column>
-      <template #body="slotProps">
-        <Button
-          icon="pi pi-trash"
-          @click="
-            confirmDeleteAssignment(
-              slotProps.data.assignmentId,
-              slotProps.data.doingName,
-            )
-          "
-          variant="text"
-          class="p-button-rounded p-button-danger"
-        />
-      </template>
-    </Column>
-  </DataTable>
 
-  <div class="mt-4 flex flex-wrap gap-3">
-    <Button
-      :label="
-        showStatusExplanation
-          ? 'Hide Status Explanation'
-          : 'Show Status Explanation'
-      "
-      :icon="showStatusExplanation ? 'pi pi-eye-slash' : 'pi pi-eye'"
-      @click="showStatusExplanation = !showStatusExplanation"
-      class="w-full sm:w-auto"
-    />
-  </div>
-
-  <div v-if="showStatusExplanation" class="mt-10">
-    <h3 class="mb-2">Status Explanation</h3>
-    <ul class="list-disc pl-5">
-      <li>
-        <strong>Waiting:</strong> The task is waiting to be pending. Only for
-        doings with more than one repeat per week.
-      </li>
-      <li><strong>Pending:</strong> The task is open for completion.</li>
-      <li>
-        <strong>Completed:</strong> The task has been finished successfully.
-      </li>
-      <li>
-        <strong>Skipped:</strong> The task will not be completed this iteration
-        and is reassigned the next time it is due based on the interval unit.
-        Not possible for one-time doings.
-      </li>
-      <li>
-        <strong>Postponed:</strong> The task will not be completed this
-        iteration but is reassigned the next week, regardless of the interval
-        unit. Not possible for weekly doings.
-      </li>
-      <li>
-        <strong>Failed:</strong> The task has been failed and will be reassigned
-        the next week, regardless of the interval unit. Can not be set manually.
-      </li>
-    </ul>
+    <div v-if="showStatusExplanation" class="mt-10">
+      <h3 class="mb-2">Status Explanation</h3>
+      <ul class="list-disc pl-5">
+        <li>
+          <strong>Waiting:</strong> The task is waiting to be pending. Only for
+          doings with more than one repeat per week.
+        </li>
+        <li><strong>Pending:</strong> The task is open for completion.</li>
+        <li>
+          <strong>Completed:</strong> The task has been finished successfully.
+        </li>
+        <li>
+          <strong>Skipped:</strong> The task will not be completed this
+          iteration and is reassigned the next time it is due based on the
+          interval unit. Not possible for one-time doings.
+        </li>
+        <li>
+          <strong>Postponed:</strong> The task will not be completed this
+          iteration but is reassigned the next week, regardless of the interval
+          unit. Not possible for weekly doings.
+        </li>
+        <li>
+          <strong>Failed:</strong> The task has been failed and will be
+          reassigned the next week, regardless of the interval unit. Can not be
+          set manually.
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -398,6 +464,7 @@ import { Form } from '@primevue/forms';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
+import Skeleton from 'primevue/skeleton';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
@@ -443,6 +510,8 @@ const assignmentFilters = ref<any>({
 });
 
 const showStatusExplanation = ref(false);
+const pageLoading = ref(true);
+const skeletonItems = ref(new Array(3)); // For 3 skeleton rows
 const STATUS_OPTIONS = [
   'waiting',
   'pending',
@@ -488,7 +557,15 @@ const resolver = ({ values }: any) => {
 };
 
 onMounted(async () => {
-  await Promise.all([fetchDoings(), fetchAssignments(), fetchUsers()]);
+  pageLoading.value = true;
+  try {
+    await Promise.all([fetchDoings(), fetchAssignments(), fetchUsers()]);
+  } catch (error) {
+    // Errors are handled by individual fetch functions with toasts
+    console.error('Error during onMounted data fetching in TheDoings:', error);
+  } finally {
+    pageLoading.value = false;
+  }
 });
 
 const fetchDoings = async () => {

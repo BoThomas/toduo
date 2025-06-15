@@ -1,69 +1,107 @@
 <template>
   <h2>This Week's Todos</h2>
-  <div class="flex justify-end mb-2">
-    <SelectButton
-      v-model="currentFilter"
-      :options="filterOptions"
-      :allowEmpty="false"
-    />
+
+  <!-- Skeleton Loader -->
+  <div v-if="pageLoading">
+    <div class="flex justify-end mb-2">
+      <Skeleton width="10rem" height="2.5rem" />
+    </div>
+    <DataTable :value="skeletonTodos" responsiveLayout="scroll" size="small">
+      <Column>
+        <template #body>
+          <Skeleton shape="circle" size="2rem" class="mr-2"></Skeleton>
+        </template>
+      </Column>
+      <Column header="Name">
+        <template #body>
+          <Skeleton width="100%"></Skeleton>
+        </template>
+      </Column>
+      <Column header="Description" :class="{ 'hidden sm:table-cell': true }">
+        <template #body>
+          <Skeleton width="100%"></Skeleton>
+        </template>
+      </Column>
+      <Column header="Effort (min)">
+        <template #body>
+          <Skeleton width="5rem"></Skeleton>
+        </template>
+      </Column>
+      <Column header="Done">
+        <template #body>
+          <Skeleton width="3rem"></Skeleton>
+        </template>
+      </Column>
+    </DataTable>
   </div>
-  <DataTable
-    :value="filteredTodos"
-    dataKey="assignmentId"
-    responsiveLayout="scroll"
-    size="small"
-    stripedRows
-    :rowClass="
-      (data: any) => {
-        return data.completed ? 'line-through  text-gray-400' : '';
-      }
-    "
-    removableSort
-    contextMenu
-    v-model:contextMenuSelection="selectedTodo"
-    @contextmenu.prevent="openDetailsModal"
-    class="select-none"
-  >
-    <Column>
-      <template #body="slotProps">
-        <Button
-          icon="pi pi-bars"
-          @click="
-            selectedTodo = slotProps.data;
-            openDetailsModal();
-          "
-          variant="text"
-          class="p-button-rounded p-button-primary p-button-sm"
-        />
-      </template>
-    </Column>
-    <Column header="Name" sortable sortField="doingName">
-      <template #body="slotProps">
-        {{ slotProps.data.doingName }}
-        <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
-          ({{ slotProps.data.calcCounterCurrent }}/{{
-            slotProps.data.calcCounterTotal
-          }})
-        </span>
-      </template>
-    </Column>
-    <Column
-      field="doingDescription"
-      header="Description"
-      sortable
-      :class="{ 'hidden sm:table-cell': true }"
-    ></Column>
-    <Column field="doingEffort" header="Effort (min)" sortable></Column>
-    <Column header="Done" sortable sortField="completed">
-      <template #body="slotProps">
-        <Checkbox
-          v-model="slotProps.data.completed"
-          @change="updateTodoStatus(slotProps.data)"
-          :binary="true"
-        />
-      </template>
-    </Column>
-  </DataTable>
+
+  <!-- Actual Content -->
+  <div v-else>
+    <div class="flex justify-end mb-2">
+      <SelectButton
+        v-model="currentFilter"
+        :options="filterOptions"
+        :allowEmpty="false"
+      />
+    </div>
+    <DataTable
+      :value="filteredTodos"
+      dataKey="assignmentId"
+      responsiveLayout="scroll"
+      size="small"
+      stripedRows
+      :rowClass="
+        (data: any) => {
+          return data.completed ? 'line-through  text-gray-400' : '';
+        }
+      "
+      removableSort
+      contextMenu
+      v-model:contextMenuSelection="selectedTodo"
+      @contextmenu.prevent="openDetailsModal"
+      class="select-none"
+    >
+      <Column>
+        <template #body="slotProps">
+          <Button
+            icon="pi pi-bars"
+            @click="
+              selectedTodo = slotProps.data;
+              openDetailsModal();
+            "
+            variant="text"
+            class="p-button-rounded p-button-primary p-button-sm"
+          />
+        </template>
+      </Column>
+      <Column header="Name" sortable sortField="doingName">
+        <template #body="slotProps">
+          {{ slotProps.data.doingName }}
+          <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
+            ({{ slotProps.data.calcCounterCurrent }}/{{
+              slotProps.data.calcCounterTotal
+            }})
+          </span>
+        </template>
+      </Column>
+      <Column
+        field="doingDescription"
+        header="Description"
+        sortable
+        :class="{ 'hidden sm:table-cell': true }"
+      ></Column>
+      <Column field="doingEffort" header="Effort (min)" sortable></Column>
+      <Column header="Done" sortable sortField="completed">
+        <template #body="slotProps">
+          <Checkbox
+            v-model="slotProps.data.completed"
+            @change="updateTodoStatus(slotProps.data)"
+            :binary="true"
+          />
+        </template>
+      </Column>
+    </DataTable>
+  </div>
 
   <Dialog
     v-model:visible="detailsModalVisible"
@@ -171,6 +209,7 @@ import SelectButton from 'primevue/selectbutton';
 import InputGroup from 'primevue/inputgroup';
 import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
+import Skeleton from 'primevue/skeleton';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { readAPI, updateApi } from '@/services/apiService';
@@ -194,6 +233,8 @@ type Todo = {
 
 const toast = useToast();
 const todos = ref<Todo[]>([]);
+const pageLoading = ref(true);
+const skeletonTodos = ref(new Array(3)); // For 3 skeleton rows
 const currentFilter = ref('pending');
 const filterOptions = ['pending', 'completed', 'all'];
 
@@ -220,7 +261,15 @@ const filteredTodos = computed(() => {
 });
 
 onMounted(async () => {
-  await Promise.all([fetchTodos(), fetchUsers()]);
+  pageLoading.value = true;
+  try {
+    await Promise.all([fetchTodos(), fetchUsers()]);
+  } catch (error) {
+    // Error handling is already in fetchTodos/fetchUsers with toasts
+    console.error('Error during onMounted data fetching:', error);
+  } finally {
+    pageLoading.value = false;
+  }
 });
 
 const fetchTodos = async () => {

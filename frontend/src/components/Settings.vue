@@ -1,94 +1,107 @@
 <template>
   <h2>Settings</h2>
-
-  <div class="mt-4 flex flex-wrap gap-3">
-    <Button
-      :label="
-        autoassignCronInfo?.running
-          ? 'Stop Autoassign Cron'
-          : 'Start Autoassign Cron'
-      "
-      :icon="autoassignCronInfo?.running ? 'pi pi-stop' : 'pi pi-play'"
-      @click="confirmCronControl"
-      class="w-full sm:w-auto"
-    />
-    <Button
-      label="Trigger Reassignment"
-      @click="confirmReassignment(true)"
-      icon="pi pi-refresh"
-      class="w-full sm:w-auto"
-    />
-    <Button
-      label="Trigger Assignment"
-      @click="confirmReassignment(false)"
-      icon="pi pi-reply"
-      class="w-full sm:w-auto"
-    />
-    <Button
-      label="Download Database"
-      icon="pi pi-download"
-      @click="downloadDatabase"
-      class="w-full sm:w-auto"
-    />
-    <Button
-      label="Upload Database"
-      icon="pi pi-upload"
-      @click="confirmDatabaseUpload"
-      class="w-full sm:w-auto"
-    />
-    <Button
-      label="Create or Roll API Key"
-      icon="pi pi-key"
-      @click="confirmCreateOrRollApiKey"
-      class="w-full sm:w-auto"
-    />
-  </div>
-
-  <div v-if="autoassignCronInfo?.name" class="mt-10">
-    <p>The autoassign cron is currently running.</p>
-    <p><strong>Cron Time:</strong> {{ autoassignCronInfo.cronTime }}</p>
-    <p><strong>Cron Redable:</strong> {{ autoassignCronInfo.cronString }}</p>
-    <p><strong>Next Dates:</strong></p>
-    <ul class="list-disc pl-5">
-      <li v-for="date in autoassignCronInfo.nextDates" :key="date">
-        {{ new Date(date).toLocaleString() }}
-      </li>
-    </ul>
-  </div>
-  <div v-else class="mt-10">
-    <p>The autoassign cron is currently stopped.</p>
-  </div>
-
-  <Dialog
-    v-model:visible="cronTimeDialogVisible"
-    header="Set Autoassign Cron Time and enable the Cron Job"
-    :modal="true"
-    class="w-full mx-5 max-w-2xl"
-  >
-    <div class="field">
-      <label for="cronTime">Cron Time</label>
-      <InputText
-        id="cronTime"
-        v-model="cronTime"
-        placeholder="e.g. 0 23 * * 0"
-        class="w-full"
-      />
-      <p class="mt-2 text-sm text-gray-600">{{ cronExplanation }}</p>
+  <div v-if="pageLoading" class="p-4">
+    <!-- Skeleton for Buttons -->
+    <div class="mt-4 flex flex-wrap gap-3">
+      <Skeleton width="15rem" height="2.5rem" />
+      <Skeleton width="12rem" height="2.5rem" />
+      <Skeleton width="12rem" height="2.5rem" />
+      <Skeleton width="10rem" height="2.5rem" />
+      <Skeleton width="10rem" height="2.5rem" />
+      <Skeleton width="15rem" height="2.5rem" />
     </div>
-    <div class="flex justify-end gap-2 mt-4">
+  </div>
+  <div v-else>
+    <div class="mt-4 flex flex-wrap gap-3">
       <Button
-        label="Cancel"
-        icon="pi pi-times"
-        @click="cronTimeDialogVisible = false"
-        class="p-button-text"
+        :label="
+          autoassignCronInfo?.running
+            ? 'Stop Autoassign Cron'
+            : 'Start Autoassign Cron'
+        "
+        :icon="autoassignCronInfo?.running ? 'pi pi-stop' : 'pi pi-play'"
+        @click="confirmCronControl"
+        class="w-full sm:w-auto"
       />
-      <Button label="Save" icon="pi pi-check" @click="saveCronTime" />
+      <Button
+        label="Trigger Reassignment"
+        @click="confirmReassignment(true)"
+        icon="pi pi-refresh"
+        class="w-full sm:w-auto"
+      />
+      <Button
+        label="Trigger Assignment"
+        @click="confirmReassignment(false)"
+        icon="pi pi-reply"
+        class="w-full sm:w-auto"
+      />
+      <Button
+        label="Download Database"
+        icon="pi pi-download"
+        @click="downloadDatabase"
+        class="w-full sm:w-auto"
+      />
+      <Button
+        label="Upload Database"
+        icon="pi pi-upload"
+        @click="confirmDatabaseUpload"
+        class="w-full sm:w-auto"
+      />
+      <Button
+        label="Create or Roll API Key"
+        icon="pi pi-key"
+        @click="confirmCreateOrRollApiKey"
+        class="w-full sm:w-auto"
+      />
     </div>
-  </Dialog>
+
+    <div v-if="autoassignCronInfo?.name" class="mt-10">
+      <p>The autoassign cron is currently running.</p>
+      <p><strong>Cron Time:</strong> {{ autoassignCronInfo.cronTime }}</p>
+      <p><strong>Cron Redable:</strong> {{ autoassignCronInfo.cronString }}</p>
+      <p><strong>Next Dates:</strong></p>
+      <ul class="list-disc pl-5">
+        <li v-for="date in autoassignCronInfo.nextDates" :key="date">
+          {{ new Date(date).toLocaleString() }}
+        </li>
+      </ul>
+    </div>
+    <div v-else class="mt-10">
+      <p>The autoassign cron is currently stopped.</p>
+    </div>
+
+    <Dialog
+      v-model:visible="cronTimeDialogVisible"
+      header="Set Autoassign Cron Time and enable the Cron Job"
+      :modal="true"
+      class="w-full mx-5 max-w-2xl"
+    >
+      <div class="field">
+        <label for="cronTime">Cron Time</label>
+        <InputText
+          id="cronTime"
+          v-model="cronTime"
+          placeholder="e.g. 0 23 * * 0"
+          class="w-full"
+        />
+        <p class="mt-2 text-sm text-gray-600">{{ cronExplanation }}</p>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <Button
+          label="Cancel"
+          icon="pi pi-times"
+          @click="cronTimeDialogVisible = false"
+          class="p-button-text"
+        />
+        <Button label="Save" icon="pi pi-check" @click="saveCronTime" />
+      </div>
+    </Dialog>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import Skeleton from 'primevue/skeleton';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -103,9 +116,18 @@ const autoassignCronInfo = ref<any>({});
 
 const cronTimeDialogVisible = ref(false);
 const cronTime = ref();
+const pageLoading = ref(true);
 
 onMounted(async () => {
-  await fetchAutoassignCronInfo();
+  pageLoading.value = true;
+  try {
+    await fetchAutoassignCronInfo();
+  } catch (error) {
+    // Error is handled in fetchAutoassignCronInfo with a toast
+    console.error('Error onMounted in Settings:', error);
+  } finally {
+    pageLoading.value = false;
+  }
 });
 
 const fetchAutoassignCronInfo = async () => {

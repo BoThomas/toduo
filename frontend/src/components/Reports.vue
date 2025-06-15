@@ -1,66 +1,95 @@
 <template>
   <div class="reports">
     <h2 class="mb-6">Reports</h2>
+    <div v-if="pageLoading" class="p-4">
+      <Skeleton width="100%" height="3rem" class="mb-4" />
+      <!-- Tabs Skeleton -->
 
-    <Tabs value="0">
-      <TabList>
-        <Tab value="0">Completed Todos</Tab>
-        <Tab value="1">Worked Minutes</Tab>
-      </TabList>
-      <TabPanels>
-        <TabPanel value="0">
-          <Chart
-            type="line"
-            :data="completedTodosData"
-            :options="chartOptions"
-            style="height: 220px"
-          />
-          <DataTable :value="completedTodosCount" stripedRows class="mt-14">
-            <Column field="username" header="" style="width: 25%" />
-            <Column field="week" header="This Week" style="width: 25%" />
-            <Column field="month" header="This Month" style="width: 25%" />
-            <Column field="year" header="This Year" style="width: 25%" />
-          </DataTable>
-        </TabPanel>
-        <TabPanel value="1">
-          <Chart
-            type="line"
-            :data="completedTodoMinutesData"
-            :options="chartOptions"
-            style="height: 220px"
-          />
-          <DataTable :value="completedTodosMinutsSum" stripedRows class="mt-14">
-            <Column field="username" header="" style="width: 25%" />
-            <Column header="This Week" style="width: 25%">
-              <template #body="slotProps">
-                {{ slotProps.data.week }} ({{
-                  Math.round(slotProps.data.week / 60)
-                }}h)
-              </template>
-            </Column>
-            <Column header="This Month" style="width: 25%">
-              <template #body="slotProps">
-                {{ slotProps.data.month }} ({{
-                  Math.round(slotProps.data.month / 60)
-                }}h)
-              </template>
-            </Column>
-            <Column header="This Year" style="width: 25%">
-              <template #body="slotProps">
-                {{ slotProps.data.year }} ({{
-                  Math.round(slotProps.data.year / 60)
-                }}h)
-              </template>
-            </Column>
-          </DataTable>
-        </TabPanel>
-      </TabPanels>
-    </Tabs>
+      <!-- Skeleton for Chart and DataTable (repeated for both tabs conceptually) -->
+      <div>
+        <Skeleton height="220px" class="mb-14" />
+        <DataTable :value="skeletonItems" stripedRows>
+          <Column header="" style="width: 25%"
+            ><template #body><Skeleton width="100%"></Skeleton></template
+          ></Column>
+          <Column header="This Week" style="width: 25%"
+            ><template #body><Skeleton width="100%"></Skeleton></template
+          ></Column>
+          <Column header="This Month" style="width: 25%"
+            ><template #body><Skeleton width="100%"></Skeleton></template
+          ></Column>
+          <Column header="This Year" style="width: 25%"
+            ><template #body><Skeleton width="100%"></Skeleton></template
+          ></Column>
+        </DataTable>
+      </div>
+    </div>
+    <div v-else>
+      <Tabs value="0">
+        <TabList>
+          <Tab value="0">Completed Todos</Tab>
+          <Tab value="1">Worked Minutes</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel value="0">
+            <Chart
+              type="line"
+              :data="completedTodosData"
+              :options="chartOptions"
+              style="height: 220px"
+            />
+            <DataTable :value="completedTodosCount" stripedRows class="mt-14">
+              <Column field="username" header="" style="width: 25%" />
+              <Column field="week" header="This Week" style="width: 25%" />
+              <Column field="month" header="This Month" style="width: 25%" />
+              <Column field="year" header="This Year" style="width: 25%" />
+            </DataTable>
+          </TabPanel>
+          <TabPanel value="1">
+            <Chart
+              type="line"
+              :data="completedTodoMinutesData"
+              :options="chartOptions"
+              style="height: 220px"
+            />
+            <DataTable
+              :value="completedTodosMinutsSum"
+              stripedRows
+              class="mt-14"
+            >
+              <Column field="username" header="" style="width: 25%" />
+              <Column header="This Week" style="width: 25%">
+                <template #body="slotProps">
+                  {{ slotProps.data.week }} ({{
+                    Math.round(slotProps.data.week / 60)
+                  }}h)
+                </template>
+              </Column>
+              <Column header="This Month" style="width: 25%">
+                <template #body="slotProps">
+                  {{ slotProps.data.month }} ({{
+                    Math.round(slotProps.data.month / 60)
+                  }}h)
+                </template>
+              </Column>
+              <Column header="This Year" style="width: 25%">
+                <template #body="slotProps">
+                  {{ slotProps.data.year }} ({{
+                    Math.round(slotProps.data.year / 60)
+                  }}h)
+                </template>
+              </Column>
+            </DataTable>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import Skeleton from 'primevue/skeleton';
 import Chart from 'primevue/chart';
 import Tabs from 'primevue/tabs';
 import TabList from 'primevue/tablist';
@@ -75,6 +104,8 @@ const completedTodosData = ref<any>(null);
 const completedTodoMinutesData = ref<any>(null);
 const completedTodosCount = ref<any>(null);
 const completedTodosMinutsSum = ref<any>(null);
+const pageLoading = ref(true);
+const skeletonItems = ref(Array(2).fill({})); // For DataTable skeleton
 
 const chartOptions = {
   responsive: true,
@@ -115,11 +146,18 @@ const borderColors: string[] = [
 ];
 
 onMounted(async () => {
-  await Promise.all([
-    fetchCompletedTodos(),
-    fetchCompletedTodoMinutes(),
-    fetchCompletedTodosTotal(),
-  ]);
+  pageLoading.value = true;
+  try {
+    await Promise.all([
+      fetchCompletedTodos(),
+      fetchCompletedTodoMinutes(),
+      fetchCompletedTodosTotal(),
+    ]);
+  } catch (error) {
+    console.error('Error during onMounted in Reports:', error);
+  } finally {
+    pageLoading.value = false;
+  }
 });
 
 const fetchCompletedTodos = async () => {

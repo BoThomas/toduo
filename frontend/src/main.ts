@@ -31,6 +31,9 @@ app.use(router);
 // Define a custom preset
 const MyPreset = definePreset(Aura, {
   components: {
+    progressbar: {
+      borderRadius: '0',
+    },
     menubar: {
       // currently not working in prime vue, handled in js/css
       // item: {

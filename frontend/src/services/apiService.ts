@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/auth';
+import { useLoadingStore } from '@/stores/loadingStore';
 
 const baseUrl = import.meta.env.DEV
   ? `${import.meta.env.VITE_DEV_BACKEND_URL}/api`
@@ -10,7 +11,9 @@ const apiRequest = async (
   data?: any,
   options: { headers?: Record<string, string> } = {},
 ) => {
+  const loadingStore = useLoadingStore();
   try {
+    loadingStore.startLoading();
     const auth0 = useAuthStore();
     const token = await auth0.getAccessTokenSilently({
       authorizationParams: {
@@ -40,6 +43,8 @@ const apiRequest = async (
   } catch (error: any) {
     console.error(error.message);
     throw new Error(error.message);
+  } finally {
+    loadingStore.stopLoading();
   }
 };
 
