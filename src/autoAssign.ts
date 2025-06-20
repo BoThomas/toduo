@@ -315,6 +315,7 @@ export class AssignmentService {
     // the following makes a doing qualified:
     // - it is active
     // - it is not deleted (no deleted_at)
+    // - if autoassignable_from is set, it must be in the past
     // - either one of the following:
     //   - it was never assigned before (no history entry)
     //   - last assignment was more then 7 * interval_value (interval_unit = weekly)
@@ -328,6 +329,10 @@ export class AssignmentService {
         and(
           isNull(doings.deleted_at),
           eq(doings.is_active, true),
+          or(
+            isNull(doings.autoassignable_from),
+            lte(doings.autoassignable_from, sql`strftime('%s', 'now')`),
+          ),
           or(
             isNull(
               this.db

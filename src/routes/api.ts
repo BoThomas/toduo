@@ -169,6 +169,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           repeats_per_week,
           effort_in_minutes,
           is_active,
+          autoassignable_from,
           static_user_id,
         } = ctx.body;
 
@@ -186,6 +187,9 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
             repeats_per_week: repeats_per_week ?? 1,
             effort_in_minutes,
             static_user_id: static_user_id ?? null,
+            autoassignable_from: autoassignable_from
+              ? new Date(autoassignable_from)
+              : null,
             is_active,
             created_at: new Date(),
             updated_at: new Date(),
@@ -224,6 +228,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           repeats_per_week: t.Optional(t.Number({ minimum: 1, maximum: 7 })),
           effort_in_minutes: t.Number(),
           static_user_id: t.Optional(t.Number()),
+          autoassignable_from: t.Optional(t.String()),
           is_active: t.Boolean(),
         }),
         response: t.Object({
@@ -282,6 +287,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           repeats_per_week,
           effort_in_minutes,
           is_active,
+          autoassignable_from,
           static_user_id,
         } = ctx.body;
 
@@ -312,6 +318,9 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
             repeats_per_week: repeats_per_week ?? 1,
             effort_in_minutes,
             static_user_id: static_user_id ?? null,
+            autoassignable_from: autoassignable_from
+              ? new Date(autoassignable_from)
+              : null,
             is_active,
             updated_at: new Date(),
           })
@@ -346,6 +355,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           effort_in_minutes: t.Number(),
           is_active: t.Boolean(),
           static_user_id: t.Optional(t.Number()),
+          autoassignable_from: t.Optional(t.String()),
         }),
         response: t.Object({
           success: t.Boolean(),

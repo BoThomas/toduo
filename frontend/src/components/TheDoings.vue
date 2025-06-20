@@ -175,6 +175,19 @@
           >
         </div>
         <div class="field col-span-12 mt-2">
+          <label for="autoassignable_from"
+            >Autoassignable From (optional)</label
+          >
+          <Calendar
+            id="autoassignable_from"
+            name="autoassignable_from"
+            placeholder="Select Date"
+            class="w-full"
+            showButtonBar
+            dateFormat="yy-mm-dd"
+          />
+        </div>
+        <div class="field col-span-12">
           <label for="static_user">Allways done by (optional)</label>
           <Select
             id="static_user"
@@ -288,7 +301,19 @@
       ></Column>
       <Column header="Active" sortable sortField="is_active">
         <template #body="slotProps">
-          <span v-if="slotProps.data.is_active">✅</span>
+          <span
+            v-if="
+              slotProps.data.is_active &&
+              !isAutoassignableFuture(slotProps.data)
+            "
+            >✅</span
+          >
+          <span
+            v-else-if="
+              slotProps.data.is_active && isAutoassignableFuture(slotProps.data)
+            "
+            >⏳</span
+          >
           <span v-else>❌</span>
         </template>
       </Column>
@@ -474,6 +499,7 @@ import Checkbox from 'primevue/checkbox';
 import Message from 'primevue/message';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
+import Calendar from 'primevue/calendar';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -616,6 +642,7 @@ const openNewTodoDialog = () => {
     interval_value: 1,
     repeats_per_week: 1,
     effort_in_minutes: undefined,
+    autoassignable_from: null,
     static_user: null,
     notice: '',
     is_active: true,
@@ -690,6 +717,7 @@ const saveDoing = async (formData: any) => {
       interval_value: formData.states.interval_value.value,
       repeats_per_week: formData.states.repeats_per_week.value,
       effort_in_minutes: formData.states.effort_in_minutes.value,
+      autoassignable_from: formData.states.autoassignable_from.value ?? '',
       static_user_id: users.value.find(
         (user: any) => user.username === formData.states.static_user.value,
       )?.id,
@@ -814,6 +842,16 @@ const confirmDeleteAssignment = (assignmentId: number, doingName: string) => {
       }
     },
   });
+};
+
+// Helper: Check if a doing has an autoassignable_from date in the future
+const isAutoassignableFuture = (doing: any): boolean => {
+  if (!doing.autoassignable_from) return false;
+
+  const autoassignableDate = new Date(doing.autoassignable_from);
+  const currentDate = new Date();
+
+  return autoassignableDate > currentDate;
 };
 
 // helper function to get the available status options based on the interval unit and repeats per week

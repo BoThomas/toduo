@@ -1,0 +1,1 @@
+ALTER TABLE `doings` ADD `autoassignable_from` integer;

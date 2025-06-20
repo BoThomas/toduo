@@ -39,6 +39,7 @@ export const doings = sqliteTable('doings', {
   repeats_per_week: integer({ mode: 'number' }).notNull(),
   effort_in_minutes: integer({ mode: 'number' }).notNull(),
   static_user_id: integer({ mode: 'number' }).references(() => users.id),
+  autoassignable_from: integer({ mode: 'timestamp' }),
   is_active: integer({ mode: 'boolean' }), // TODO change to boolean when drizzle-orm supports it
   deleted_at: integer({ mode: 'timestamp' }),
   created_at: integer({ mode: 'timestamp' }).notNull(),
