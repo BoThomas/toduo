@@ -112,6 +112,17 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           };
         }
 
+        // Check for negative participation values
+        const hasNegativeValues = userArray.some(
+          (user: any) => user.participation_percent < 0,
+        );
+        if (hasNegativeValues) {
+          return {
+            success: false,
+            message: 'Participation percentages cannot be negative',
+          };
+        }
+
         // update participation_percent
         await db.transaction(async (db) => {
           for (const user of userArray) {

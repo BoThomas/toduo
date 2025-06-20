@@ -199,6 +199,14 @@ const toggleLock = (userId: number) => {
 };
 
 const updateParticipationLive = async (changedUserId: number) => {
+  // First, ensure the changed user doesn't have a negative value
+  const changedUser = users.value.find(
+    (user: any) => user.id === changedUserId,
+  );
+  if (changedUser && changedUser.participation_percent < 0) {
+    changedUser.participation_percent = 0;
+  }
+
   const totalParticipation = users.value.reduce(
     (sum: number, user: any) => sum + user.participation_percent,
     0,
@@ -210,13 +218,15 @@ const updateParticipationLive = async (changedUserId: number) => {
       (user: any) => user.id !== changedUserId && !user.locked,
     );
     if (otherUsers.length === 0) {
-      const changedUser = users.value.find(
-        (user: any) => user.id === changedUserId,
-      );
       if (changedUser) {
         changedUser.participation_percent -= excess;
+        // Ensure participation doesn't go below 0
+        if (changedUser.participation_percent < 0) {
+          changedUser.participation_percent = 0;
+        }
       }
     } else {
+      // Calculate how much to adjust each user
       const adjustment = Math.floor(excess / otherUsers.length);
       otherUsers.forEach((user: any) => {
         user.participation_percent = Math.max(
@@ -225,7 +235,7 @@ const updateParticipationLive = async (changedUserId: number) => {
         );
       });
 
-      // if the sum of participation is still not 100, adjust an unlocked user that is not the changed user
+      // If the sum of participation is still not 100, adjust an unlocked user that is not the changed user
       const remainingExcess =
         users.value.reduce(
           (sum: number, user: any) => sum + user.participation_percent,
@@ -242,6 +252,27 @@ const updateParticipationLive = async (changedUserId: number) => {
       );
       if (remainingUser) {
         remainingUser.participation_percent -= remainingExcess;
+        // Ensure participation doesn't go below 0
+        if (remainingUser.participation_percent < 0) {
+          remainingUser.participation_percent = 0;
+
+          // Recalculate and distribute if we still have excess
+          const finalExcess =
+            users.value.reduce(
+              (sum: number, user: any) => sum + user.participation_percent,
+              0,
+            ) - 100;
+
+          if (finalExcess > 0) {
+            // If we still have excess, reduce from the changed user
+            if (changedUser) {
+              changedUser.participation_percent = Math.max(
+                0,
+                changedUser.participation_percent - finalExcess,
+              );
+            }
+          }
+        }
       }
     }
   }
@@ -262,6 +293,22 @@ const updateParticipation = async () => {
       detail: `Could not update participation: ${error.message}`,
       life: 3000,
     });
+    if (error.message.includes('Sum of participation_percent must be 100')) {
+      // load the previous participation values
+      try {
+        const currentLockedUsers = users.value.filter(
+          (user: any) => user.locked,
+        );
+        await fetchUsers();
+        users.value.forEach((user: any) => {
+          if (currentLockedUsers.some((u: any) => u.id === user.id)) {
+            user.locked = true;
+          }
+        });
+      } catch (error) {
+        console.error('Error loading previous participation values', error);
+      }
+    }
   }
 };
 
