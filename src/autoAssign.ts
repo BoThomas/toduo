@@ -65,20 +65,35 @@ export class AssignmentService {
       await this.db.delete(assignments);
     }
 
+    const numberOfAllDoings = await this.db
+      .select({
+        count: count(),
+      })
+      .from(doings);
+
     const users = await this.getActiveUsers();
-    const doings = await this.getQualifiedDoings();
+    const qualifiedDoings = await this.getQualifiedDoings();
     const shittyPoints = await this.getShittyPoints();
     const todoHistory = await this.getRecentTodoHistory();
-    const totalEffort = this.getTotalEffort(doings);
+    const totalEffort = this.getTotalEffort(qualifiedDoings);
+
+    if (ENABLE_LOGGING) {
+      console.log(
+        `\nQualified Doings: ${qualifiedDoings.length}/${numberOfAllDoings[0].count}`,
+      );
+      for (const doing of qualifiedDoings) {
+        console.log(`Doing ${doing.id}: ${doing.name}`);
+      }
+    }
 
     // Step 1: Extract static assigned doings and randomize the rest
-    const staticDoings = doings.filter(
-      (doing) => doing.static_user_id !== null,
+    const staticDoings = qualifiedDoings.filter(
+      (qualifiedDoings) => qualifiedDoings.static_user_id !== null,
     );
-    const dnymaicDoings = doings.filter(
-      (doing) => doing.static_user_id === null,
+    const dynamicDoings = qualifiedDoings.filter(
+      (qualifiedDoings) => qualifiedDoings.static_user_id === null,
     );
-    const shuffledDynamicDoings = this.shuffleArray(dnymaicDoings);
+    const shuffledDynamicDoings = this.shuffleArray(dynamicDoings);
 
     // Step 2: Group dynamic doings by repetition type
     let dynamicDoingGroups;
@@ -359,13 +374,25 @@ export class AssignmentService {
             // (plus 6 hours to account for e.g. daylight saving time)
             // (devided by 1000 to convert to seconds, as drizzle-orm does save timestamps in seconds)
             inArray(
+              doings.id,
               this.db
-                .select({ status: history.status })
+                .selectDistinct({ doing_id: history.doing_id })
                 .from(history)
-                .where(eq(history.doing_id, doings.id))
-                .orderBy(desc(history.created_at))
-                .limit(1),
-              ['failed', 'postponed'],
+                .where(
+                  and(
+                    inArray(history.status, ['failed', 'postponed']),
+                    eq(
+                      history.created_at,
+                      this.db
+                        .select({
+                          last_created_at: sql`max(${history.created_at})`,
+                        })
+                        .from(history)
+                        .where(eq(history.doing_id, doings.id))
+                        .limit(1),
+                    ),
+                  ),
+                ),
             ),
           ),
         ),
@@ -429,7 +456,7 @@ export class AssignmentService {
       } else {
         if (ENABLE_LOGGING) {
           console.log(
-            `\n-> WARN: Static user ${doing.static_user_id} of doing ${doing.id}. This doing will not be assigned.\n`,
+            `\n-> WARN: Static user ${doing.static_user_id} of doing ${doing.id} does not exist. This doing will not be assigned.\n`,
           );
         }
       }
@@ -474,8 +501,15 @@ export class AssignmentService {
       } else {
         if (ENABLE_LOGGING) {
           console.log(
-            `-> WARN: No best user found for doing ${doing.id}. This doing will not be assigned.\n`,
+            `-> WARN: No best user found for doing ${doing.id}. This doing will be assigned randomly.\n`,
           );
+          const randomUser = users[Math.floor(Math.random() * users.length)];
+          currentAssignments.push({ doing, user: randomUser });
+          if (ENABLE_LOGGING) {
+            console.log(
+              `-> Assigned doing ${doing.id} to user ${randomUser.id}\n`,
+            );
+          }
           // TODO: add a messages table to the db and store such important messages for chron tasks and show them on next visit to the admin.
           // For sync usage via ui, show them in the ui directly
         }
@@ -531,20 +565,24 @@ export class AssignmentService {
         });
 
         // Add points if the user postponed, or failed the last time
-        const lastHistoryEntry = todoHistory.find(
+        const lastHistoryEntrys = todoHistory.filter(
           (h) => h.doing_id === doing.id && h.user_id === user.id,
         );
-        if (
-          lastHistoryEntry &&
-          ['postponed', 'failed'].includes(lastHistoryEntry.status)
-        ) {
-          score += 50;
-          if (ENABLE_LOGGING) {
-            console.log(
-              `+50 points due to last status being ${lastHistoryEntry.status}`,
-            );
+        lastHistoryEntrys.forEach((lastHistoryEntry) => {
+          if (
+            lastHistoryEntry &&
+            ['postponed', 'failed'].includes(lastHistoryEntry.status)
+          ) {
+            const failedPostponedPoints =
+              this.calculateFailedPostponedPoints(lastHistoryEntry);
+            score += failedPostponedPoints;
+            if (ENABLE_LOGGING) {
+              console.log(
+                `+${failedPostponedPoints} points due to last status being ${lastHistoryEntry.status}`,
+              );
+            }
           }
-        }
+        });
 
         // Add score to the map
         scores.set(`${doing.id}-${user.id}`, score);
@@ -622,6 +660,12 @@ export class AssignmentService {
     return Math.round(
       (5 - (daysAgo / 60) * 4) / (historyEntry.repeats_per_week ?? 1),
     ); // Linearly decay penalty from 5 to 1 over 60 days
+  }
+
+  // Helper: Calculate failed/postponed points
+  private calculateFailedPostponedPoints(historyEntry: any): number {
+    // 50 devided by the number of repeats per week
+    return Math.round(50 / (historyEntry.repeats_per_week ?? 1));
   }
 
   // Helper: Save assignments to the database
