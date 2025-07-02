@@ -31,6 +31,7 @@ export const doings = sqliteTable('doings', {
   id: integer({ mode: 'number' }).primaryKey({ autoIncrement: true }),
   name: text().unique().notNull(),
   description: text(),
+  link: text(),
   notice: text(),
   interval_unit: text({
     enum: ['once', 'weekly', 'monthly'],

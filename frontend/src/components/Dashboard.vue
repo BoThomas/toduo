@@ -84,12 +84,32 @@
       </Column>
       <Column header="Name" sortable sortField="doingName">
         <template #body="slotProps">
-          {{ slotProps.data.doingName }}
-          <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
-            ({{ slotProps.data.calcCounterCurrent }}/{{
-              slotProps.data.calcCounterTotal
-            }})
-          </span>
+          <div class="flex items-center gap-2">
+            <span>
+              {{ slotProps.data.doingName }}
+              <span v-if="slotProps.data.doingRepeatsPerWeek > 1">
+                ({{ slotProps.data.calcCounterCurrent }}/{{
+                  slotProps.data.calcCounterTotal
+                }})
+              </span>
+            </span>
+            <a
+              v-if="slotProps.data.doingLink"
+              :href="slotProps.data.doingLink"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click.stop
+              aria-label="Open link in new tab"
+            >
+              <Button
+                icon="pi pi-external-link"
+                severity="secondary"
+                text
+                rounded
+                size="small"
+              />
+            </a>
+          </div>
         </template>
       </Column>
       <Column
@@ -127,6 +147,18 @@
         <span class="text-primary">{{
           selectedTodo?.doingDescription || '-'
         }}</span>
+      </p>
+      <p v-if="selectedTodo?.doingLink">
+        <strong class="w-20 inline-block text-right mr-3">Link</strong>
+        <a
+          :href="selectedTodo.doingLink"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-primary"
+          :title="selectedTodo.doingLink"
+        >
+          {{ truncateLink(selectedTodo.doingLink, 30) }}
+        </a>
       </p>
       <p>
         <strong class="w-20 inline-block text-right mr-3">Effort</strong>
@@ -219,6 +251,7 @@ import Dialog from 'primevue/dialog';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
 import { useToast } from 'primevue/usetoast';
+import { truncateLink } from '@/utils/links';
 import { useConfirm } from 'primevue/useconfirm';
 import { readAPI, updateApi } from '@/services/apiService';
 
@@ -228,6 +261,7 @@ type Todo = {
   doingId: number;
   doingName: string;
   doingDescription: string;
+  doingLink: string;
   doingEffort: number;
   doingIntervalUnit: string;
   doingIntervalValue: number;

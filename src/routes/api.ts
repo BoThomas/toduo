@@ -171,16 +171,29 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           is_active,
           autoassignable_from,
           static_user_id,
+          link,
         } = ctx.body;
 
         const { group: auth0Group } =
           (await ctx.authenticatedUserInfo()) as AuthInfo;
         const db = getDbConnection(auth0Group);
 
+        if (link) {
+          try {
+            new URL(link);
+          } catch (error) {
+            return {
+              success: false,
+              message: 'The provided link is not a valid URL.',
+            };
+          }
+        }
+
         try {
           await db.insert(schema.doings).values({
             name,
             description,
+            link,
             notice,
             interval_unit: interval_unit as 'once' | 'weekly' | 'monthly',
             interval_value: interval_value ?? 1,
@@ -230,6 +243,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           static_user_id: t.Optional(t.Number()),
           autoassignable_from: t.Optional(t.String()),
           is_active: t.Boolean(),
+          link: t.Optional(t.String()),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -289,6 +303,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           is_active,
           autoassignable_from,
           static_user_id,
+          link,
         } = ctx.body;
 
         const { group: auth0Group } =
@@ -307,11 +322,23 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           };
         }
 
+        if (link) {
+          try {
+            new URL(link);
+          } catch (error) {
+            return {
+              success: false,
+              message: 'The provided link is not a valid URL.',
+            };
+          }
+        }
+
         await db
           .update(schema.doings)
           .set({
             name,
             description,
+            link,
             notice,
             interval_unit: interval_unit as 'once' | 'weekly' | 'monthly',
             interval_value: interval_value ?? 1,
@@ -356,6 +383,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           is_active: t.Boolean(),
           static_user_id: t.Optional(t.Number()),
           autoassignable_from: t.Optional(t.String()),
+          link: t.Optional(t.String()),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -845,6 +873,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
             doingId: schema.doings.id,
             doingName: schema.doings.name,
             doingDescription: schema.doings.description,
+            doingLink: schema.doings.link,
             doingEffort: schema.doings.effort_in_minutes,
             doingIntervalUnit: schema.doings.interval_unit,
             doingIntervalValue: schema.doings.interval_value,

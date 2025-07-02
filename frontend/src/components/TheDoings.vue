@@ -103,6 +103,22 @@
             class="w-full"
           />
         </div>
+        <div class="field col-span-12">
+          <label for="link">Link (optional)</label>
+          <InputText
+            id="link"
+            name="link"
+            placeholder="e.g. https://example.com"
+            class="w-full"
+          />
+          <Message
+            v-if="$form.link?.invalid"
+            severity="error"
+            size="small"
+            variant="simple"
+            >{{ $form.link.error?.message }}</Message
+          >
+        </div>
         <div class="field col-span-12 sm:col-span-6">
           <label for="interval_value">Interval Value</label>
           <InputNumber
@@ -260,6 +276,7 @@
       :globalFilterFields="[
         'name',
         'description',
+        'link',
         'interval_unit',
         'effort_in_minutes',
       ]"
@@ -283,6 +300,20 @@
       </div>
       <Column field="name" header="Name" sortable></Column>
       <Column field="description" header="Description" sortable></Column>
+      <Column field="link" header="Link" sortable>
+        <template #body="slotProps">
+          <a
+            v-if="slotProps.data.link"
+            :href="slotProps.data.link"
+            target="_blank"
+            rel="noopener noreferrer"
+            :title="slotProps.data.link"
+            class="text-primary hover:underline"
+          >
+            {{ truncateLink(slotProps.data.link, 30) }}
+          </a>
+        </template>
+      </Column>
       <Column header="Interval" sortable sortField="interval_unit">
         <template #body="slotProps">
           <span v-if="slotProps.data.interval_value > 1">
@@ -501,6 +532,7 @@ import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
 import Calendar from 'primevue/calendar';
 import { useToast } from 'primevue/usetoast';
+import { truncateLink } from '@/utils/links';
 import { useConfirm } from 'primevue/useconfirm';
 import { FilterMatchMode } from '@primevue/core/api';
 import {
@@ -559,6 +591,14 @@ const resolver = ({ values }: any) => {
 
   if (!values.name) {
     errors.name = [{ message: 'required' }];
+  }
+
+  if (values.link) {
+    try {
+      new URL(values.link);
+    } catch (_) {
+      errors.link = [{ message: 'Must be a valid URL' }];
+    }
   }
 
   if (!values.interval_unit) {
@@ -638,6 +678,7 @@ const openNewTodoDialog = () => {
   currentDoing.value = {
     name: '',
     description: '',
+    link: '',
     interval_unit: 'weekly',
     interval_value: 1,
     repeats_per_week: 1,
@@ -713,6 +754,7 @@ const saveDoing = async (formData: any) => {
     const updateDoingData = {
       name: formData.states.name.value,
       description: formData.states.description.value,
+      link: formData.states.link.value,
       interval_unit: formData.states.interval_unit.value,
       interval_value: formData.states.interval_value.value,
       repeats_per_week: formData.states.repeats_per_week.value,
