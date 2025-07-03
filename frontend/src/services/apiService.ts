@@ -31,10 +31,15 @@ const apiRequest = async (
       body: data ? JSON.stringify(data) : undefined,
       ...options,
     });
-    if (!response.ok) {
-      throw new Error(`Error: ${response.statusText}`);
-    }
     const responseJson = await response.json();
+    if (!response.ok) {
+      if (responseJson.type === 'validation' && responseJson.summary) {
+        console.error('API Validation Error:', responseJson);
+        throw new Error(responseJson.summary);
+      }
+      throw new Error(responseJson.message || `Error: ${response.statusText}`);
+    }
+
     if (!responseJson.success) {
       throw new Error(responseJson.message);
     }
