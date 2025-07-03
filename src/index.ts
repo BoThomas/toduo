@@ -40,6 +40,18 @@ const app = new Elysia({
       return request.text();
     }
   })
+  .onError(({ code, error }) => {
+    if (code === 'VALIDATION') {
+      console.error('The api request failed validation');
+      console.error(error.all);
+
+      // Find a specific error name (path is OpenAPI Schema compliance)
+      const name = error.all.find((x: any) => x.path === '/name');
+
+      // If has a validation error, then log it
+      if (name) console.error(name);
+    }
+  })
   .use(Logestic.preset('common')) // Log all requests
   .use(apiRoutes)
   .use(siriRoutes);
