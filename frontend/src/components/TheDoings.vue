@@ -735,9 +735,15 @@ const assignDoing = async () => {
 const openEditDoing = (todo: any) => {
   currentDoing.value = {
     ...todo,
+    description: todo.description || '',
+    link: todo.link || '',
+    notice: todo.notice || '',
     static_user: todo.static_user_id
       ? users.value.find((user: any) => user.id === todo.static_user_id)
-          .username
+          ?.username
+      : null,
+    autoassignable_from: todo.autoassignable_from
+      ? new Date(todo.autoassignable_from)
       : null,
   };
   doingDialogVisible.value = true;
