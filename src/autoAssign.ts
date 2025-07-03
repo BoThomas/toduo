@@ -128,6 +128,10 @@ export class AssignmentService {
 
     // Step 4: Save assignments to the database
     await this.saveAssignments(assignmentArray, dryRun);
+
+    if (ENABLE_LOGGING) {
+      console.log(`\n--- Autoassign completed ---\n`);
+    }
   }
 
   // PreHelper: Deactivate completed "once" doings
