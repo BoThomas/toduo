@@ -243,7 +243,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           static_user_id: t.Optional(t.Number()),
           autoassignable_from: t.Optional(t.String()),
           is_active: t.Boolean(),
-          link: t.Optional(t.String()),
+          link: t.Optional(t.Nullable(t.String())),
         }),
         response: t.Object({
           success: t.Boolean(),
@@ -383,7 +383,7 @@ const apiRoutes = new Elysia().use(authService).group('/api', (apiGroup) =>
           is_active: t.Boolean(),
           static_user_id: t.Optional(t.Number()),
           autoassignable_from: t.Optional(t.String()),
-          link: t.Optional(t.String()),
+          link: t.Optional(t.Nullable(t.String())),
         }),
         response: t.Object({
           success: t.Boolean(),
